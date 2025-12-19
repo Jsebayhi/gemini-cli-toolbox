@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# Configuration
+HOST_CONF_DIR="${HOME}/.gemini"
+PROJECT_DIR="$(pwd)"
+IMAGE_NAME="gemini-cli:latest"
+IS_DEBUG=false
+EXTRA_DOCKER_ARGS=()
+
+# Help Function
+show_help() {
+    echo "Usage: gemini-docker [OPTIONS] [-- APP_ARGS]"
+    echo ""
+    echo "Options:"
+    echo "  --config <path>      Path to configuration directory (default: ~/.gemini)"
+    echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
+    echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
+    echo "  --debug              Start a bash shell instead of the Gemini CLI"
+    echo "  --help               Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  gemini-docker chat"
+    echo "  gemini-docker --config ~/.gemini-work -- --help"
+    echo "  gemini-docker --docker-args '-v /opt/ext:/ext' chat"
+}
+
+# 1. Parse Arguments
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --config)      HOST_CONF_DIR="$2"; shift; shift ;;
+    --project)     PROJECT_DIR="$2";   shift; shift ;;
+    --debug)       IS_DEBUG=true;      shift ;;
+    --docker-args) 
+        read -ra SPLIT_ARGS <<< "$2"
+        EXTRA_DOCKER_ARGS+=("${SPLIT_ARGS[@]}")
+        shift; shift 
+        ;; 
+    --help)        show_help; exit 0 ;;
+    --)            shift; ARGS+=("$@"); break ;;
+    *)             ARGS+=("$1");       shift ;;
+  esac
+done
+
+# 2. Setup Directories
+HOST_CONF_DIR=$(realpath -m "$HOST_CONF_DIR")
+mkdir -p "$HOST_CONF_DIR"
+
+PROJECT_DIR=$(realpath -m "$PROJECT_DIR")
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "Error: Project directory '$PROJECT_DIR' does not exist." >&2
+    exit 1
+fi
+
+# 3. Build Docker Command
+DOCKER_CMD=(
+  docker run --rm -it
+  --net=host
+  --volume "${PROJECT_DIR}:/home/gemini/workspace"
+  --volume "${HOST_CONF_DIR}:/home/gemini/.gemini"
+  --env DEFAULT_UID="$(id -u)"
+  --env DEFAULT_GID="$(id -g)"
+  --env TERM
+  --env LANG
+  --env LC_ALL
+  --env HTTP_PROXY --env HTTPS_PROXY --env NO_PROXY
+  --env http_proxy --env https_proxy --env no_proxy
+  --workdir /home/gemini/workspace
+  "${EXTRA_DOCKER_ARGS[@]}"
+)
+
+# 4. Execute
+if [ "$IS_DEBUG" = true ]; then
+    echo "Starting in DEBUG mode (bash)..."
+    "${DOCKER_CMD[@]}" \
+      --entrypoint /usr/local/bin/docker-entrypoint.sh \
+      "$IMAGE_NAME" bash
+else
+    "${DOCKER_CMD[@]}" \
+      "$IMAGE_NAME" "${ARGS[@]}"
+fi
