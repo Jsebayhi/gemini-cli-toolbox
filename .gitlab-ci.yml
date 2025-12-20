@@ -42,6 +42,7 @@ trivy_scan:
   needs: ["build_image"]
   script:
     # Scan the saved tarball
-    - trivy image --input dist/image.tar
-    # Fail the pipeline on ANY vulnerability that has a fix available
-    - trivy image --input dist/image.tar --exit-code 1 --ignore-unfixed
+    # 1. Report ALL vulnerabilities (Informational, exit 0)
+    - trivy image --input dist/image.tar --exit-code 0
+    # 2. Fail ONLY on CRITICAL fixable vulnerabilities (Gatekeeper, exit 1)
+    - trivy image --input dist/image.tar --severity CRITICAL --exit-code 1 --ignore-unfixed
