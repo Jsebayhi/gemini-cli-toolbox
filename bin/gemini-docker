@@ -4,7 +4,7 @@
 HOST_CONF_DIR="${HOME}/.gemini"
 PROJECT_DIR="$(pwd)"
 IMAGE_NAME="gemini-cli:latest"
-IS_DEBUG=false
+USE_BASH=false
 EXTRA_DOCKER_ARGS=()
 
 # Help Function
@@ -16,7 +16,7 @@ show_help() {
     echo "  --config <path>      Path to configuration directory (default: ~/.gemini)"
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
-    echo "  --debug              Start a bash shell instead of the Gemini CLI"
+    echo "  --bash               Start a bash shell instead of the Gemini CLI"
     echo "  --help               Show this help message"
     echo ""
     echo "Examples:"
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
     --full)        IMAGE_NAME="gemini-cli-full:latest"; shift ;;
     --config)      HOST_CONF_DIR="$2"; shift; shift ;;
     --project)     PROJECT_DIR="$2";   shift; shift ;;
-    --debug)       IS_DEBUG=true;      shift ;;
+    --bash)        USE_BASH=true;      shift ;;
     --docker-args) 
         read -ra SPLIT_ARGS <<< "$2"
         EXTRA_DOCKER_ARGS+=("${SPLIT_ARGS[@]}")
@@ -106,8 +106,8 @@ DOCKER_CMD=(
 )
 
 # 4. Execute
-if [ "$IS_DEBUG" = true ]; then
-    echo "Starting in DEBUG mode (bash)..."
+if [ "$USE_BASH" = true ]; then
+    echo "Starting in BASH mode..."
     "${DOCKER_CMD[@]}" \
       --entrypoint /usr/local/bin/docker-entrypoint.sh \
       "$IMAGE_NAME" bash
