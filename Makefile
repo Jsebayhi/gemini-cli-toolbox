@@ -8,48 +8,107 @@
 help:
 	@echo "Project Orchestration"
 	@echo "====================="
-	@echo "  make build       : Build ALL images (Base -> Stack -> Full & Light)"
-	@echo "  make rebuild     : Force rebuild (no cache) of all images"
-	@echo "  make scan        : Run security scan (Trivy) on built images"
-	@echo "  make clean-cache : Prune the npm build cache (frees disk space)"
+	@echo "  make build         : Build ALL images (Parallelizable with -j)"
+	@echo "  make rebuild       : Force rebuild ALL images (Parallelizable with -j)"
+	@echo "  make scan          : Run security scan (Trivy)"
+	@echo "  make clean-cache   : Prune npm build cache"
+	@echo ""
+	@echo "Parallel Build Example:"
+	@echo "  make -j4 build"
 
-.PHONY: build
-build:
-	@echo ">> [1/4] Building gemini-base..."
+# --- Build Targets (Incremental) ---
+
+.PHONY: build-base
+build-base:
+	@echo ">> Building gemini-base..."
 	$(MAKE) -C images/gemini-base build
-	@echo ">> [2/4] Building gemini-stack (depends on base)..."
-	$(MAKE) -C images/gemini-stack build
-	@echo ">> [3/4] Building gemini-cli (Light)..."
+
+.PHONY: build-cli
+build-cli: build-base
+	@echo ">> Building gemini-cli (Light)..."
 	$(MAKE) -C images/gemini-cli build
-	@echo ">> [4/4] Building gemini-cli-full (depends on stack)..."
+
+.PHONY: build-cli-preview
+build-cli-preview: build-base
+	@echo ">> Building gemini-cli-preview..."
+	$(MAKE) -C images/gemini-cli-preview build
+
+.PHONY: build-stack
+build-stack: build-base
+	@echo ">> Building gemini-stack..."
+	$(MAKE) -C images/gemini-stack build
+
+.PHONY: build-cli-full
+build-cli-full: build-stack
+	@echo ">> Building gemini-cli-full..."
 	$(MAKE) -C images/gemini-cli-full build
 
+# Main Build Entrypoint
 .PHONY: build
-rebuild:
-	@echo ">> [1/4] Rebuilding gemini-base..."
+build: build-cli build-cli-preview build-cli-full
+
+# --- Rebuild Targets (No Cache) ---
+
+.PHONY: rebuild-base
+rebuild-base:
+	@echo ">> Rebuilding gemini-base..."
 	$(MAKE) -C images/gemini-base rebuild
-	@echo ">> [2/4] Rebuilding gemini-stack..."
-	$(MAKE) -C images/gemini-stack rebuild
-	@echo ">> [3/4] Rebuilding gemini-cli..."
+
+.PHONY: rebuild-cli
+rebuild-cli: rebuild-base
+	@echo ">> Rebuilding gemini-cli..."
 	$(MAKE) -C images/gemini-cli rebuild
-	@echo ">> [4/4] Rebuilding gemini-cli-full..."
+
+.PHONY: rebuild-cli-preview
+rebuild-cli-preview: rebuild-base
+	@echo ">> Rebuilding gemini-cli-preview..."
+	$(MAKE) -C images/gemini-cli-preview rebuild
+
+.PHONY: rebuild-stack
+rebuild-stack: rebuild-base
+	@echo ">> Rebuilding gemini-stack..."
+	$(MAKE) -C images/gemini-stack rebuild
+
+.PHONY: rebuild-cli-full
+rebuild-cli-full: rebuild-stack
+	@echo ">> Rebuilding gemini-cli-full..."
 	$(MAKE) -C images/gemini-cli-full rebuild
 
-# Security Scan (Delegate to components)
+# Main Rebuild Entrypoint
+.PHONY: rebuild
+rebuild: rebuild-cli rebuild-cli-preview rebuild-cli-full
 
+# --- Fast Update Targets (App Layer Only) ---
+
+.PHONY: rebuild-cli-only
+rebuild-cli-only:
+	@echo ">> Rebuilding gemini-cli (App Layer)..."
+	$(MAKE) -C images/gemini-cli rebuild
+
+.PHONY: rebuild-cli-preview-only
+rebuild-cli-preview-only:
+	@echo ">> Rebuilding gemini-cli-preview (App Layer)..."
+	$(MAKE) -C images/gemini-cli-preview rebuild
+
+.PHONY: rebuild-cli-full-only
+rebuild-cli-full-only:
+	@echo ">> Rebuilding gemini-cli-full (App Layer)..."
+	$(MAKE) -C images/gemini-cli-full rebuild
+
+# Rebuild only the applications (Parallelizable)
+.PHONY: rebuild-gemini-cli
+rebuild-gemini-cli: rebuild-cli-only rebuild-cli-preview-only rebuild-cli-full-only
+
+# Security Scan (Delegate to components)
 .PHONY: scan
 scan:
-
 	@echo ">> Scanning gemini-base..."
-
 	$(MAKE) -C images/gemini-base scan
-
 	@echo ">> Scanning gemini-cli..."
-
 	$(MAKE) -C images/gemini-cli scan
-
+	@echo ">> Scanning gemini-cli-preview..."
+	$(MAKE) -C images/gemini-cli-preview scan
 	@echo ">> Scanning gemini-cli-full..."
-
 	$(MAKE) -C images/gemini-cli-full scan
 
 .PHONY: clean-cache
