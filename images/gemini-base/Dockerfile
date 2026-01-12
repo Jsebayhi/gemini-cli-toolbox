@@ -29,6 +29,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     procps \
     findutils \
     xsel \
+    vim \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. Configure Python for "Toolbox" Usage
