@@ -13,6 +13,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --full               Use the full image (Java 8/17/21, Go, Scala)"
+    echo "  --preview            Use the preview image (Latest Beta CLI)"
     echo "  --config <path>      Path to configuration directory (default: ~/.gemini)"
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
@@ -21,6 +22,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  gemini-docker chat"
+    echo "  gemini-docker --preview chat"
     echo "  gemini-docker --config ~/.gemini-work -- --help"
     echo "  gemini-docker --docker-args '-v /opt/ext:/ext' chat"
 }
@@ -30,6 +32,7 @@ ARGS=()
 while [[ $# -gt 0 ]]; do
   case $1 in
     --full)        IMAGE_NAME="gemini-cli-full:latest"; shift ;;
+    --preview)     IMAGE_NAME="gemini-cli-preview:latest"; shift ;;
     --config)      HOST_CONF_DIR="$2"; shift; shift ;;
     --project)     PROJECT_DIR="$2";   shift; shift ;;
     --bash)        USE_BASH=true;      shift ;;
