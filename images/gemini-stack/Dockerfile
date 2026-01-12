@@ -25,8 +25,18 @@ COPY --from=golang /usr/local/go /opt/sdks/go
 # 4. Copy Maven
 COPY --from=maven /usr/share/maven /opt/sdks/maven
 
-# 5. Install Dependencies for SDKMAN
-RUN apt-get update && apt-get install -y zip unzip curl bash
+# 5. Install Dependencies (SDKMAN + Google Cloud SDK)
+# - zip, unzip, curl, bash: For SDKMAN
+# - apt-transport-https, gnupg: For GCloud repo security
+RUN apt-get update && apt-get install -y \
+    zip unzip curl bash \
+    apt-transport-https ca-certificates gnupg
+
+# 5.1 Install Google Cloud SDK (Modern 'signed-by' method)
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+    apt-get update && apt-get install -y google-cloud-cli && \
+    rm -rf /var/lib/apt/lists/*
 
 # 6. Install SDKMAN (Strictly for SBT/Scala)
 ENV SDKMAN_DIR="/usr/local/sdkman"
