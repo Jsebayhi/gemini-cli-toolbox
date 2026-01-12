@@ -1,10 +1,10 @@
 # Master Makefile
 # Orchestrates build tasks for all images in the repo
 
-.PHONY: help build rebuild
-
+# Default target
 .DEFAULT_GOAL := help
 
+.PHONY: help
 help:
 	@echo "Project Orchestration"
 	@echo "====================="
@@ -13,6 +13,7 @@ help:
 	@echo "  make scan        : Run security scan (Trivy) on built images"
 	@echo "  make clean-cache : Prune the npm build cache (frees disk space)"
 
+.PHONY: build
 build:
 	@echo ">> [1/4] Building gemini-base..."
 	$(MAKE) -C images/gemini-base build
@@ -23,6 +24,7 @@ build:
 	@echo ">> [4/4] Building gemini-cli-full (depends on stack)..."
 	$(MAKE) -C images/gemini-cli-full build
 
+.PHONY: build
 rebuild:
 	@echo ">> [1/4] Rebuilding gemini-base..."
 	$(MAKE) -C images/gemini-base rebuild
@@ -35,6 +37,7 @@ rebuild:
 
 # Security Scan (Delegate to components)
 
+.PHONY: scan
 scan:
 
 	@echo ">> Scanning gemini-base..."
@@ -49,7 +52,7 @@ scan:
 
 	$(MAKE) -C images/gemini-cli-full scan
 
-# Clean the specific build cache for this project
+.PHONY: clean-cache
 clean-cache:
 	@echo ">> Pruning gemini-npm-cache..."
 	docker builder prune --force --filter id=gemini-npm-cache
