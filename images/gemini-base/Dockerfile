@@ -41,3 +41,8 @@ ENV PIP_ROOT_USER_ACTION=ignore
 # This allows 'pip install' to work immediately without sudo or --user
 RUN chmod -R 777 /usr/local/lib/python* \
     && chmod 777 /usr/local/bin
+
+# 4. Shell Configuration
+# Force bash to append history to disk after every command.
+# This ensures history is saved even if the container is killed.
+RUN echo 'export PROMPT_COMMAND="history -a"' >> /etc/bash.bashrc
