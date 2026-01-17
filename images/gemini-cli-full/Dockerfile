@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
     npm install -g --verbose @google/gemini-cli \
     && cd $(npm root -g)/@google/gemini-cli \
     && npm install --package-lock-only \
-    && npm audit fix --only=prod \
+    && (npm audit fix --only=prod || true) \
     && npm cache clean --force
 
 # 2. Copy Entrypoint (Reuse the robust one we wrote)
