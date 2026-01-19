@@ -1,4 +1,4 @@
-IMAGE_NAME := gemini-cli-full
+IMAGE_NAME := gemini-toolbox/cli-full
 IMAGE_TAG := latest
 
 .DEFAULT_GOAL := help

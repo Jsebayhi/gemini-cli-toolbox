@@ -1,4 +1,4 @@
-IMAGE_NAME := gemini-stack
+IMAGE_NAME := gemini-toolbox/stack
 IMAGE_TAG := latest
 
 .PHONY: build rebuild

@@ -3,7 +3,7 @@
 # Configuration
 HOST_CONF_DIR="${HOME}/.gemini"
 PROJECT_DIR="$(pwd)"
-IMAGE_NAME="gemini-cli:latest"
+IMAGE_NAME="gemini-toolbox/cli:latest"
 USE_BASH=false
 
 # Auto-detect VS Code environment
@@ -40,8 +40,8 @@ show_help() {
 ARGS=()
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --full)        IMAGE_NAME="gemini-cli-full:latest"; shift ;;
-    --preview)     IMAGE_NAME="gemini-cli-preview:latest"; shift ;;
+    --full)        IMAGE_NAME="gemini-toolbox/cli-full:latest"; shift ;;
+    --preview)     IMAGE_NAME="gemini-toolbox/cli-preview:latest"; shift ;;
     --no-ide)      ENABLE_VSCODE_INTEGRATION=false;   shift ;;
     --config)      HOST_CONF_DIR="$2"; shift; shift ;;
     --project)     PROJECT_DIR="$2";   shift; shift ;;

@@ -1,4 +1,4 @@
-IMAGE_NAME := gemini-cli-preview
+IMAGE_NAME := gemini-toolbox/cli-preview
 IMAGE_TAG := latest
 
 # Set 'help' as the default target

@@ -1,7 +1,7 @@
 # Tier 3: The Full Application
 # Combines the heavy SDKs (Stack) with the latest Gemini CLI.
 
-FROM gemini-stack:latest
+FROM gemini-toolbox/stack:latest
 
 # 1. Install Gemini CLI
 # We accept the same build arguments if needed, but usually latest is fine
