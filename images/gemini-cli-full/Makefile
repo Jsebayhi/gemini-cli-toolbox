@@ -22,6 +22,13 @@ build: pre-build
 rebuild: pre-build
 	docker build --no-cache -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
+tag-version:
+	@VERSION=$$(docker run --rm --entrypoint="" $(IMAGE_NAME):$(IMAGE_TAG) gemini --version | tr -d '\r'); \
+	echo ">> Detected version: $$VERSION"; \
+	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(IMAGE_NAME):$$VERSION
+
+ci: rebuild tag-version
+
 scan:
 	@echo ">> Scanning $(IMAGE_NAME):$(IMAGE_TAG)..."
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \

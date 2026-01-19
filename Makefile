@@ -99,6 +99,27 @@ rebuild-cli-full-only:
 .PHONY: rebuild-gemini-cli
 rebuild-gemini-cli: rebuild-cli-only rebuild-cli-preview-only rebuild-cli-full-only
 
+# --- CI Targets (Full Rebuild + Tag) ---
+
+.PHONY: ci-cli
+ci-cli: rebuild-base
+	@echo ">> CI: Building & Tagging gemini-cli..."
+	$(MAKE) -C images/gemini-cli ci
+
+.PHONY: ci-preview
+ci-preview: rebuild-base
+	@echo ">> CI: Building & Tagging gemini-cli-preview..."
+	$(MAKE) -C images/gemini-cli-preview ci
+
+.PHONY: ci-full
+ci-full: rebuild-stack
+	@echo ">> CI: Building & Tagging gemini-cli-full..."
+	$(MAKE) -C images/gemini-cli-full ci
+
+# Main CI Entrypoint
+.PHONY: ci
+ci: ci-cli ci-preview ci-full
+
 # Security Scan (Delegate to components)
 .PHONY: scan
 scan:
