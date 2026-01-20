@@ -30,8 +30,9 @@ make build
 ## 4. Core Mandates
 
 ### Documentation is Code
-*   **Mandate:** You must strictly maintain all documentation (`README.md`, `GEMINI.md`, `TECHNICAL_SPEC.md`, `adr/*`) in sync with code changes.
+*   **Mandate:** You must strictly maintain all documentation (`README.md`, `GEMINI.md`, `adr/*`) in sync with code changes.
 *   **Trigger:** Any time you rename files, change architecture, modify workflows, or discover new gotchas, you **MUST** update the corresponding documentation in the same turn.
+*   **User-Facing Rule:** If you add a new feature (e.g., a flag, a command, a capability) or change behavior, you **MUST** update the root `README.md` to reflect this immediately. Do not leave features undocumented.
 *   **Why:** This project relies on the "Golden Artifact" pattern where the documentation is the source of truth for future sessions.
 
 ### Context Management
