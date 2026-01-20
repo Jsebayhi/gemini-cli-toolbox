@@ -3,7 +3,7 @@
 [![CI](https://github.com/Jsebayhi/gemini-cli-docker/actions/workflows/ci.yml/badge.svg)](https://github.com/Jsebayhi/gemini-cli-docker/actions)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jsebayhi/gemini-toolbox)](https://hub.docker.com/r/jsebayhi/gemini-toolbox)
 
-**Docker Hub:** [jsebayhi/gemini-toolbox](https://hub.docker.com/r/jsebayhi/gemini-toolbox)
+**GitHub Repository:** [Jsebayhi/gemini-cli-docker](https://github.com/Jsebayhi/gemini-cli-docker) | **Docker Hub:** [jsebayhi/gemini-toolbox](https://hub.docker.com/r/jsebayhi/gemini-toolbox)
 
 > **Securely sandbox the Gemini CLI** to execute scripts and commands without risking host integrity. Manage multiple accounts on one machine with full **VS Code Companion Mode** support. Includes shared dependency caches for instant project compilation (Java, Go, Node).
 > **zero-config, secure sandbox** for safe experimentation. *Incoming: Native remote access.*
