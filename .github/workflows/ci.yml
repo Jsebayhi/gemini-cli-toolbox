@@ -26,7 +26,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y make
 
       - name: Build & Tag (CI Mode)
-        run: make -j 2 ci
+        run: make ci
 
       - name: Security Scan (Gemini CLI)
         uses: aquasecurity/trivy-action@master
