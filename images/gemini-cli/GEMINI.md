@@ -37,12 +37,7 @@ bin/gemini-docker --debug
 ### The "Input Lag" Issue
 *   **Symptom:** Severe latency when typing in the interactive chat.
 *   **Cause:** Large host configuration folder (`~/.gemini`) causing slow synchronous I/O.
-*   **Fix:** Clean the host configuration folder. *Note: Alpine was ruled out; Debian is preferred.*
-
-### Session Sharing "Shrinkage"
-*   **Symptom:** When a remote (mobile) user connects, the desktop terminal window suddenly shrinks or shows dots around the borders.
-*   **Cause:** `tmux` is configured with `aggressive-resize on`. It resizes the shared session to fit the *smallest* active screen (the phone) so the mobile user can see everything.
-*   **Status:** **By Design.** Do not attempt to fix this unless you want to break the mobile experience.
+*   **Fix:** Clean the host configuration folder.
 
 ### Permission Architecture
 *   **Concept:** The container starts as `root`, creates a user matching `DEFAULT_UID` (from host), fixes ownership of `/home/gemini`, and drops privileges via `gosu`.
