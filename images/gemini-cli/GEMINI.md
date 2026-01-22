@@ -11,6 +11,7 @@ A Debian-based Docker image wrapping the `@google/gemini-cli`. It focuses on sea
 | :--- | :--- |
 | `Dockerfile` | **The Environment.** Node.js 20 (Bookworm), `gosu`, and the CLI tool. |
 | `docker-entrypoint.sh` | **The Logic.** Runtime script that fixes permissions and switches user via `gosu`. |
+| `index.html` | **The UI.** Custom ttyd template for mobile-friendly remote access (keyboard handling). |
 | `Makefile` | **The Builder.** Local build commands (`build`, `rebuild`) for this image. |
 | `adr/` | **The Decisions.** Records explaining Debian vs Alpine, `gosu` usage, etc. |
 
@@ -37,6 +38,11 @@ bin/gemini-docker --debug
 *   **Symptom:** Severe latency when typing in the interactive chat.
 *   **Cause:** Large host configuration folder (`~/.gemini`) causing slow synchronous I/O.
 *   **Fix:** Clean the host configuration folder. *Note: Alpine was ruled out; Debian is preferred.*
+
+### Session Sharing "Shrinkage"
+*   **Symptom:** When a remote (mobile) user connects, the desktop terminal window suddenly shrinks or shows dots around the borders.
+*   **Cause:** `tmux` is configured with `aggressive-resize on`. It resizes the shared session to fit the *smallest* active screen (the phone) so the mobile user can see everything.
+*   **Status:** **By Design.** Do not attempt to fix this unless you want to break the mobile experience.
 
 ### Permission Architecture
 *   **Concept:** The container starts as `root`, creates a user matching `DEFAULT_UID` (from host), fixes ownership of `/home/gemini`, and drops privileges via `gosu`.

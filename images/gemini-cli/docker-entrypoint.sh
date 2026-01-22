@@ -63,14 +63,6 @@ if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
     # --- Session Mirroring (Tmux) ---
     echo ">> Starting Shared Session (Tmux)..."
     
-    # Configure Tmux for better UX (Mouse Scrolling + History)
-    cat <<EOT > "$HOME/.tmux.conf"
-set -g mouse on
-set -g history-limit 50000
-set -g default-terminal "screen-256color"
-EOT
-    chown "$UID:$GID" "$HOME/.tmux.conf"
-    
     # 1. Create a DETACHED tmux session named 'gemini' running the user's command
     # We must run this as the user so they own the session socket
     gosu "$UID:$GID" tmux new-session -d -s gemini "$@"
