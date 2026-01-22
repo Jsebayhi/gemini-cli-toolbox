@@ -114,14 +114,14 @@ PROJECT_NAME=$(basename "$PROJECT_DIR")
 
 # 2.2 Resolve Image Name (Local vs Remote)
 if [ "$VARIANT" == "full" ]; then
-    LOCAL_TAG="gemini-toolbox/cli-full:latest"
-    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-toolbox:latest-full"
+    LOCAL_TAG="gemini-cli-toolbox/cli-full:latest"
+    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-full"
 elif [ "$VARIANT" == "preview" ]; then
-    LOCAL_TAG="gemini-toolbox/cli-preview:latest"
-    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-toolbox:latest-preview"
+    LOCAL_TAG="gemini-cli-toolbox/cli-preview:latest"
+    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-preview"
 else
-    LOCAL_TAG="gemini-toolbox/cli:latest"
-    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-toolbox:latest-stable"
+    LOCAL_TAG="gemini-cli-toolbox/cli:latest"
+    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-stable"
 fi
 
 # Check if local image exists

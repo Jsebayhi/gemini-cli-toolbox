@@ -9,7 +9,7 @@ FROM golang:1.24-bookworm AS golang
 FROM maven:3.9.6-eclipse-temurin-17 AS maven
 
 # --- Stage 2: Build the Stack ---
-FROM gemini-toolbox/base:latest
+FROM gemini-cli-toolbox/base:latest
 
 # 1. Setup Directories
 RUN mkdir -p /opt/sdks/java /opt/sdks/go /opt/sdks/maven

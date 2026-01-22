@@ -1,9 +1,9 @@
-# Project Context: Dockerized CLI Toolbox
+# Project Context: Gemini CLI Toolbox
 
 This document provides high-level operational context for AI agents working on the repository as a whole.
 
 ## 1. Project Overview
-A modular "Toolbox" repository containing multiple self-contained Dockerized CLI tools. Each tool resides in `images/<tool-name>` and manages its own lifecycle.
+A modular "Gemini CLI Toolbox" repository containing multiple self-contained Dockerized CLI tools. Each tool resides in `images/<tool-name>` and manages its own lifecycle.
 
 ## 2. Repository Structure
 

@@ -31,7 +31,7 @@ jobs:
       - name: Security Scan (Gemini CLI)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'gemini-toolbox/cli:latest'
+          image-ref: 'gemini-cli-toolbox/cli:latest'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -40,7 +40,7 @@ jobs:
       - name: Security Scan (Gemini Preview)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'gemini-toolbox/cli-preview:latest'
+          image-ref: 'gemini-cli-toolbox/cli-preview:latest'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -49,7 +49,7 @@ jobs:
       - name: Security Scan (Gemini Full)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'gemini-toolbox/cli-full:latest'
+          image-ref: 'gemini-cli-toolbox/cli-full:latest'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -62,39 +62,50 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-      - name: Publish to Docker Hub
+      - name: Publish to Docker Hub (New Repo)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-toolbox"
+          REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
           
           # --- Stable ---
           # Tags: :latest-stable, :X.Y.Z-stable
-          docker tag gemini-toolbox/cli:latest $REPO:latest-stable
+          docker tag gemini-cli-toolbox/cli:latest $REPO:latest-stable
           docker push $REPO:latest-stable
           
-          VERSION=$(docker run --rm --entrypoint="" gemini-toolbox/cli:latest gemini --version | tr -d '\r')
-          docker tag gemini-toolbox/cli:latest $REPO:$VERSION-stable
+          VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:latest gemini --version | tr -d '\r')
+          docker tag gemini-cli-toolbox/cli:latest $REPO:$VERSION-stable
           docker push $REPO:$VERSION-stable
 
           # --- Preview ---
           # Tags: :latest-preview, :X.Y.Z-preview
-          docker tag gemini-toolbox/cli-preview:latest $REPO:latest-preview
+          docker tag gemini-cli-toolbox/cli-preview:latest $REPO:latest-preview
           docker push $REPO:latest-preview
           
-          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-toolbox/cli-preview:latest gemini --version | tr -d '\r')
-          docker tag gemini-toolbox/cli-preview:latest $REPO:$PREVIEW_VER-preview
+          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:latest gemini --version | tr -d '\r')
+          docker tag gemini-cli-toolbox/cli-preview:latest $REPO:$PREVIEW_VER-preview
           docker push $REPO:$PREVIEW_VER-preview
 
           # --- Full ---
           # Tags: :latest-full, :X.Y.Z-full
-          docker tag gemini-toolbox/cli-full:latest $REPO:latest-full
+          docker tag gemini-cli-toolbox/cli-full:latest $REPO:latest-full
           docker push $REPO:latest-full
           
-          FULL_VER=$(docker run --rm --entrypoint="" gemini-toolbox/cli-full:latest gemini --version | tr -d '\r')
-          docker tag gemini-toolbox/cli-full:latest $REPO:$FULL_VER-full
+          FULL_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-full:latest gemini --version | tr -d '\r')
+          docker tag gemini-cli-toolbox/cli-full:latest $REPO:$FULL_VER-full
           docker push $REPO:$FULL_VER-full
 
-      - name: Update Docker Hub Description
+      - name: Update Docker Hub Description (New Repo)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
+          short-description: "A zero-config, secure sandbox for Google Gemini CLI with VS Code integration."
+          readme-filepath: ./README.md
+
+      - name: Update Docker Hub Description (Old Repo - Legacy)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peter-evans/dockerhub-description@v4
         continue-on-error: true
@@ -102,5 +113,5 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-toolbox
-          short-description: "A zero-config, secure sandbox for Google Gemini CLI with VS Code integration."
-          readme-filepath: ./README.md
+          short-description: "MOVED -> jsebayhi/gemini-cli-toolbox"
+          readme-filepath: ./README_LEGACY.md

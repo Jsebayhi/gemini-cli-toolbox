@@ -1,4 +1,4 @@
-IMAGE_NAME := gemini-toolbox/cli
+IMAGE_NAME := gemini-cli-toolbox/cli
 IMAGE_TAG := latest
 
 # Set 'help' as the default target
@@ -7,7 +7,7 @@ IMAGE_TAG := latest
 .PHONY: help build rebuild
 
 help:
-	@echo "Gemini CLI Docker Toolbox"
+	@echo "Gemini CLI Toolbox"
 	@echo "========================="
 	@echo "  make build    : Build the Docker image (cached)"
 	@echo "  make rebuild  : Force rebuild without cache (updates CLI)"

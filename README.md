@@ -1,9 +1,9 @@
-# Gemini CLI Docker
+# Gemini CLI Toolbox
 
-[![CI](https://github.com/Jsebayhi/gemini-cli-docker/actions/workflows/ci.yml/badge.svg)](https://github.com/Jsebayhi/gemini-cli-docker/actions)
-[![Docker Pulls](https://img.shields.io/docker/pulls/jsebayhi/gemini-toolbox)](https://hub.docker.com/r/jsebayhi/gemini-toolbox)
+[![CI](https://github.com/Jsebayhi/gemini-cli-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/Jsebayhi/gemini-cli-toolbox/actions)
+[![Docker Pulls](https://img.shields.io/docker/pulls/jsebayhi/gemini-cli-toolbox)](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)
 
-**GitHub Repository:** [Jsebayhi/gemini-cli-docker](https://github.com/Jsebayhi/gemini-cli-docker) | **Docker Hub:** [jsebayhi/gemini-toolbox](https://hub.docker.com/r/jsebayhi/gemini-toolbox)
+**GitHub Repository:** [Jsebayhi/gemini-cli-toolbox](https://github.com/Jsebayhi/gemini-cli-toolbox) | **Docker Hub:** [jsebayhi/gemini-cli-toolbox](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)
 
 > **Securely sandbox the Gemini CLI** to execute scripts and commands without risking host integrity. Manage multiple accounts on one machine with full **VS Code Companion Mode** support. Includes shared dependency caches for instant project compilation (Java, Go, Node).
 > **zero-config, secure sandbox** for safe experimentation with **Native Remote Access (Experimental)** via Tailscale.
@@ -26,8 +26,8 @@ The `gemini-docker` script handles the complex Docker flags (networking, mounts,
 
 ```bash
 # Clone the repo (or just download the script)
-git clone https://github.com/Jsebayhi/gemini-cli-docker.git
-cd gemini-cli-docker
+git clone https://github.com/Jsebayhi/gemini-cli-toolbox.git
+cd gemini-cli-toolbox
 
 # Add to your PATH (Optional)
 ln -s $(pwd)/bin/gemini-docker ~/.local/bin/gemini-docker
@@ -161,7 +161,7 @@ docker run --rm -it \
   --env TERM_PROGRAM=vscode \
   --volume "$PWD:$PWD" \
   --workdir "$PWD" \
-  jsebayhi/gemini-toolbox:latest-stable \
+  jsebayhi/gemini-cli-toolbox:latest-stable \
   "Explain this code"
 ```
 

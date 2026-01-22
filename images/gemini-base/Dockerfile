@@ -1,4 +1,4 @@
-# Base Image for Gemini Toolbox
+# Base Image for Gemini CLI Toolbox
 # Contains: Python (Latest Stable), Node.js 20, OS Security Updates, Gosu, Git
 
 # --- Stage 1: Source Node.js ---

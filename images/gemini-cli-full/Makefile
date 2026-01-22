@@ -1,4 +1,4 @@
-IMAGE_NAME := gemini-toolbox/cli-full
+IMAGE_NAME := gemini-cli-toolbox/cli-full
 IMAGE_TAG := latest
 
 .DEFAULT_GOAL := help
@@ -6,7 +6,7 @@ IMAGE_TAG := latest
 .PHONY: help build rebuild pre-build scan
 
 help:
-	@echo "Gemini CLI Full (Stack) Docker Toolbox"
+	@echo "Gemini CLI Full (Stack) Toolbox"
 	@echo "======================================"
 	@echo "  make build    : Build the Docker image (cached)"
 	@echo "  make rebuild  : Force rebuild without cache"
