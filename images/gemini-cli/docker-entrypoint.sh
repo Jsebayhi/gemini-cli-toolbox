@@ -28,9 +28,27 @@ if ! getent passwd "$UID" >/dev/null 2>&1; then
     useradd -u "$UID" -g "$GID" -m -d "$HOME" -s /bin/bash "$USER" >&3 2>&4
 fi
 
+# Identify the actual username for the UID (in case it pre-existed)
+TARGET_USER=$(getent passwd "$UID" | cut -d: -f1)
+
 # Fix permissions
 mkdir -p "$HOME"
 chown -R "$UID:$GID" "$HOME"
+
+# --- Docker-out-of-Docker Setup ---
+if [ -n "${HOST_DOCKER_GID:-}" ] && [ -S "/var/run/docker.sock" ]; then
+    if [ "$DEBUG" = "true" ]; then
+        echo ">> Setting up Docker Access (GID: $HOST_DOCKER_GID)..." >&3
+    fi
+
+    # Check if a group with this GID already exists
+    if ! getent group "$HOST_DOCKER_GID" >/dev/null 2>&1; then
+        groupadd -g "$HOST_DOCKER_GID" host-docker >&3 2>&4
+    fi
+    
+    # Add user to the group
+    usermod -aG "$HOST_DOCKER_GID" "$TARGET_USER" >&3 2>&4
+fi
 
 # --- Remote Access (Tailscale) ---
 if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
@@ -65,20 +83,20 @@ if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
     
     # 1. Create a DETACHED tmux session named 'gemini' running the user's command
     # We must run this as the user so they own the session socket
-    gosu "$UID:$GID" tmux new-session -d -s gemini "$@"
+    gosu "$TARGET_USER" tmux new-session -d -s gemini "$@"
     
     # 2. Start Web Terminal (ttyd) in BACKGROUND
     # It attaches to the 'gemini' session
     # -p 3000: Port
     # -W: Writable
-    ttyd -p 3000 -W gosu "$UID:$GID" tmux attach -t gemini > /tmp/ttyd.log 2>&1 &
+    ttyd -p 3000 -W gosu "$TARGET_USER" tmux attach -t gemini > /tmp/ttyd.log 2>&1 &
     
     echo ">> Web Terminal active at http://<IP>:3000"
     echo ">> Attaching local session..."
     
     # 3. Attach the Foreground (Desktop) to the same session
     # We DO NOT use 'exec' here so we can catch the exit and clean up
-    gosu "$UID:$GID" tmux attach -t gemini
+    gosu "$TARGET_USER" tmux attach -t gemini
     
     # Cleanup on exit
     echo ">> Session ended. Stopping remote services..."
@@ -91,4 +109,4 @@ fi
 export HOME
 
 # Execute (Standard Mode)
-exec gosu "$UID:$GID" "$@"
+exec gosu "$TARGET_USER" "$@"

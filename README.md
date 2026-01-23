@@ -17,6 +17,7 @@
 *   ⚡ **VS Code Integration:** Connects natively to your host IDE. Open files, diff changes, and use the companion extension as if the CLI were installed locally.
 *   🚀 **Zero Config:** No Node.js, Python, or SDK setup required on your host. Just run the script.
 *   📦 **Persistent Caching:** Mounts your host's `~/.m2`, `~/.gradle`, and `~/.npm` caches so builds inside the container are instant.
+*   🐳 **Docker Integration:** Run `docker` and `docker-compose` commands directly from the agent. Supports building images and running databases.
 *   🔑 **Multi-Account:** Easily switch between different `.gemini` configurations for personal and work accounts.
 
 ## Quick Start
@@ -64,6 +65,32 @@ This Docker wrapper supports the **Gemini CLI Companion** extension natively.
 1.  Open VS Code in your project folder.
 2.  Run `gemini-toolbox -i "/ide status"` from the Integrated Terminal.
 3.  **It just works.** The container connects to your host IDE to read context and diff files.
+
+### 🐳 Docker-out-of-Docker
+The container connects to your **host's Docker Daemon** (via `/var/run/docker.sock`). This gives the agent the power to:
+*   Start databases (e.g., `docker run -d -p 5432:5432 postgres`).
+*   Build images (e.g., `docker build .`).
+*   Run integration tests using `docker-compose`.
+
+#### ✅ Benefits: Shared Cache
+Because it talks to your host daemon, the agent **shares your host's image library**.
+*   **Instant Builds:** If you have already built an image locally, the agent can use it immediately.
+*   **Bandwidth Saver:** It doesn't need to re-download `postgres` or `node` images inside the container.
+
+#### 🛡️ Sandbox Opt-Out
+By default, Docker support is **Enabled**. This effectively gives the agent root-level control over your host's Docker environment.
+If you are running untrusted scripts or want a strict sandbox, you can disable this:
+
+```bash
+# Disable Docker integration (Strict Sandbox Mode)
+gemini-toolbox --no-docker
+```
+
+#### ⚠️ Limitation: Volume Mounts
+The agent is running *inside* a container, but it sends commands to the *host*.
+*   **Relative Paths Work:** `docker run -v ./data:/data ...` works because we mirror the project path.
+*   **Absolute Paths Fail:** `docker run -v /home/gemini/cache:/cache ...` will fail because `/home/gemini` likely doesn't exist on your host.
+*   **Tip:** Always use relative paths (`./`) in your `docker-compose.yml` files.
 
 ### 📱 Remote Access (Experimental)
 Access your Gemini CLI session from your phone or tablet using integrated **Tailscale VPN** support. This works with zero host configuration, even if you are behind a corporate VPN.

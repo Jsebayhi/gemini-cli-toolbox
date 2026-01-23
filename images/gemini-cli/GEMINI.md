@@ -42,3 +42,11 @@ bin/gemini-toolbox --debug
 ### Permission Architecture
 *   **Concept:** The container starts as `root`, creates a user matching `DEFAULT_UID` (from host), fixes ownership of `/home/gemini`, and drops privileges via `gosu`.
 *   **Rule:** Never remove `gosu` or the entrypoint logic. It is the backbone of the "write-access" feature.
+
+### Docker-out-of-Docker (DooD)
+*   **Concept:** The container mounts `/var/run/docker.sock` from the host and installs the Docker CLI.
+*   **Benefit:** You can run `docker build`, `docker run`, or `docker-compose up` from within the agent.
+*   **Gotcha:** You are talking to the **Host's Daemon**.
+    *   `docker ps` shows host containers.
+    *   `docker system prune` cleans the **Host**.
+    *   Ports published (`-p 8080:80`) bind to the **Host's** localhost.
