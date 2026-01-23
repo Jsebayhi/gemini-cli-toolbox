@@ -115,6 +115,14 @@ fi
 # Extract project name for prettier mount point
 PROJECT_NAME=$(basename "$PROJECT_DIR")
 
+# Generate readable unique container name
+CONTAINER_NAME_ARG=()
+if [ -f /proc/sys/kernel/random/uuid ]; then
+    GEN_UUID=$(head -c 36 /proc/sys/kernel/random/uuid | cut -c1-8)
+    CONTAINER_NAME="${PROJECT_NAME}-${GEN_UUID}"
+    CONTAINER_NAME_ARG=("--name" "${CONTAINER_NAME}")
+fi
+
 # 2.2 Resolve Image Name (Local vs Remote)
 if [ "$VARIANT" == "full" ]; then
     LOCAL_TAG="gemini-cli-toolbox/cli-full:latest"
@@ -188,7 +196,7 @@ if [ "$REMOTE_MODE" = true ]; then
 fi
 
 DOCKER_CMD=(
-  docker run --rm -it
+  docker run --rm -it "${CONTAINER_NAME_ARG[@]}"
   $NETWORK_MODE
   # Path Mirroring for IDE Security Check:
   # We mount the project at the EXACT SAME path as the host (not /home/gemini/workspace).
