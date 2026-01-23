@@ -5,20 +5,17 @@
 
 **GitHub Repository:** [Jsebayhi/gemini-cli-toolbox](https://github.com/Jsebayhi/gemini-cli-toolbox) | **Docker Hub:** [jsebayhi/gemini-cli-toolbox](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)
 
-> **Securely sandbox the Gemini CLI** to execute scripts and commands without risking host integrity. Manage multiple accounts on one machine with full **VS Code Companion Mode** support. Includes shared dependency caches for instant project compilation (Java, Go, Node).
-> **zero-config, secure sandbox** for safe experimentation with **Native Remote Access (Experimental)** via Tailscale.
+> **A zero-config, secure sandbox for the Gemini CLI.** Keep your AI agent fully integrated with your development environment while protecting your host.
+>
+> *   **🚀 Zero Config:** No Node.js, Python, or SDK setup required on your host. Just run the script.
+> *   **🛡️ Secure Sandbox:** Just as the agent cannot edit files outside your project, any command/script run by the agent is trapped in the container, guaranteeing no side effects outside your project folder.
+> *   **💻 VS Code Companion:** Native integration with your host IDE for context and diffs.
+> *   **🐳 Docker-Powered:** Extends the agent to any language. Build and test projects (Rust, PHP) using your host's Docker images, saving bandwidth and setup time.
+> *   **📦 Persistent Caching:** Mounts your host's `~/.m2`, `~/.gradle`, and `~/.npm` caches for instant builds.
+> *   **📱 Remote Access:** Code from your phone via Tailscale VPN (Experimental).
+> *   **🔑 Multi-Profile:** Switch seamlessly between personal, work, and bot accounts using different config dirs.
 
 **📅 Auto-Updates:** Images are rebuilt automatically every Friday morning (UTC) to include the latest `@google/gemini-cli` release.
-
-## Why use this?
-
-*   🔒 **Sandboxed & Secure:** Don't let AI-generated scripts run directly on your OS. Isolate them in a disposable container.
-*   📱 **Remote Access (Experimental):** Code from your phone or tablet anywhere. Integrated VPN support lets you safely access your dev environment on the go.
-*   ⚡ **VS Code Integration:** Connects natively to your host IDE. Open files, diff changes, and use the companion extension as if the CLI were installed locally.
-*   🚀 **Zero Config:** No Node.js, Python, or SDK setup required on your host. Just run the script.
-*   📦 **Persistent Caching:** Mounts your host's `~/.m2`, `~/.gradle`, and `~/.npm` caches so builds inside the container are instant.
-*   🐳 **Docker Integration:** Run `docker` and `docker-compose` commands directly from the agent. Supports building images and running databases.
-*   🔑 **Multi-Account:** Easily switch between different `.gemini` configurations for personal and work accounts.
 
 ## Quick Start
 
