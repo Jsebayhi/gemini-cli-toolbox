@@ -229,6 +229,8 @@ if [ "$ENABLE_DOCKER" = true ]; then
       --volume "/var/run/docker.sock:/var/run/docker.sock"
       --env HOST_DOCKER_GID="${HOST_DOCKER_GID}"
     )
+else
+    echo ">> Warning: Docker-out-of-Docker integration is disabled (--no-docker)."
 fi
 
 # Conditionally Add IDE Integration
