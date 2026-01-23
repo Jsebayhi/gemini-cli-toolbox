@@ -102,7 +102,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
-          short-description: "A zero-config, secure sandbox for Google Gemini CLI with VS Code integration."
+          short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion."
           readme-filepath: ./README.md
 
       - name: Update Docker Hub Description (Old Repo - Legacy)
