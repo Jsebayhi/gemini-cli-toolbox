@@ -126,9 +126,14 @@ ci-full: rebuild-stack
 	@echo ">> CI: Building & Tagging gemini-cli-full..."
 	$(MAKE) -C images/gemini-cli-full ci
 
+.PHONY: ci-hub
+ci-hub:
+	@echo ">> CI: Building gemini-hub..."
+	$(MAKE) -C images/gemini-hub ci
+
 # Main CI Entrypoint
 .PHONY: ci
-ci: ci-cli ci-preview ci-full
+ci: ci-cli ci-preview ci-full ci-hub
 
 # Security Scan (Delegate to components)
 .PHONY: scan

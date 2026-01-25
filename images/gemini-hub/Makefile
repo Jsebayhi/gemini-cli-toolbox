@@ -9,3 +9,5 @@ build:
 
 rebuild:
 	docker build --no-cache -t $(IMAGE_NAME):latest -f $(DOCKER_FILE) $(CONTEXT)
+
+ci: rebuild
