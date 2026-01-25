@@ -34,6 +34,7 @@ show_help() {
     echo ""
     echo "Commands:"
     echo "  update               Force update the Docker image from the registry"
+    echo "  stop-hub             Stop the background Gemini Hub service"
     echo ""
     echo "Examples:"
     echo "  gemini-toolbox chat"
@@ -76,6 +77,7 @@ while [[ $# -gt 0 ]]; do
         ;;
     --help)        show_help; exit 0 ;;
     update)        FORCE_UPDATE=true; shift ;;
+    stop-hub)      STOP_HUB=true; shift ;;
     --)            shift; ARGS+=("$@"); break ;;
     *)             ARGS+=("$1");       shift ;;
   esac
@@ -115,13 +117,24 @@ fi
 # Extract project name for prettier mount point
 PROJECT_NAME=$(basename "$PROJECT_DIR")
 
+# Determine Session Type for Remote Access / Analytics
+SESSION_TYPE="geminicli"
+if [ "$USE_BASH" = true ]; then
+    SESSION_TYPE="bash"
+fi
+
 # Generate readable unique container name
-CONTAINER_NAME_ARG=()
+# Format: {PROJECT}-{TYPE}-{UUID}
+# We pass this ID to the container so it can use it for the Tailscale Hostname
+# ensuring 1:1 mapping between Container Name and VPN Name.
 if [ -f /proc/sys/kernel/random/uuid ]; then
     GEN_UUID=$(head -c 36 /proc/sys/kernel/random/uuid | cut -c1-8)
-    CONTAINER_NAME="${PROJECT_NAME}-${GEN_UUID}"
-    CONTAINER_NAME_ARG=("--name" "${CONTAINER_NAME}")
 fi
+# Ensure UUID is set even if /proc is missing (unlikely on Linux)
+GEN_UUID="${GEN_UUID:-$(date +%s)}"
+
+GEMINI_SESSION_ID="gem-${PROJECT_NAME}-${SESSION_TYPE}-${GEN_UUID}"
+CONTAINER_NAME_ARG=("--name" "${GEMINI_SESSION_ID}")
 
 # 2.2 Resolve Image Name (Local vs Remote)
 if [ "$VARIANT" == "full" ]; then
@@ -155,7 +168,27 @@ if [ "$FORCE_UPDATE" = true ]; then
     exit $?
 fi
 
-# 2.4 Stale Image Warning
+# 2.4 Handle Hub Stop
+if [ "$STOP_HUB" = true ]; then
+    # Resolve real path in case this script is a symlink
+    REAL_SOURCE="${BASH_SOURCE[0]}"
+    while [ -h "$REAL_SOURCE" ]; do
+        DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+        REAL_SOURCE="$(readlink "$REAL_SOURCE")"
+        [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
+    done
+    SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+    
+    HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
+    if [ -x "$HUB_SCRIPT" ]; then
+         exec "$HUB_SCRIPT" stop
+    else
+         echo "Error: gemini-hub script not found."
+         exit 1
+    fi
+fi
+
+# 2.5 Stale Image Warning
 # Only if using remote image, it is a 'latest' tag, AND it is > 7 days old
 if [[ "$IMAGE_NAME" == *"$REMOTE_TAG"* ]] && [[ "$IMAGE_NAME" == *"latest"* ]] && docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
     CREATED=$(docker inspect --format='{{.Created}}' "$IMAGE_NAME")
@@ -186,6 +219,38 @@ if [ "$REMOTE_MODE" = true ]; then
         exit 1
     fi
     echo ">> Remote Mode detected. Isolating network stack..."
+
+    # Auto-start Gemini Hub (for mobile discovery)
+    HUB_NAME="gemini-hub-service"
+    # Check if container is running by looking for non-empty ID output
+    # Use anchor ^...$ to match exact name
+    if [ -z "$(docker ps -q -f name="^/${HUB_NAME}$")" ]; then
+        # Resolve real path in case this script is a symlink
+        REAL_SOURCE="${BASH_SOURCE[0]}"
+        while [ -h "$REAL_SOURCE" ]; do
+            DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+            REAL_SOURCE="$(readlink "$REAL_SOURCE")"
+            [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
+        done
+        SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+        
+        HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
+        echo "DEBUG: HUB_SCRIPT is at ${HUB_SCRIPT}"
+        if [ -x "$HUB_SCRIPT" ]; then
+             echo ">> Auto-starting Gemini Hub..."
+             echo "   (Stop with: gemini-hub stop)"
+             if "$HUB_SCRIPT" -d --key "$TAILSCALE_KEY" > /tmp/gemini-hub.log 2>&1; then
+                 echo ">> Hub started."
+             else
+                 echo ">> Warning: Failed to start Hub. Check /tmp/gemini-hub.log"
+             fi
+        else
+             echo ">> Warning: gemini-hub script not found at $HUB_SCRIPT"
+        fi
+    else
+         echo ">> Gemini Hub is active at http://localhost:8888"
+    fi
+
     NETWORK_MODE="--network=bridge"
     ENABLE_VSCODE_INTEGRATION=false
     EXTRA_DOCKER_ARGS+=(
@@ -213,6 +278,9 @@ DOCKER_CMD=(
   --volume "${HOME}/.cache/go-build:/home/gemini/.cache/go-build"
   --env DEFAULT_UID="$(id -u)"
   --env DEFAULT_GID="$(id -g)"
+  --env GEMINI_SESSION_ID="${GEMINI_SESSION_ID}"
+  --env GEMINI_PROJECT_NAME="${PROJECT_NAME}"
+  --env GEMINI_SESSION_TYPE="${SESSION_TYPE}"
   --env TERM
   --env LANG
   --env LC_ALL

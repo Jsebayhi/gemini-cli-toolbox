@@ -94,6 +94,12 @@ jobs:
           docker tag gemini-cli-toolbox/cli-full:latest $REPO:$FULL_VER-full
           docker push $REPO:$FULL_VER-full
 
+          # --- Hub ---
+          # Tags: :latest-hub, :X.Y.Z-hub (Hub versioning is independent, but we'll use a date or static version for now or just latest)
+          # For simplicity and since it's an internal tool, we just push latest-hub for now.
+          docker tag gemini-cli-toolbox/hub:latest $REPO:latest-hub
+          docker push $REPO:latest-hub
+
       - name: Update Docker Hub Description (New Repo)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peter-evans/dockerhub-description@v4

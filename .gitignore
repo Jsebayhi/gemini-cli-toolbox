@@ -1,1 +1,18 @@
-/.idea/
+# IntelliJ
+.idea/
+*.iml
+
+# Node
+node_modules/
+npm-debug.log
+
+# Mac
+.DS_Store
+
+# Build Artifacts (Entrypoints copied by Makefile)
+images/gemini-cli-full/docker-entrypoint.sh
+images/gemini-cli-preview/docker-entrypoint.sh
+
+# Temporary Files
+*.log
+tmp/

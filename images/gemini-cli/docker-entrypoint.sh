@@ -62,21 +62,27 @@ if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
     sleep 2
     
     # Generate meaningful hostname from project directory
-    # 1. Get basename of workspace (current dir)
-    # 2. Lowercase
-    # 3. Replace non-alphanumeric with hyphens
-    # 4. Limit length to avoid errors
-    PROJECT_NAME=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-')
-    
-    # 5. Append unique suffix (first 4 chars of container hostname/id) to handle multiple instances
-    UNIQUE_SUFFIX=$(hostname | cut -c1-4)
-    TS_HOSTNAME="gemini-${PROJECT_NAME}-${UNIQUE_SUFFIX}"
+    if [ -n "${GEMINI_SESSION_ID:-}" ]; then
+        # Preferred: Use the ID passed from the toolbox script (Guaranteed Consistency)
+        # Format: gem-{PROJECT}-{TYPE}-{UUID}
+        TS_HOSTNAME="${GEMINI_SESSION_ID}"
+    else
+        # Fallback: Legacy generation (for manual docker run usage)
+        RAW_PROJ="${GEMINI_PROJECT_NAME:-$(basename "$(pwd)")}"
+        RAW_TYPE="${GEMINI_SESSION_TYPE:-unknown}"
+        
+        CLEAN_PROJ=$(echo "$RAW_PROJ" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
+        CLEAN_TYPE=$(echo "$RAW_TYPE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
+        UNIQUE_SUFFIX=$(hostname | cut -c1-4)
+        
+        TS_HOSTNAME="gem-${CLEAN_PROJ}-${CLEAN_TYPE}-${UNIQUE_SUFFIX}"
+    fi
     
     # Authenticate and bring up the node
     # Removed --ephemeral as it caused issues
+    echo ">> Registering VPN Node: ${TS_HOSTNAME}"
     tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="${TS_HOSTNAME}"
-    echo ">> Remote Access Active. Hostname: ${TS_HOSTNAME}"
-    echo ">> Find your IP in the Tailscale dashboard."
+    echo ">> Remote Access Active."
     
     # --- Tmux Configuration ---
     # Enable mouse support to allow scrolling in ttyd/browser

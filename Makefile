@@ -43,9 +43,14 @@ build-cli-full: build-stack
 	@echo ">> Building gemini-cli-full..."
 	$(MAKE) -C images/gemini-cli-full build
 
+.PHONY: build-hub
+build-hub:
+	@echo ">> Building gemini-hub..."
+	$(MAKE) -C images/gemini-hub build
+
 # Main Build Entrypoint
 .PHONY: build
-build: build-cli build-cli-preview build-cli-full
+build: build-cli build-cli-preview build-cli-full build-hub
 
 # --- Rebuild Targets (No Cache) ---
 
@@ -74,9 +79,14 @@ rebuild-cli-full: rebuild-stack
 	@echo ">> Rebuilding gemini-cli-full..."
 	$(MAKE) -C images/gemini-cli-full rebuild
 
+.PHONY: rebuild-hub
+rebuild-hub:
+	@echo ">> Rebuilding gemini-hub..."
+	$(MAKE) -C images/gemini-hub rebuild
+
 # Main Rebuild Entrypoint
 .PHONY: rebuild
-rebuild: rebuild-cli rebuild-cli-preview rebuild-cli-full
+rebuild: rebuild-cli rebuild-cli-preview rebuild-cli-full rebuild-hub
 
 # --- Fast Update Targets (App Layer Only) ---
 

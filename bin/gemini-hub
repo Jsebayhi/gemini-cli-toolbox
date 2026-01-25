@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+
+# Configuration
+DOCKER_HUB_USER="${DOCKER_HUB_USER:-jsebayhi}"
+LOCAL_TAG="gemini-cli-toolbox/hub:latest"
+REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-hub"
+CONTAINER_NAME="gemini-hub-service"
+PORT="8888"
+
+# Commands
+if [[ "$1" == "stop" ]]; then
+    echo ">> Stopping Gemini Hub..."
+    docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || echo ">> Hub is not running."
+    exit 0
+fi
+
+# Auth Key
+AUTH_KEY="${GEMINI_REMOTE_KEY:-}"
+
+# Parse Args
+MODE="-it"
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -d|--detach) MODE="-d"; shift ;;
+    --key)       AUTH_KEY="$2"; shift; shift ;;
+    *)           shift ;; # Ignore unknown args
+  esac
+done
+
+if [ -z "$AUTH_KEY" ]; then
+    echo "Error: TAILSCALE_KEY is required for the Hub."
+    echo "Usage: gemini-hub --key tskey-auth-..."
+    exit 1
+fi
+
+# Resolve Image (Local vs Remote)
+if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
+    IMAGE_NAME="$LOCAL_TAG"
+else
+    # Fallback to remote image (Docker will auto-pull if missing)
+    IMAGE_NAME="$REMOTE_TAG"
+fi
+
+echo ">> Starting Gemini Hub on port $PORT..."
+echo ">> Access at http://localhost:$PORT (Desktop)"
+echo ">> Access at http://gemini-hub:8888 (Mobile VPN)"
+
+# Run Container
+# --rm: Clean up on exit
+# --net=host: STILL REQUIRED to bind to the host interface properly for VPN + Local access
+# --device /dev/net/tun: For VPN
+# --cap-add=NET_ADMIN: For VPN
+
+docker run --rm $MODE \
+    --name "$CONTAINER_NAME" \
+    --net=host \
+    --cap-add=NET_ADMIN \
+    --device /dev/net/tun \
+    --env TAILSCALE_AUTH_KEY="$AUTH_KEY" \
+    "$IMAGE_NAME"

@@ -92,19 +92,40 @@ The agent is running *inside* a container, but it sends commands to the *host*.
 ### 📱 Remote Access (Experimental)
 Access your Gemini CLI session from your phone or tablet using integrated **Tailscale VPN** support. This works with zero host configuration, even if you are behind a corporate VPN.
 
-1.  **Get a Key:** Go to [Tailscale Settings > Keys](https://login.tailscale.com/admin/settings/keys). Generate a **Reusable Auth Key**.
-2.  **Run:** Pass the key or set the environment variable.
-    ```bash
-    # Option 1: One-shot
-    gemini-toolbox --remote tskey-auth-xxxxxx
+#### 1. Start a Session
+Run the toolbox with the `--remote` flag and your Tailscale Auth Key.
+```bash
+# Option 1: One-shot
+gemini-toolbox --remote tskey-auth-xxxxxx
 
-    # Option 2: Environment Variable
-    export GEMINI_REMOTE_KEY="tskey-auth-xxxxxx"
-    gemini-toolbox --remote
-    ```
-3.  **Connect:** Open the **Tailscale App** on your phone. You will see a new device named `gemini-<project>-<id>`. Access it at `http://<IP>:3000`.
+# Option 2: Environment Variable
+export GEMINI_REMOTE_KEY="tskey-auth-xxxxxx"
+gemini-toolbox --remote
+```
 
-**✨ Real-time Mirroring:** Desktop and phone share the exact same session via `tmux`. What you type on one appears instantly on the other.
+This command will:
+1.  Start your Gemini CLI session (isolated on the VPN).
+    *   **Hostname:** `gem-{PROJECT}-{TYPE}-{ID}` (e.g., `gem-myapp-geminicli-a1b2`).
+2.  **Auto-Start the Gemini Hub** if it's not already running.
+
+#### 2. Connect via Gemini Hub
+The **Gemini Hub** is a mobile-optimized dashboard running on your machine.
+*   **On Mobile:** Open the URL shown in the terminal (e.g., `http://gemini-hub:8888`).
+*   **Features:**
+    *   **Search & Filter:** Quickly find projects by name or type (CLI vs Bash).
+    *   **One-Tap Connect:** Tap any card to open the remote terminal.
+    *   **Auto-Shutdown:** The Hub automatically stops after **60 seconds** of inactivity (no active sessions).
+
+#### Manual Control
+You can also control the Hub directly:
+
+```bash
+# Stop the Hub manually
+gemini-toolbox stop-hub
+
+# Start the Hub manually (requires key)
+bin/gemini-hub --key $GEMINI_REMOTE_KEY
+```
 
 > [!WARNING]
 > **VS Code Integration is disabled** when using Remote Access. This mode isolates the container's network stack for secure VPN connectivity, preventing it from talking to the host's IDE.
