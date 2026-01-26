@@ -18,6 +18,29 @@ if [ ! -d "$CONFIG_ROOT" ] && [ -d "${HOME}/.gemini-profiles" ]; then
     CONFIG_ROOT="${HOME}/.gemini-profiles"
 fi
 
+# Help Function
+show_help() {
+    echo "Usage: gemini-hub [OPTIONS] [COMMAND]"
+    echo ""
+    echo "A dashboard for discovering and connecting to active Gemini sessions via Tailscale."
+    echo ""
+    echo "Options:"
+    echo "  -d, --detach          Start the Hub in the background"
+    echo "  --key <key>           Tailscale Auth Key (Required if GEMINI_REMOTE_KEY is not set)"
+    echo "  --workspace <path>    Add a host directory to the list of scannable project roots"
+    echo "                        (Can be specified multiple times)"
+    echo "  --config-root <path>  Root directory containing configuration profiles"
+    echo "                        (Default: ~/.gemini/configs or ~/.gemini-profiles)"
+    echo "  -h, --help            Show this help message"
+    echo ""
+    echo "Commands:"
+    echo "  stop                  Stop the running Gemini Hub service"
+    echo ""
+    echo "Examples:"
+    echo "  gemini-hub --key tskey-auth-xxxx"
+    echo "  gemini-hub --workspace ~/projects --workspace /data/repos"
+}
+
 # Parse Args
 MODE="-it"
 while [[ $# -gt 0 ]]; do
@@ -26,18 +49,19 @@ while [[ $# -gt 0 ]]; do
     --key)       AUTH_KEY="$2"; shift; shift ;;
     --workspace) WORKSPACE_ROOTS+=("$2"); shift; shift ;;
     --config-root) CONFIG_ROOT="$2"; shift; shift ;;
+    -h|--help)   show_help; exit 0 ;;
     stop)
         echo ">> Stopping Gemini Hub..."
         docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || echo ">> Hub is not running."
         exit 0
         ;;
-    *)           shift ;; # Ignore unknown args
+    *)           echo "Error: Unknown argument '$1'"; show_help; exit 1 ;;
   esac
 done
 
 if [ -z "$AUTH_KEY" ]; then
     echo "Error: TAILSCALE_KEY is required for the Hub."
-    echo "Usage: gemini-hub --key tskey-auth-... [--workspace path] [--config-root path]"
+    echo "Run 'gemini-hub --help' for usage instructions."
     exit 1
 fi
 
