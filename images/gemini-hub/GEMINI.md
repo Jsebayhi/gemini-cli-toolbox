@@ -46,4 +46,12 @@ The Hub will automatically terminate after **60 seconds** of inactivity (when no
 
 ### Naming Constraint
 The Hub relies on the naming convention documented in the root `GEMINI.md`. It extracts project names and types by parsing hostnames from the right side, assuming the type segment (e.g., `geminicli`) contains no hyphens.
+
+### Profile-Specific Arguments (extra-args)
+Each configuration profile (subdirectory in `HOST_CONFIG_ROOT`) can contain a file named `extra-args`. If present, the Hub (via `gemini-toolbox`) will load these arguments as if they were passed to the CLI.
+
+*   **Semantics:** **Toolbox Arguments**. You can use any flag accepted by `gemini-toolbox` (e.g., `--full`, `--no-ide`, `--volume`, `--env`).
+*   **Format:** One argument per line is recommended.
+*   **Precedence:** Arguments in the file are applied *before* the CLI arguments (meaning CLI arguments can override profile defaults).
+*   **Location:** `${HOST_CONFIG_ROOT}/{profile_name}/extra-args`
 ```

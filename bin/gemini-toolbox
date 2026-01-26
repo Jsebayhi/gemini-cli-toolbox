@@ -44,6 +44,66 @@ show_help() {
     echo "  gemini-toolbox --config ~/.gemini-work -- --help"
 }
 
+# 0. Pre-scan for Config & Load Extra Args
+# We scan CLI args for --config to locate the profile directory.
+# Then we load 'extra-args' (if present) and prepend them to the argument list.
+# This allows profiles to define toolbox flags (like --full, --no-ide) in addition to docker args.
+# 0. Pre-scan for Config/Profile & Load Extra Args
+# We scan CLI args for --config or --profile to locate the directory.
+# --profile: Use directory as root, mount .gemini subdir (ENABLE_PROFILE_MODE=true)
+# --config: Use directory directly (ENABLE_PROFILE_MODE=false)
+TEMP_CONF="$HOST_CONF_DIR"
+ENABLE_PROFILE_MODE=false
+HAS_CONFIG=false
+HAS_PROFILE=false
+
+iter_args=("$@")
+for ((i=0; i<${#iter_args[@]}; i++)); do
+    case "${iter_args[i]}" in
+        --config)
+            TEMP_CONF="${iter_args[i+1]}"
+            ENABLE_PROFILE_MODE=false
+            HAS_CONFIG=true
+            ;;
+        --profile)
+            TEMP_CONF="${iter_args[i+1]}"
+            ENABLE_PROFILE_MODE=true
+            HAS_PROFILE=true
+            ;;
+    esac
+done
+
+# Guard against ambiguous usage
+if [ "$HAS_CONFIG" = true ] && [ "$HAS_PROFILE" = true ]; then
+    echo "Error: Cannot use both --config and --profile simultaneously." >&2
+    echo "Choose one: --config for simple directory mount, or --profile for nested workspace." >&2
+    exit 1
+fi
+
+# Resolve absolute path for check
+TEMP_CONF=$(realpath -m "$TEMP_CONF")
+FILE_ARGS=()
+
+if [ "$ENABLE_PROFILE_MODE" = true ] && [ -f "${TEMP_CONF}/extra-args" ]; then
+    echo ">> Loading profile args from ${TEMP_CONF}/extra-args"
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Trim leading whitespace
+        line="${line#"${line%%[![:space:]]*}"}"
+        # Ignore empty lines and comments
+        if [[ -n "$line" && ! "$line" =~ ^# ]]; then
+             # Use eval to properly parse quotes arguments (like shell would)
+             eval "PARTS=($line)"
+             FILE_ARGS+=("${PARTS[@]}")
+        fi
+    done < "${TEMP_CONF}/extra-args"
+fi
+
+# Combine: File Args first, then CLI args (so CLI overrides File)
+if [ ${#FILE_ARGS[@]} -gt 0 ]; then
+    # We must reset the positional parameters to the combined list
+    set -- "${FILE_ARGS[@]}" "$@"
+fi
+
 # 1. Parse Arguments
 ARGS=()
 REMOTE_MODE=false
@@ -58,6 +118,7 @@ while [[ $# -gt 0 ]]; do
     --no-ide)      ENABLE_VSCODE_INTEGRATION=false;   shift ;;
     --no-docker)   ENABLE_DOCKER=false;               shift ;;
     --config)      HOST_CONF_DIR="$2"; shift; shift ;;
+    --profile)     HOST_CONF_DIR="$2"; ENABLE_PROFILE_MODE=true; shift; shift ;;
     --project)     PROJECT_DIR="$2";   shift; shift ;;
     --bash)        USE_BASH=true;      shift ;;
     --detached)    DETACHED_MODE=true; shift ;;
@@ -76,7 +137,7 @@ while [[ $# -gt 0 ]]; do
         shift; shift 
         ;;
     -v|--volume)
-        EXTRA_MOUNTS+=("-v" "$2")
+        EXTRA_DOCKER_ARGS+=("--volume" "$2")
         shift; shift
         ;;
     --help)        show_help; exit 0 ;;
@@ -89,9 +150,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 # 2. Setup Directories
-# ... (rest of the directory setup logic) ...
-# (I'll keep the context small for the replacement tool)
+# HOST_CONF_DIR might be passed as relative or absolute.
+# We resolve it to absolute to ensure Docker mounts work correctly.
 HOST_CONF_DIR=$(realpath -m "$HOST_CONF_DIR")
+
+# Profile Root Logic (Post-Parse)
+# If ENABLE_PROFILE_MODE is true (user passed --config), we treat the path as a "Profile Root".
+# The actual Gemini Configuration (history, keys) lives in a '.gemini' subdirectory.
+# This keeps the Profile Root clean for extra-args and user files.
+if [ "$ENABLE_PROFILE_MODE" = true ]; then
+    HOST_CONF_DIR="${HOST_CONF_DIR}/.gemini"
+fi
 mkdir -p "$HOST_CONF_DIR"
 
 # 2.1 Pre-create Host Cache Directories (As User)

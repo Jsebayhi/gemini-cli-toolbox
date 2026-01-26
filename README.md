@@ -12,7 +12,7 @@
 > *   **💻 VS Code Companion:** Native integration with your host IDE for context and diffs.
 > *   **🐳 Docker-Powered:** Extends the agent to any language. Build and test projects (Rust, PHP) using your host's Docker images, saving bandwidth and setup time.
 > *   **📦 Persistent Caching:** Mounts your host's `~/.m2`, `~/.gradle`, and `~/.npm` caches for instant builds.
-> *   **📱 Remote Access:** Code from your phone via Tailscale VPN (Experimental).
+> *   **📱 Remote Access:** Code from your phone via Tailscale VPN.
 > *   **🔑 Multi-Profile:** Switch seamlessly between personal, work, and bot accounts using different config dirs.
 
 **📅 Auto-Updates:** Images are rebuilt automatically every Friday morning (UTC) to include the latest `@google/gemini-cli` release.
@@ -177,13 +177,54 @@ gemini-toolbox --bash
 gemini-toolbox --bash -c "echo 'Hello from inside Docker' && ls -la"
 ```
 
-### 📂 Custom Volume Mounts
+### 📂 Custom Volume MountS
 Use `-v` (or `--volume`) to mount additional directories from your host into the container.
 
 ```bash
-# Mount /opt/data on host to /data in container
-gemini-toolbox -v /opt/data:/data --bash -c "ls /data"
+gemini-toolbox -v /home/user/my-docs:/docs chat
 ```
+
+### 👤 Configuration Profiles (Advanced)
+You can maintain separate environments (e.g., "Work", "Personal") by using configuration profiles.
+
+#### The `--profile` Flag
+Use `--profile` to point to a directory acting as a **Workspace Root**. This keeps your config data isolated from your user files.
+
+```bash
+gemini-toolbox --profile ~/.gemini-profiles/work chat
+```
+
+**Structure:**
+```text
+~/.gemini-profiles/work/
+├── extra-args          # Persistent flags (e.g., --full, --volume ...)
+├── .gemini/            # Auto-generated: stores history, cookies, and keys
+└── secrets/            # Your private files
+```
+
+#### The `--config` Flag (Legacy/Simple)
+Use `--config` if you just want to point to a standard configuration folder (without nesting).
+
+```bash
+gemini-toolbox --config ~/.old-gemini chat
+```
+
+#### Persistent Settings (`extra-args`)
+**Only supported in Profile Mode (`--profile`).** Instead of typing `-v` or `--full` every time, you can put them in an `extra-args` file.
+
+**Example `extra-args`:**
+```text
+# Always use the full image for work
+--full
+
+# Mount my work-specific documents
+--volume "/mnt/data/work-docs:/docs"
+```
+
+---
+
+### 📱 Remote Access (VPN)
+Access your Gemini CLI session from your phone or tablet using integrated **Tailscale VPN** support.
 
 ### 📜 Persistent Bash History
 To keep your command history across container restarts, mount your history file.

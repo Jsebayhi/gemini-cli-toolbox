@@ -13,6 +13,11 @@ AUTH_KEY="${GEMINI_REMOTE_KEY:-}"
 WORKSPACE_ROOTS=()
 CONFIG_ROOT="${HOME}/.gemini/configs"
 
+# Auto-detect config root fallback
+if [ ! -d "$CONFIG_ROOT" ] && [ -d "${HOME}/.gemini-profiles" ]; then
+    CONFIG_ROOT="${HOME}/.gemini-profiles"
+fi
+
 # Parse Args
 MODE="-it"
 while [[ $# -gt 0 ]]; do

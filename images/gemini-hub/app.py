@@ -330,9 +330,12 @@ TEMPLATE = """
         <!-- Step 3: Config -->
         <div id="step-config" class="wizard-step">
             <p>Select Configuration:</p>
-            <select id="config-select" class="filter-select" style="width:100%; margin-bottom:20px">
+            <select id="config-select" class="filter-select" style="width:100%; margin-bottom:10px" onchange="loadConfigDetails()">
                 <option value="">Default (Global)</option>
             </select>
+            <div id="config-details" style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 20px; min-height: 1.2em;">
+                <!-- Extra args info here -->
+            </div>
             <div class="footer-actions">
                 <button class="refresh-btn btn-small" onclick="goToBrowse()">Back</button>
                 <button id="launch-btn" class="refresh-btn action-btn btn-small" style="margin:0" onclick="doLaunch()">
@@ -455,7 +458,29 @@ TEMPLATE = """
                 opt.innerText = c;
                 select.appendChild(opt);
             });
+            document.getElementById('config-details').innerText = "";
             showStep('step-config');
+        }
+
+        async function loadConfigDetails() {
+            const config = document.getElementById('config-select').value;
+            const detailsDiv = document.getElementById('config-details');
+            if (!config) {
+                detailsDiv.innerText = "";
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/config-details?name=${encodeURIComponent(config)}`);
+                const data = await res.json();
+                if (data.extra_args && data.extra_args.length > 0) {
+                    detailsDiv.innerText = "⚡ Custom arguments: " + data.extra_args.join(" ");
+                } else {
+                    detailsDiv.innerText = "Using default settings.";
+                }
+            } catch (e) {
+                detailsDiv.innerText = "";
+            }
         }
 
         async function doLaunch() {
@@ -627,6 +652,37 @@ def get_configs():
     configs.sort()
     return jsonify({"configs": configs})
 
+@app.route('/api/config-details')
+def get_config_details():
+    """Returns details (like extra-args) for a specific config profile."""
+    name = request.args.get('name', '')
+    if not name:
+        return jsonify({})
+    
+    profile_path = os.path.join(HOST_CONFIG_ROOT, name)
+    
+    # Logic matches gemini-toolbox:
+    # If .gemini exists, extra-args is in profile_path.
+    # If not, extra-args is also in profile_path (legacy/simple mode).
+    # So we always look in profile_path.
+    extra_args_path = os.path.join(profile_path, "extra-args")
+    
+    details = {"extra_args": []}
+    if os.path.isfile(extra_args_path):
+        try:
+            with open(extra_args_path, 'r') as f:
+                # Read non-empty lines that don't start with #
+                args = []
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        args.append(line)
+                details["extra_args"] = args
+        except Exception as e:
+            print(f"Error reading extra-args: {e}")
+            
+    return jsonify(details)
+
 @app.route('/api/browse')
 def browse():
     """Lists subdirectories of a given path, restricted to HUB_ROOTS."""
@@ -681,8 +737,8 @@ def launch():
     config_args = []
     if config_profile:
         profile_path = os.path.join(HOST_CONFIG_ROOT, config_profile)
-        if os.path.isdir(profile_path):
-            config_args = ["--config", profile_path]
+        # The Hub always uses Profile Mode (nested .gemini) for its managed profiles
+        config_args = ["--profile", profile_path]
 
     try:
         # Prepare Environment
