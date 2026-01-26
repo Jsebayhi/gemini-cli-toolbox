@@ -63,6 +63,11 @@ ABS_CONFIG_ROOT=$(realpath -m "$CONFIG_ROOT")
 mkdir -p "$ABS_CONFIG_ROOT"
 EXTRA_MOUNTS+=("-v" "${ABS_CONFIG_ROOT}:${ABS_CONFIG_ROOT}")
 
+# 3. Persistence (Named Volume)
+# We use a Docker Named Volume for the Tailscale state.
+# This keeps the host filesystem clean while preventing "New Device" naming collisions (gemini-hub-1).
+EXTRA_MOUNTS+=("-v" "gemini-hub-state:/var/lib/tailscale")
+
 # Resolve Image (Local vs Remote)
 if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
     IMAGE_NAME="$LOCAL_TAG"
@@ -74,6 +79,13 @@ fi
 echo ">> Starting Gemini Hub on port $PORT..."
 echo ">> Access at http://localhost:$PORT (Desktop)"
 echo ">> Access at http://gemini-hub:8888 (Mobile VPN)"
+
+# Check if already running
+if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    echo "Error: A Hub instance ('$CONTAINER_NAME') is already running."
+    echo "Run 'gemini-hub stop' to shut it down before starting a new one."
+    exit 1
+fi
 
 # Run Container
 docker run --rm $MODE \
