@@ -158,7 +158,9 @@ HOST_CONF_DIR=$(realpath -m "$HOST_CONF_DIR")
 # If ENABLE_PROFILE_MODE is true (user passed --config), we treat the path as a "Profile Root".
 # The actual Gemini Configuration (history, keys) lives in a '.gemini' subdirectory.
 # This keeps the Profile Root clean for extra-args and user files.
+PROFILE_ROOT=""
 if [ "$ENABLE_PROFILE_MODE" = true ]; then
+    PROFILE_ROOT="$HOST_CONF_DIR"
     HOST_CONF_DIR="${HOST_CONF_DIR}/.gemini"
 fi
 mkdir -p "$HOST_CONF_DIR"
@@ -315,12 +317,19 @@ if [ "$REMOTE_MODE" = true ]; then
         SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
         
         HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
-        echo "DEBUG: HUB_SCRIPT is at ${HUB_SCRIPT}"
         if [ -x "$HUB_SCRIPT" ]; then
              echo ">> Auto-starting Gemini Hub..."
              echo "   (Stop with: gemini-toolbox stop-hub)"
-             # Pass current project dir as a default workspace root for the Hub
-             if "$HUB_SCRIPT" -d --key "$TAILSCALE_KEY" --workspace "$PROJECT_DIR" > /tmp/gemini-hub.log 2>&1; then
+             
+             HUB_ARGS=("-d" "--key" "$TAILSCALE_KEY" "--workspace" "$PROJECT_DIR")
+             
+             # If running in Profile Mode, tell the Hub to look for other profiles in the parent directory
+             if [ "$ENABLE_PROFILE_MODE" = true ] && [ -n "$PROFILE_ROOT" ]; then
+                 HUB_CONFIG_ROOT=$(dirname "$PROFILE_ROOT")
+                 HUB_ARGS+=("--config-root" "$HUB_CONFIG_ROOT")
+             fi
+             
+             if "$HUB_SCRIPT" "${HUB_ARGS[@]}" > /tmp/gemini-hub.log 2>&1; then
                  echo ">> Hub started."
              else
                  echo ">> Warning: Failed to start Hub. Check /tmp/gemini-hub.log"

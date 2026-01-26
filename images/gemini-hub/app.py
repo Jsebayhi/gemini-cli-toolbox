@@ -604,8 +604,12 @@ def parse_peers(status_json):
 def auto_shutdown_monitor():
     """
     Background thread that monitors active sessions.
-    If no sessions are found for 60 seconds, it kills the process.
+    Only runs if HUB_AUTO_SHUTDOWN is set to "1" or "true".
     """
+    if os.environ.get("HUB_AUTO_SHUTDOWN", "").lower() not in ("1", "true"):
+        print(">> Auto-shutdown disabled. Hub will run until manually stopped.")
+        return
+
     TIMEOUT_SECONDS = 60
     last_active = time.time()
     
