@@ -10,8 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     git \
     procps \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install flask
+    && rm -rf /var/lib/apt/lists/*
 
 # 2. Install Tailscale (Official Repo)
 RUN mkdir -p --mode=0755 /usr/share/keyrings \
@@ -32,7 +31,11 @@ RUN install -m 0755 -d /etc/apt/keyrings \
 
 # 3. Copy Application & Tools
 WORKDIR /app
-COPY app.py .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ app/
+COPY run.py .
 COPY gemini-toolbox /usr/local/bin/
 RUN chmod +x /usr/local/bin/gemini-toolbox
 COPY docker-entrypoint.sh /usr/local/bin/

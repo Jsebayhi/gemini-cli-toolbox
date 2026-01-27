@@ -23,4 +23,4 @@ tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reau
 echo ">> Gemini Hub Online: http://$HOSTNAME:8888"
 
 # 3. Start Flask App
-exec python app.py
+exec python run.py

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Gemini Workspace Hub</h1>
+    
+    <div class="container">
+        <button class="refresh-btn action-btn" onclick="openWizard()">+ New Session</button>
+
+        <!-- Filters -->
+        <div class="filters">
+            <input type="text" id="projectFilter" class="filter-input" placeholder="Search sessions..." onkeyup="filterList()">
+            <select id="typeFilter" class="filter-select" onchange="filterList()">
+                <option value="all">All Types</option>
+                <option value="geminicli">Gemini CLI</option>
+                <option value="bash">Bash</option>
+            </select>
+            <label class="filter-checkbox">
+                <input type="checkbox" id="offlineFilter" onchange="filterList()"> Offline
+            </label>
+        </div>
+
+        {% if machines %}
+            {% for m in machines %}
+            <a href="http://{{ m.ip }}:3000" class="card {% if not m.online %}hidden{% endif %}" target="_blank" data-project="{{ m.project }}" data-type="{{ m.type }}" data-online="{{ 'true' if m.online else 'false' }}">
+                <div class="info">
+                    <span class="name">{{ m.project }}</span>
+                    <div class="meta">
+                        <span class="badge">{{ m.type }}</span>
+                        <span class="ip">{{ m.ip }}</span>
+                    </div>
+                </div>
+                <div class="status {% if not m.online %}offline{% endif %}"></div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <p>No active sessions found.</p>
+                <small>Launch one below or from your desktop.</small>
+            </div>
+        {% endif %}
+        
+        <button class="refresh-btn" onclick="window.location.reload();">Refresh List</button>
+    </div>
+
+    <!-- Wizard Overlay -->
+    <div id="wizard" class="overlay">
+        <div class="overlay-header">
+            <h2>Launch Session</h2>
+            <button class="close-btn" onclick="closeWizard()">×</button>
+        </div>
+
+        <!-- Step 1: Select Root -->
+        <div id="step-roots" class="wizard-step active">
+            <p>Select a workspace root:</p>
+            <div id="roots-list" class="list-group"></div>
+        </div>
+
+        <!-- Step 2: Browse -->
+        <div id="step-browse" class="wizard-step">
+            <div class="breadcrumb" id="current-path"></div>
+            <div id="folder-list" class="list-group"></div>
+            <div class="footer-actions">
+                <button class="refresh-btn btn-small" onclick="goBackToRoots()">Change Root</button>
+                <button class="refresh-btn action-btn btn-small" style="margin:0" onclick="goToConfig()">Use This Folder</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Config -->
+        <div id="step-config" class="wizard-step">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Profile Configuration</label>
+                    <select id="config-select" class="filter-select" style="width:100%;" onchange="loadConfigDetails()">
+                        <option value="">Default (Global)</option>
+                    </select>
+                    <div id="config-details" style="font-size: 0.75rem; color: var(--accent); margin-top: 5px; min-height: 1.2em;">
+                        <!-- Extra args info here -->
+                    </div>
+                </div>
+                
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Session Interface</label>
+                    <select id="session-type-select" class="filter-select" style="width:100%;">
+                        <option value="cli">Gemini CLI</option>
+                        <option value="bash">Bash Shell</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="launch-results" style="display:none; margin-top: 20px;">
+                <p id="launch-status" style="font-weight:bold; margin-bottom:5px;"></p>
+                <div style="background:#000; padding:10px; border-radius:8px; font-family:monospace; font-size:0.75rem; color:#0f0; border: 1px solid #333; overflow-x:auto;">
+                    <div style="color:#666; border-bottom:1px solid #222; margin-bottom:5px; padding-bottom:5px; display:flex; justify-content:space-between;">
+                        <span>Launch Log</span>
+                        <span id="launch-cmd" style="font-size:0.6rem; color:#444;"></span>
+                    </div>
+                    <pre id="launch-log" style="margin:0; white-space:pre-wrap;"></pre>
+                </div>
+            </div>
+            <div class="footer-actions">
+                <button class="refresh-btn btn-small" id="launch-back-btn" onclick="goToBrowse()">Back</button>
+                <button id="launch-btn" class="refresh-btn action-btn btn-small" style="margin:0" onclick="doLaunch()">
+                    Launch Session
+                </button>
+                <div id="launch-loader" class="loader"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
