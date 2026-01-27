@@ -12,10 +12,17 @@ A standalone Tailscale node running a Flask-based dashboard for discovering and 
 | `Dockerfile` | **The Environment.** Python 3.11-slim, Tailscale daemon + CLI. |
 | `docker-entrypoint.sh` | **The Logic.** Starts `tailscaled`, authenticates with `TAILSCALE_AUTH_KEY`, and launches the Flask app. |
 | `app.py` | **The Application.** Queries Tailscale status, parses hostnames, and serves the UI with search/filters. Includes the auto-shutdown monitor. |
+| `docs/ENGINEERING_STANDARDS.md` | **The Law.** Mandatory coding standards and architectural patterns for this component. |
 | `Makefile` | **The Builder.** Local build commands (`build`, `rebuild`) for this image. |
 | `adr/` | **The Decisions.** Records explaining the shift to standalone architecture and mobile discovery goals. |
 
-## 3. Operational Workflows
+## 3. Core Mandates
+
+### Engineering Standards
+*   **Mandate:** All changes to the Python code must adhere to [ENGINEERING_STANDARDS.md](docs/ENGINEERING_STANDARDS.md).
+*   **Key Rules:** Use `requirements.txt`, separate logic from Flask routes, and strictly type-hint all functions.
+
+## 4. Operational Workflows
 
 ### Building (Local)
 Run from `images/gemini-hub/`:
@@ -36,7 +43,7 @@ docker run --rm -it \
     gemini-cli-toolbox/hub:latest
 ```
 
-## 4. Known Peculiarities & Gotchas
+## 5. Known Peculiarities & Gotchas
 
 ### Host Networking
 The Hub uses `--net=host` to ensure reliable peer discovery and MagicDNS resolution within the Tailscale mesh. This binds port 8888 directly to the host's network interfaces.
