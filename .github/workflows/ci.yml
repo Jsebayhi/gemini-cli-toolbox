@@ -12,8 +12,50 @@ on:
     - cron: '0 12 * * 6' # Saturday at 12:00 UTC (Fallback/Hotfix catch)
 
 jobs:
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Linters
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          pip install ruff
+
+      - name: Validate Bash Scripts (Syntax)
+        run: |
+          # Check Wrapper Scripts
+          bash -n bin/gemini-toolbox
+          bash -n bin/gemini-hub
+          
+          # Check Entrypoints
+          find images -name "*.sh" -print0 | xargs -0 -I {} bash -n "{}"
+
+      - name: Validate Bash Scripts (Lint)
+        run: |
+          # strict check
+          shellcheck bin/gemini-toolbox bin/gemini-hub
+          find images -name "*.sh" -print0 | xargs -0 shellcheck
+
+      - name: Validate Python (Syntax)
+        run: |
+          find images/gemini-hub -name "*.py" -exec python -m py_compile {} +
+
+      - name: Validate Python (Lint)
+        run: |
+          # Check images/gemini-hub
+          ruff check images/gemini-hub
+
   build:
     name: Build & Test
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
