@@ -53,6 +53,6 @@ def launch():
             result["error"] = result["stderr"] or result["stdout"]
             return jsonify(result), 500
     except PermissionError as e:
-        return jsonify({"error": str(e)}), 403
+        return jsonify({"status": "error", "error": str(e)}), 403
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"status": "error", "error": str(e)}), 500

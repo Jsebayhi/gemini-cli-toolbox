@@ -22,14 +22,58 @@ def test_browse_success(client):
         assert "directories" in data
         assert "project1" in data["directories"]
         assert ".git" not in data["directories"] # Hidden files filtered
-        # Note: In real logic, isdir check inside loop would filter files. 
-        # But we mock os.path.isdir globally to True, so file.txt might show up if logic only checks isdir.
-        # Let's refine the mock or accept basic flow verification.
 
 def test_browse_access_denied(client):
     """Test browsing outside allowed roots."""
     response = client.get('/api/browse?path=/etc')
     assert response.status_code == 403
+
+def test_browse_not_found(client):
+    """Test browsing a non-existent directory."""
+    with patch("os.path.isdir", return_value=False):
+        response = client.get('/api/browse?path=/mock/root/missing')
+        assert response.status_code == 404
+
+def test_browse_missing_param(client):
+    """Test browsing without path parameter."""
+    response = client.get('/api/browse')
+    assert response.status_code == 400
+
+# --- Config Tests ---
+
+def test_get_configs(client):
+    """Test listing configuration profiles."""
+    # Mock os.listdir on HOST_CONFIG_ROOT
+    with patch("os.path.isdir", return_value=True), \
+         patch("os.listdir", return_value=["profile1", "profile2", "file.txt"]):
+        
+        # We also need to mock os.path.isdir for the filter check inside listdir loop
+        def isdir_side_effect(path):
+            return "file.txt" not in path
+            
+        with patch("os.path.isdir", side_effect=isdir_side_effect):
+            response = client.get('/api/configs')
+            
+            assert response.status_code == 200
+            assert "configs" in response.json
+            assert "profile1" in response.json["configs"]
+            assert "file.txt" not in response.json["configs"]
+
+def test_get_config_details(client):
+    """Test reading profile details."""
+    mock_content = "--full\n--volume /data:/data"
+    with patch("os.path.isfile", return_value=True), \
+         patch("builtins.open", new_callable=MagicMock) as mock_open:
+        
+        mock_file = MagicMock()
+        mock_file.__enter__.return_value = mock_content.splitlines()
+        mock_open.return_value = mock_file
+        
+        response = client.get('/api/config-details?name=profile1')
+        
+        assert response.status_code == 200
+        assert "extra_args" in response.json
+        assert "--full" in response.json["extra_args"]
 
 # --- Launcher Tests ---
 
@@ -71,6 +115,7 @@ def test_launch_failure_subprocess(client):
     with patch("subprocess.run") as mock_run:
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = "Docker error"
+        mock_run.return_value.stdout = ""
         
         payload = {"project_path": "/mock/root/project"}
         response = client.post('/api/launch', json=payload)
