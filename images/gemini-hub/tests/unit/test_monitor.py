@@ -72,3 +72,27 @@ def test_monitor_activity_reset():
             
         # Verify NO Shutdown
         assert not mock_kill.called
+
+def test_monitor_exception_handling():
+    """Test that monitor logs exceptions without crashing."""
+    with patch("app.services.monitor.Config") as MockConfig, \
+         patch("app.services.monitor.TailscaleService") as MockTailscale, \
+         patch("app.services.monitor.time") as mock_time, \
+         patch("app.services.monitor.logger") as mock_logger:
+        
+        MockConfig.HUB_AUTO_SHUTDOWN = True
+        
+        # Simulate exception during status check
+        MockTailscale.get_status.side_effect = RuntimeError("API Error")
+        
+        # Run loop once then exit
+        mock_time.sleep.side_effect = [None, StopIteration]
+        
+        try:
+            MonitorService._monitor_loop()
+        except StopIteration:
+            pass
+            
+        # Verify error logged
+        assert mock_logger.error.called
+        assert "API Error" in str(mock_logger.error.call_args[0][0])
