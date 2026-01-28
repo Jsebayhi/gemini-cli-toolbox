@@ -371,7 +371,7 @@ fi
 
 DOCKER_ARGS=(
   "${CONTAINER_NAME_ARG[@]}"
-  $NETWORK_MODE
+  "$NETWORK_MODE"
   # Path Mirroring for IDE Security Check:
   # We mount the project at the EXACT SAME path as the host (not /home/gemini/workspace).
   # The Gemini CLI checks that PWD inside match the Workspace Path in VS Code.

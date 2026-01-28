@@ -79,11 +79,11 @@ fi
 
 # --- SMART RESTART LOGIC ---
 # Check if Hub is already running
-if docker ps -q -f name="^/${CONTAINER_NAME}$" >/dev/null 2>&1; then
+if [ -n "$(docker ps -q -f name="^/${CONTAINER_NAME}$")" ]; then
     echo ">> Hub is already running."
     
     # 1. Introspect existing configuration
-    EXISTING_ROOTS_STR=$(docker inspect --format '{{range .Config.Env}}{{if match . "HUB_ROOTS=.*"}}{{slice . 10}}{{end}}{{end}}' "$CONTAINER_NAME")
+    EXISTING_ROOTS_STR=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER_NAME" | grep "^HUB_ROOTS=" | cut -d= -f2-)
     IFS=':' read -ra EXISTING_ROOTS <<< "$EXISTING_ROOTS_STR"
     
     # 2. Check for missing roots
