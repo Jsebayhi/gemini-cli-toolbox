@@ -22,4 +22,5 @@ COPY run.py .
 # Run Tests
 # -vv: verbose
 # --cov: coverage
-CMD ["python3", "-m", "pytest", "-vv", "--cov=app"]
+# --cov-fail-under=90: Fail if coverage is below 90%
+CMD ["python3", "-m", "pytest", "-vv", "--cov=app", "--cov-fail-under=90"]

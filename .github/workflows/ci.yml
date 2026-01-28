@@ -56,9 +56,10 @@ jobs:
       - name: Run Tests (Gemini Hub)
         run: |
           cd images/gemini-hub
-          pip install -r requirements.txt
-          # Enforce 90% coverage on the 'app' package
-          python -m pytest --cov=app --cov-fail-under=90
+          # Build the test image (includes dev dependencies)
+          docker build -t gemini-hub-test -f tests/Dockerfile .
+          # Run tests (enforces 90% coverage via CMD)
+          docker run --rm gemini-hub-test
 
   build:
     name: Build & Test
