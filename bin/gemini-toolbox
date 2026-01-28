@@ -292,7 +292,7 @@ if [[ "$IMAGE_NAME" == *"$REMOTE_TAG"* ]] && [[ "$IMAGE_NAME" == *"latest"* ]] &
     fi
 fi
 
-# 2.5 Detect Host Docker GID (for DooD)
+# 2.7 Detect Host Docker GID (for DooD)
 if [ "$ENABLE_DOCKER" = true ]; then
     HOST_DOCKER_GID=""
     if command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
@@ -438,8 +438,6 @@ fi
 # 5. Execute
 if [ "$DETACHED_MODE" = true ]; then
     echo ">> Starting container in background..."
-    echo "DEBUG: DETACHED_MODE=$DETACHED_MODE"
-    echo "DEBUG: EXEC_ARGS=${EXEC_ARGS[*]}"
     docker run --rm -d "${DOCKER_ARGS[@]}" "${EXEC_ARGS[@]}"
     echo ">> Container started: ${GEMINI_SESSION_ID}"
 else

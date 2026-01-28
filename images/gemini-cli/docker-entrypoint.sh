@@ -99,7 +99,6 @@ if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
 
     # --- Session Mirroring (Tmux) ---
     echo ">> Starting Shared Session (Tmux)..."
-    echo "DEBUG: Entrypoint args: $@"
     
     # 1. Create a DETACHED tmux session named 'gemini' running the user's command
     # We must run this as the user so they own the session socket
