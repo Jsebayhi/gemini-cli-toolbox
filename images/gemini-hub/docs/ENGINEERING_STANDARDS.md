@@ -120,16 +120,56 @@ While we follow the Testing Trophy, we still enforce high coverage standards to 
     *   **Integration Tests (The Bulk):** Test the API endpoints (e.g., `POST /api/launch`) and assembled services.
     *   **E2E (Critical Paths):** Test the full flow only for critical user journeys.
 
-*   **Mocking Principle: "Mock at the Boundary Only"**
-    *   **Do Not Mock Internal Collaborators:** When testing a Service or API, do *not* mock your own internal helper classes or functions. Doing so leads to brittle tests that pass even when the system is broken ("testing the mocks").
-    *   **Mock Only the Outside World:** Mocks should be restricted to the **system boundaries** (the "leaves" of the call graph).
-        *   **Allowed Mocks:** `subprocess.run`, `requests.get`, `open()` (file I/O), `time.sleep`.
-        *   **Forbidden Mocks:** `Config` class, `TailscaleParser` class, or any other code *we own*.
-    *   **Goal:** Execute the code path through the full application stack (API -> Service -> Logic) and only fake the final system call.
+*   **Mocking Principle: "Mock at the System Boundary Only"**
+    *   **Integration Tests:** Do **not** mock the Service layer. Do **not** mock internal resources that can be easily instantiated (like the Filesystem).
+        *   **Good:** Use `tmp_path` to create real files, then call the API. This verifies the full stack: `HTTP -> Router -> Service -> Real FS`.
+        *   **Bad:** Mocking `os.listdir` in an API test. This degrades the test to a slow unit test.
+    *   **When to Mock:** Only mock **slow, dangerous, or non-deterministic** external boundaries.
+        *   **Allowed Mocks:** `subprocess.run` (don't actually run Docker), `requests.get` (don't hit real URLs), `time.sleep`.
+        *   **Forbidden Mocks:** `FileSystemService`, `os.path` (use `tmp_path`), internal helper classes.
+    *   **Goal:** Execute the code path through the full application stack and only fake the final "impossible" system call.
 
 *   **Target Distribution:**
     *   **Integration:** ~80% of your effort. This gives the highest confidence per minute spent.
     *   **Unit:** ~10%. Only for logic that is too complex to test via the API or has too many permutations.
     *   **E2E:** ~10%. Only for "smoke testing" the critical paths.
 
-*   **Guideline:** "Prioritize Integration Tests for API Endpoints." Tests that verify the *behavior* of the API (input -> output) are more resilient to refactoring than unit tests that verify the *implementation details* of a service.
+    *   **Guideline:** "Prioritize Integration Tests for API Endpoints." Tests that verify the *behavior* of the API (input -> output) are more resilient to refactoring than unit tests that verify the *implementation details* of a service.
+
+
+
+### 5.7 File System Testing
+
+*   **No Mocks for Filesystem:** Do **not** mock `os.listdir`, `os.path.exists`, `open()`, or `glob` when testing file system operations.
+
+    *   **Why:** Mocking the file system often leads to "tautological" tests that verify the mock configuration rather than the code's behavior. It also makes tests brittle to implementation changes (e.g., switching from `os.path` to `pathlib`).
+
+*   **Use `tmp_path`:** Use the standard `pytest` fixture `tmp_path` to create real, temporary directory structures for each test.
+
+    *   **Pattern:**
+
+        ```python
+
+        def test_list_files(tmp_path):
+
+            # Setup: Create real files in the temp dir
+
+            (tmp_path / "file1.txt").touch()
+
+            (tmp_path / "subdir").mkdir()
+
+            
+
+            # Action: Call the function with the temp path
+
+            result = my_file_service.list_files(str(tmp_path))
+
+            
+
+            # Assert: Verify the result
+
+            assert "file1.txt" in result
+
+        ```
+
+

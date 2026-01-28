@@ -5,33 +5,49 @@ from unittest.mock import patch, MagicMock
 
 def test_get_roots(client):
     """Test retrieving allowed workspace roots."""
-    response = client.get('/api/roots')
-    assert response.status_code == 200
-    assert response.json == {"roots": ["/mock/root"]}
+    with patch("app.config.Config.HUB_ROOTS", ["/real/root"]):
+        response = client.get('/api/roots')
+        assert response.status_code == 200
+        assert response.json == {"roots": ["/real/root"]}
 
-def test_browse_success(client):
+def test_browse_success(client, tmp_path):
     """Test browsing a valid directory."""
-    with patch("os.path.isdir", return_value=True), \
-         patch("os.listdir", return_value=["project1", ".git", "file.txt"]):
-        
-        # We must use a path inside the mock root
-        response = client.get('/api/browse?path=/mock/root')
+    # Setup: Create real FS structure
+    root = tmp_path / "workspace"
+    root.mkdir()
+    (root / "project1").mkdir()
+    (root / ".git").mkdir()
+    (root / "file.txt").touch()
+
+    # Patch Config to allow access to this root
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        response = client.get(f'/api/browse?path={root}')
         
         assert response.status_code == 200
         data = response.json
         assert "directories" in data
         assert "project1" in data["directories"]
         assert ".git" not in data["directories"] # Hidden files filtered
+        assert "file.txt" not in data["directories"] # Files filtered
 
-def test_browse_access_denied(client):
+def test_browse_access_denied(client, tmp_path):
     """Test browsing outside allowed roots."""
-    response = client.get('/api/browse?path=/etc')
-    assert response.status_code == 403
+    root = tmp_path / "allowed"
+    root.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        response = client.get('/api/browse?path=/etc')
+        assert response.status_code == 403
 
-def test_browse_not_found(client):
+def test_browse_not_found(client, tmp_path):
     """Test browsing a non-existent directory."""
-    with patch("os.path.isdir", return_value=False):
-        response = client.get('/api/browse?path=/mock/root/missing')
+    root = tmp_path / "workspace"
+    root.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        # Request a path that starts with root but doesn't exist
+        missing_path = root / "missing"
+        response = client.get(f'/api/browse?path={missing_path}')
         assert response.status_code == 404
 
 def test_browse_missing_param(client):
@@ -41,34 +57,29 @@ def test_browse_missing_param(client):
 
 # --- Config Tests ---
 
-def test_get_configs(client):
+def test_get_configs(client, tmp_path):
     """Test listing configuration profiles."""
-    # Mock os.listdir on HOST_CONFIG_ROOT
-    with patch("os.path.isdir", return_value=True), \
-         patch("os.listdir", return_value=["profile1", "profile2", "file.txt"]):
-        
-        # We also need to mock os.path.isdir for the filter check inside listdir loop
-        def isdir_side_effect(path):
-            return "file.txt" not in path
-            
-        with patch("os.path.isdir", side_effect=isdir_side_effect):
-            response = client.get('/api/configs')
-            
-            assert response.status_code == 200
-            assert "configs" in response.json
-            assert "profile1" in response.json["configs"]
-            assert "file.txt" not in response.json["configs"]
+    # Setup: Create real FS structure
+    (tmp_path / "profile1").mkdir()
+    (tmp_path / "profile2").mkdir()
+    (tmp_path / "file.txt").touch()
 
-def test_get_config_details(client):
+    with patch("app.config.Config.HOST_CONFIG_ROOT", str(tmp_path)):
+        response = client.get('/api/configs')
+        
+        assert response.status_code == 200
+        assert "configs" in response.json
+        assert "profile1" in response.json["configs"]
+        assert "file.txt" not in response.json["configs"]
+
+def test_get_config_details(client, tmp_path):
     """Test reading profile details."""
-    mock_content = "--full\n--volume /data:/data"
-    with patch("os.path.isfile", return_value=True), \
-         patch("builtins.open", new_callable=MagicMock) as mock_open:
-        
-        mock_file = MagicMock()
-        mock_file.__enter__.return_value = mock_content.splitlines()
-        mock_open.return_value = mock_file
-        
+    # Setup: Create real profile and file
+    profile_dir = tmp_path / "profile1"
+    profile_dir.mkdir()
+    (profile_dir / "extra-args").write_text("--full\n--volume /data:/data")
+
+    with patch("app.config.Config.HOST_CONFIG_ROOT", str(tmp_path)):
         response = client.get('/api/config-details?name=profile1')
         
         assert response.status_code == 200
