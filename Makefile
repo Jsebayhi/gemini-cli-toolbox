@@ -11,6 +11,7 @@ help:
 	@echo "  make build         : Build ALL images (Parallelizable with -j)"
 	@echo "  make rebuild       : Force rebuild ALL images (Parallelizable with -j)"
 	@echo "  make scan          : Run security scan (Trivy)"
+	@echo "  make local-ci      : Run mandatory pre-PR checks (Lint & Test)"
 	@echo "  make clean-cache   : Prune npm build cache"
 	@echo ""
 	@echo "Parallel Build Example:"
@@ -108,6 +109,30 @@ rebuild-cli-full-only:
 # Rebuild only the applications (Parallelizable)
 .PHONY: rebuild-gemini-cli
 rebuild-gemini-cli: rebuild-cli-only rebuild-cli-preview-only rebuild-cli-full-only
+
+# --- Quality Assurance (Lint & Test) ---
+
+.PHONY: lint
+lint: lint-shell lint-python
+
+.PHONY: lint-shell
+lint-shell:
+	@echo ">> Linting Bash Scripts (ShellCheck)..."
+	docker run --rm -v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck bin/gemini-toolbox bin/gemini-hub images/gemini-cli/docker-entrypoint.sh images/gemini-hub/docker-entrypoint.sh
+
+.PHONY: lint-python
+lint-python:
+	@echo ">> Linting Python Code (Ruff)..."
+	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
+
+.PHONY: test
+test:
+	$(MAKE) -C images/gemini-hub test
+
+# --- Mandatory Pre-PR Check ---
+.PHONY: local-ci
+local-ci: lint test
+	@echo ">> All mandatory checks passed. Ready for PR."
 
 # --- CI Targets (Full Rebuild + Tag) ---
 
