@@ -190,8 +190,9 @@ if [ ! -d "$PROJECT_DIR" ]; then
     exit 1
 fi
 
-# Extract project name for prettier mount point
-PROJECT_NAME=$(basename "$PROJECT_DIR")
+# Extract project name for prettier mount point.
+# We sanitize it to ensure it is a valid DNS label (only alphanumeric and hyphens).
+PROJECT_NAME=$(basename "$PROJECT_DIR" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
 
 # Determine Session Type for Remote Access / Analytics
 SESSION_TYPE="geminicli"
