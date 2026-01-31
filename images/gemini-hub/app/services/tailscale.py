@@ -29,10 +29,51 @@ class TailscaleService:
             return {}
 
     @staticmethod
+    def get_local_ports() -> Dict[str, str]:
+        """
+        Returns a mapping of {container_name: local_url} for gemini containers
+        that have port 3000 exposed to the host.
+        """
+        try:
+            # We use "docker ps" to find containers that map port 3000.
+            # Format: Name|Ports
+            # Example Ports: "127.0.0.1:32768->3000/tcp"
+            cmd = ["docker", "ps", "--format", "{{.Names}}|{{.Ports}}"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=2)
+            
+            if result.returncode != 0:
+                return {}
+
+            mapping = {}
+            for line in result.stdout.strip().split('\n'):
+                if not line or "|" not in line:
+                    continue
+                
+                name, ports_str = line.split('|', 1)
+                if not name.startswith("gem-"):
+                    continue
+                
+                # Parse ports
+                for part in ports_str.split(','):
+                    part = part.strip()
+                    if "->3000/tcp" in part:
+                        # Extract "127.0.0.1:32768" from "127.0.0.1:32768->3000/tcp"
+                        left = part.split("->")[0]
+                        if ":" in left:
+                            host_port = left.split(":")[-1]
+                            mapping[name] = f"http://localhost:{host_port}"
+                            break
+            return mapping
+        except Exception as e:
+            logger.error(f"Error getting docker ports: {e}")
+            return {}
+
+    @staticmethod
     def parse_peers(status_json: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extracts and filters Gemini peers from status JSON."""
         machines = []
         peers = status_json.get("Peer", {})
+        local_ports = TailscaleService.get_local_ports()
         
         for _, node in peers.items():
             hostname = node.get("HostName", "")
@@ -64,7 +105,8 @@ class TailscaleService:
                     "project": project,
                     "type": session_type,
                     "ip": ip,
-                    "online": node.get("Online", False)
+                    "online": node.get("Online", False),
+                    "local_url": local_ports.get(hostname)
                 })
                 
         machines.sort(key=lambda x: x["name"])
