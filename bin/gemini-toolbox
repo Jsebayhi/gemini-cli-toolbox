@@ -362,6 +362,10 @@ if [ "$REMOTE_MODE" = true ]; then
         --env TAILSCALE_AUTH_KEY="$TAILSCALE_KEY"
         --cap-add=NET_ADMIN
         --device /dev/net/tun
+        # Hybrid Mode: Expose port 3000 to localhost (host)
+        # This allows the user to browse http://localhost:<random_port> on the host machine
+        # and hit the app running on port 3000 inside the container (on the VPN).
+        -p 127.0.0.1:0:3000
     )
 fi
 
