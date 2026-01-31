@@ -68,7 +68,7 @@ Discovery tools (like `gemini-hub`) rely on this structure.
 *   **Concept:** Users can maintain multiple configuration directories (profiles) for different contexts (e.g., Work, Personal).
 *   **Location:** Default is `~/.gemini`. Additional profiles are typically in `~/.gemini-profiles/`.
 *   **Selection:** Use `gemini-toolbox --config <path>` to select a profile.
-*   **Customization:** A profile can define persistent runtime arguments (volumes, flags) by placing a file named `extra-args` in its root. See [ADR-0010](images/gemini-cli/adr/0010-configuration-profiles-and-extra-args.md).
+*   **Customization:** A profile can define persistent runtime arguments (volumes, flags) by placing a file named `extra-args` in its root. See [ADR-0021](adr/0021-configuration-profiles-and-extra-args.md).
 
 ## 7. Known Peculiarities & Gotchas
 --- End of Context from: GEMINI.md ---
