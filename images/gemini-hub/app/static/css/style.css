@@ -119,6 +119,9 @@ h1 {
 .card.hidden {
     display: none;
 }
+.hidden {
+    display: none !important;
+}
 .info {
     display: flex;
     flex-direction: column;
