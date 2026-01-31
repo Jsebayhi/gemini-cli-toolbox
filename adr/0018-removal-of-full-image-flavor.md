@@ -15,7 +15,7 @@ However, this approach presented several challenges:
 We have decided to remove the `gemini-cli-full` image and the associated `--full` flag from the `gemini-toolbox` wrapper.
 
 ## Rationale
-The introduction of **Docker-out-of-Docker (DooD)** integration (see ADR-0009 in `images/gemini-cli/adr/`) provides a superior alternative:
+The introduction of **Docker-out-of-Docker (DooD)** integration (see ADR-0014 in `adr/`) provides a superior alternative:
 1.  **Orchestration vs. Inclusion:** Instead of *containing* every tool, the Gemini CLI now acts as an *orchestrator*. It can use the host's Docker daemon to launch small, official, and version-specific containers (e.g., `maven:3.9`, `python:3.11`, `golang:1.21`) for specific tasks.
 2.  **Shared Cache:** Since it uses the host daemon, it benefits from the host's image cache, saving bandwidth and disk space.
 3.  **Correctness:** The agent can choose the exact runtime version required by the project being analyzed, rather than being limited to what was pre-baked into the `:full` image.
