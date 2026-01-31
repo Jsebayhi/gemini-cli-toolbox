@@ -7,10 +7,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function checkLocalVisibility() {
     const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    if (!isLocalhost) return; // Keep them hidden
-
-    document.querySelectorAll('.local-badge').forEach(badge => {
-        badge.classList.remove('hidden');
+    
+    document.querySelectorAll('.card').forEach(card => {
+        const localBadge = card.querySelector('.local-badge');
+        const mainLink = card.querySelector('.card-main-link');
+        
+        if (!localBadge) return;
+        
+        const localUrl = localBadge.getAttribute('data-local-url');
+        const vpnUrl = mainLink.href;
+        
+        if (isLocalhost && localUrl) {
+            // Smart Swap: Make the main card click go to Localhost
+            mainLink.href = localUrl;
+            
+            // Retain VPN option in the badge
+            localBadge.href = vpnUrl;
+            localBadge.innerText = "VPN";
+            localBadge.classList.remove('hidden');
+        } else {
+            // Remote User: Hide the Local badge completely
+            localBadge.classList.add('hidden');
+        }
     });
 }
 
@@ -192,12 +210,12 @@ async function doLaunch() {
             if (match && match[1]) {
                 const hostname = match[1];
                 
-                // 1. VPN Button (Always valid)
+                // 1. Default to VPN Button
                 btn.innerText = "Connect (VPN) 🚀";
                 btn.onclick = () => window.open(`http://${hostname}:3000`, '_blank');
                 btn.style.display = "block";
                 
-                // 2. Local Button (Only if on host)
+                // 2. Upgrade to Local Button (if on host)
                 if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
                     // Poll briefly for the port mapping to appear
                     setTimeout(async () => {
@@ -205,14 +223,10 @@ async function doLaunch() {
                             const res = await fetch(`/api/resolve-local-url?hostname=${hostname}`);
                             const data = await res.json();
                             if (data.url) {
-                                const localBtn = document.createElement('button');
-                                localBtn.className = "refresh-btn action-btn btn-small";
-                                localBtn.style.marginTop = "10px";
-                                localBtn.style.backgroundColor = "transparent";
-                                localBtn.style.border = "1px solid var(--accent)";
-                                localBtn.innerText = "Connect (Local) ⚡";
-                                localBtn.onclick = () => window.open(data.url, '_blank');
-                                btn.parentNode.insertBefore(localBtn, btn.nextSibling);
+                                // Smart Upgrade: Change the main button to Local
+                                btn.innerText = "Connect (Local) ⚡";
+                                btn.onclick = () => window.open(data.url, '_blank');
+                                btn.style.border = "1px solid var(--accent)";
                             }
                         } catch (e) { console.error("Failed to resolve local url", e); }
                     }, 1500); // Wait 1.5s for Docker to map ports
