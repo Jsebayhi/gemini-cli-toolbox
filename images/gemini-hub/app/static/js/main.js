@@ -93,6 +93,8 @@ function filterList() {
 
 function openWizard() {
     document.getElementById('wizard').classList.add('active');
+    const taskInput = document.getElementById('task-input');
+    if (taskInput) taskInput.value = "";
     fetchRoots();
 }
 
@@ -263,6 +265,7 @@ async function doLaunch() {
     const loader = document.getElementById('launch-loader');
     const config = document.getElementById('config-select').value;
     const sessionType = document.getElementById('session-type-select').value;
+    const task = document.getElementById('task-input').value;
     const results = document.getElementById('launch-results');
     const status = document.getElementById('launch-status');
     const cmdSpan = document.getElementById('launch-cmd');
@@ -280,7 +283,8 @@ async function doLaunch() {
             body: JSON.stringify({
                 project_path: currentPath,
                 config_profile: config,
-                session_type: sessionType
+                session_type: sessionType,
+                task: task
             })
         });
         const result = await res.json();
