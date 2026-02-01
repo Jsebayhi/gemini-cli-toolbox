@@ -100,11 +100,65 @@ function closeWizard() {
     document.getElementById('wizard').classList.remove('active');
 }
 
+// --- Recent Paths Logic ---
+function getRecentPaths() {
+    try {
+        const raw = localStorage.getItem('recentPaths');
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveRecentPath(path) {
+    if (!path) return;
+    try {
+        let recents = getRecentPaths();
+        // Remove existing to bump to top
+        recents = recents.filter(p => p !== path);
+        // Add to front
+        recents.unshift(path);
+        // Limit to 3
+        if (recents.length > 3) recents = recents.slice(0, 3);
+        localStorage.setItem('recentPaths', JSON.stringify(recents));
+    } catch (e) {
+        console.error("Failed to save recent path", e);
+    }
+}
+
 async function fetchRoots() {
     const res = await fetch('/api/roots');
     const data = await res.json();
     const list = document.getElementById('roots-list');
     list.innerHTML = "";
+
+    // 1. Recent Paths
+    const recents = getRecentPaths();
+    if (recents.length > 0) {
+        const header = document.createElement('div');
+        header.innerText = "Recent";
+        header.style.cssText = "font-size: 0.75rem; color: var(--text-dim); margin: 10px 0 5px 5px; text-transform: uppercase;";
+        list.appendChild(header);
+
+        recents.forEach(path => {
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.style.borderLeft = "3px solid var(--accent)";
+            div.innerHTML = `<span style="font-family:monospace; font-size:0.9em">${path}</span> <span style="font-size:0.8em">🚀</span>`;
+            div.onclick = () => {
+                currentPath = path;
+                goToConfig();
+            };
+            list.appendChild(div);
+        });
+    }
+
+    // 2. System Roots
+    const rootHeader = document.createElement('div');
+    rootHeader.innerText = "System Roots";
+    rootHeader.style.cssText = "font-size: 0.75rem; color: var(--text-dim); margin: 15px 0 5px 5px; text-transform: uppercase;";
+    list.appendChild(rootHeader);
+
     data.roots.forEach(root => {
         const div = document.createElement('div');
         div.className = 'list-item';
@@ -236,6 +290,7 @@ async function doLaunch() {
         logPre.innerText = (result.stdout || "") + "\n" + (result.stderr || "");
         
         if (result.status === 'success') {
+            saveRecentPath(currentPath);
             status.innerText = "✅ Session launched!";
             status.style.color = "var(--accent)";
             
