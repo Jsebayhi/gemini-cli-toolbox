@@ -88,13 +88,16 @@ class TailscaleService:
             
             project = "Unknown"
             session_type = "Unknown"
+            uid = "Unknown"
             
             if len(parts) >= 4:
                 session_type = parts[-2]
                 project = "-".join(parts[1:-2])
+                uid = parts[-1]
             elif len(parts) == 3:
                 project = parts[1]
                 session_type = "cli"
+                uid = parts[-1]
                 
             addrs = node.get("TailscaleIPs", [])
             ip = next((a for a in addrs if "." in a), None)
@@ -104,6 +107,7 @@ class TailscaleService:
                     "name": hostname,
                     "project": project,
                     "type": session_type,
+                    "uid": uid,
                     "ip": ip,
                     "online": node.get("Online", False),
                     "local_url": local_ports.get(hostname)

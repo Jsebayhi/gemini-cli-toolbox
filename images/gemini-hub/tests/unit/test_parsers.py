@@ -19,6 +19,7 @@ def test_parse_peers_standard(mock_get_local_ports):
     assert len(peers) == 1
     assert peers[0]["project"] == "myproject"
     assert peers[0]["type"] == "geminicli"
+    assert peers[0]["uid"] == "a1b2"
     assert peers[0]["online"] is True
     assert peers[0]["local_url"] is None
 
@@ -43,6 +44,7 @@ def test_parse_peers_with_local_url(mock_get_local_ports):
     peers = TailscaleService.parse_peers(mock_status)
     assert len(peers) == 1
     assert peers[0]["name"] == "gem-local-app-geminicli-1234"
+    assert peers[0]["uid"] == "1234"
     assert peers[0]["local_url"] == "http://localhost:3001"
 
 @patch("app.services.tailscale.TailscaleService.get_local_ports")
@@ -63,6 +65,7 @@ def test_parse_peers_bash(mock_get_local_ports):
     assert len(peers) == 1
     assert peers[0]["type"] == "bash"
     assert peers[0]["project"] == "debug"
+    assert peers[0]["uid"] == "x9y8"
 
 @patch("app.services.tailscale.TailscaleService.get_local_ports")
 def test_parse_peers_complex_project(mock_get_local_ports):
@@ -83,6 +86,7 @@ def test_parse_peers_complex_project(mock_get_local_ports):
     # Project should join parts: "my-complex-app"
     assert peers[0]["project"] == "my-complex-app"
     assert peers[0]["type"] == "geminicli"
+    assert peers[0]["uid"] == "1234"
 
 @patch("app.services.tailscale.TailscaleService.get_local_ports")
 def test_parse_peers_ignore_non_gem(mock_get_local_ports):
