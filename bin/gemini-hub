@@ -188,6 +188,13 @@ else
     IMAGE_NAME="$REMOTE_TAG"
 fi
 
+# Detect Host Docker GID (for DooD)
+# We must calculate this on the HOST and pass it to the container.
+HOST_DOCKER_GID=""
+if command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
+    HOST_DOCKER_GID=$(getent group docker | cut -d: -f3)
+fi
+
 echo ">> Starting Gemini Hub on port $PORT..."
 echo ">> Access at http://localhost:$PORT (Desktop)"
 echo ">> Access at http://gemini-hub:8888 (Mobile VPN)"
