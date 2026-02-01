@@ -1,8 +1,18 @@
 from flask import Blueprint, jsonify, request
 from app.services.filesystem import FileSystemService
 from app.services.launcher import LauncherService
+from app.services.tailscale import TailscaleService
 
 api = Blueprint('api', __name__)
+
+@api.route('/resolve-local-url')
+def resolve_local_url():
+    hostname = request.args.get('hostname', '')
+    if not hostname:
+        return jsonify({"url": None})
+    
+    ports = TailscaleService.get_local_ports()
+    return jsonify({"url": ports.get(hostname)})
 
 @api.route('/roots')
 def get_roots():

@@ -27,16 +27,24 @@
 
         {% if machines %}
             {% for m in machines %}
-            <a href="http://{{ m.ip }}:3000" class="card {% if not m.online %}hidden{% endif %}" target="_blank" data-project="{{ m.project }}" data-type="{{ m.type }}" data-online="{{ 'true' if m.online else 'false' }}">
-                <div class="info">
-                    <span class="name">{{ m.project }}</span>
-                    <div class="meta">
-                        <span class="badge">{{ m.type }}</span>
-                        <span class="ip">{{ m.ip }}</span>
+            <div class="card {% if not m.online %}hidden{% endif %}" data-project="{{ m.project }}" data-type="{{ m.type }}" data-online="{{ 'true' if m.online else 'false' }}">
+                <a href="http://{{ m.ip }}:3000" class="card-main-link" target="_blank">
+                    <div class="info">
+                        <span class="name">{{ m.project }}</span>
+                        <div class="meta">
+                            <span class="badge">{{ m.type }}</span>
+                            <span class="ip">{{ m.ip }}</span>
+                        </div>
                     </div>
+                </a>
+                <div class="card-side">
+                    {% if m.local_url %}
+                    <!-- Hidden by default. JS will show if user is on localhost. -->
+                    <a href="{{ m.local_url }}" target="_blank" class="local-badge hidden" data-local-url="{{ m.local_url }}" title="Open Localhost">LOCAL</a>
+                    {% endif %}
+                    <div class="status {% if not m.online %}offline{% endif %}"></div>
                 </div>
-                <div class="status {% if not m.online %}offline{% endif %}"></div>
-            </a>
+            </div>
             {% endfor %}
         {% else %}
             <div class="empty-state">

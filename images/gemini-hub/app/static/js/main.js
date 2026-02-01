@@ -1,6 +1,71 @@
 let currentPath = "";
 let selectedConfig = "";
 
+document.addEventListener("DOMContentLoaded", () => {
+    checkConnectivity();
+});
+
+async function checkConnectivity() {
+    const cards = document.querySelectorAll('.card');
+    
+    for (const card of cards) {
+        const localBadge = card.querySelector('.local-badge');
+        const mainLink = card.querySelector('.card-main-link');
+        
+        if (!localBadge) continue; // Offline or no local port
+        
+        const localUrl = localBadge.getAttribute('data-local-url');
+        const vpnUrl = mainLink.href; // Original VPN URL from template
+        
+        // 1. Probe Localhost
+        let localReachable = false;
+        if (localUrl && ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+            localReachable = await probeUrl(localUrl);
+        }
+
+        // 2. Probe VPN
+        const vpnReachable = await probeUrl(vpnUrl);
+
+        // 3. Apply Logic
+        if (localReachable) {
+            // Priority: Localhost
+            mainLink.href = localUrl;
+            
+            if (vpnReachable) {
+                // If VPN also works, show it as a badge
+                localBadge.href = vpnUrl;
+                localBadge.innerText = "VPN";
+                localBadge.classList.remove('hidden');
+                localBadge.title = "Connect via Tailscale IP";
+            } else {
+                // VPN unreachable? Hide badge.
+                localBadge.classList.add('hidden');
+            }
+        } else {
+            // Local unreachable (or remote client)
+            // Main link remains VPN (default)
+            // Local badge remains hidden (default)
+             localBadge.classList.add('hidden');
+        }
+    }
+}
+
+async function probeUrl(url) {
+    try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 1500); // 1.5s timeout
+        
+        await fetch(url, {
+            mode: 'no-cors', // Opaque response is fine, we just want to know if it connects
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 function filterList() {
     const search = document.getElementById('projectFilter').value.toLowerCase();
     const type = document.getElementById('typeFilter').value;
@@ -178,9 +243,28 @@ async function doLaunch() {
             const match = (result.stdout || "").match(/Container started: (gem-[a-zA-Z0-9-]+)/);
             if (match && match[1]) {
                 const hostname = match[1];
-                btn.innerText = "Connect Now 🚀";
+                
+                // 1. Default to VPN Button
+                btn.innerText = "Connect (VPN) 🚀";
                 btn.onclick = () => window.open(`http://${hostname}:3000`, '_blank');
                 btn.style.display = "block";
+                
+                // 2. Upgrade to Local Button (if on host)
+                if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+                    // Poll briefly for the port mapping to appear
+                    setTimeout(async () => {
+                        try {
+                            const res = await fetch(`/api/resolve-local-url?hostname=${hostname}`);
+                            const data = await res.json();
+                            if (data.url) {
+                                // Smart Upgrade: Change the main button to Local
+                                btn.innerText = "Connect (Local) ⚡";
+                                btn.onclick = () => window.open(data.url, '_blank');
+                                btn.style.border = "1px solid var(--accent)";
+                            }
+                        } catch (e) { console.error("Failed to resolve local url", e); }
+                    }, 1500); // Wait 1.5s for Docker to map ports
+                }
             }
 
             backBtn.innerText = "Done";

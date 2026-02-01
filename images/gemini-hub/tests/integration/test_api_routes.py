@@ -133,3 +133,29 @@ def test_launch_failure_subprocess(client):
         assert response.status_code == 500
         assert response.json["status"] == "error"
         assert "Docker error" in response.json["error"]
+
+# --- Tailscale/Resolve Tests ---
+
+def test_resolve_local_url_success(client):
+    """Test resolving a local URL for a valid hostname."""
+    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
+        mock_ports.return_value = {"gem-test": "http://localhost:1234"}
+        
+        response = client.get('/api/resolve-local-url?hostname=gem-test')
+        assert response.status_code == 200
+        assert response.json["url"] == "http://localhost:1234"
+
+def test_resolve_local_url_not_found(client):
+    """Test resolving a hostname that has no local mapping."""
+    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
+        mock_ports.return_value = {}
+        
+        response = client.get('/api/resolve-local-url?hostname=gem-test')
+        assert response.status_code == 200
+        assert response.json["url"] is None
+
+def test_resolve_local_url_missing_param(client):
+    """Test resolving without hostname parameter."""
+    response = client.get('/api/resolve-local-url')
+    assert response.status_code == 200
+    assert response.json["url"] is None

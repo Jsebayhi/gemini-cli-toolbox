@@ -119,6 +119,7 @@ The **Gemini Hub** is a built-in dashboard that auto-starts with your remote ses
     *   **Search & Filter:** Find projects by name or type.
     *   **Persistent by Default:** The Hub stays running to facilitate switching sessions. Auto-shutdown is optional.
     *   **Smart Workspace Management:** Need to access a new folder? Just run `gemini-toolbox` with the new path. The Hub will detect it and offer to **Merge and Restart** seamlessly.
+    *   **Hybrid Mode (Local Access):** If the Hub detects a session running on the *same machine*, it adds a **LOCAL** badge to the card. Click it to bypass the VPN and connect directly via `localhost` for zero latency.
 
 #### Manual Control
 ```bash
