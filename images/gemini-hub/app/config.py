@@ -9,11 +9,6 @@ class Config:
     # Workspace Roots (Colon separated)
     HUB_ROOTS = [r for r in os.environ.get("HUB_ROOTS", "").split(":") if r]
     
-    # Sandbox Management (ADR-0012)
-    GEMINI_WORKTREE_ROOT = os.environ.get("GEMINI_WORKTREE_ROOT", "")
-    if GEMINI_WORKTREE_ROOT and GEMINI_WORKTREE_ROOT not in HUB_ROOTS:
-        HUB_ROOTS.append(GEMINI_WORKTREE_ROOT)
-    
     # Host Environment
     HOST_CONFIG_ROOT = os.environ.get("HOST_CONFIG_ROOT", "")
     HOST_HOME = os.environ.get("HOST_HOME", "")
