@@ -42,7 +42,7 @@ class LauncherService:
         
         if task:
             # Autonomous mode: pass the task as arguments to gemini
-            cmd.extend(["--", "chat", task])
+            cmd.extend(["--", task])
 
         cmd_str = ' '.join(cmd)
         

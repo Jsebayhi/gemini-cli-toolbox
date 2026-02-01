@@ -36,5 +36,5 @@ def test_launch_success_with_task():
             args, _ = mock_run.call_args
             cmd = args[0]
             # Verify task is passed after --
-            assert cmd[-3:] == ["--", "chat", "Hello Bot"]
+            assert cmd[-2:] == ["--", "Hello Bot"]
 
