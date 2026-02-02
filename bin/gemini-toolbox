@@ -390,6 +390,7 @@ DOCKER_ARGS=(
   --env GEMINI_PROJECT_NAME="${PROJECT_NAME}"
   --env GEMINI_SESSION_TYPE="${SESSION_TYPE}"
   --env TERM="${TERM:-xterm-256color}"
+  --env COLORTERM
   --env LANG
   --env LC_ALL
   --env HTTP_PROXY --env HTTPS_PROXY --env NO_PROXY
