@@ -215,4 +215,6 @@ docker run --rm "$MODE" \
     --env HUB_ROOTS="${ROOT_PATHS_LIST}" \
     --env HOST_CONFIG_ROOT="${ABS_CONFIG_ROOT}" \
     --env HOST_HOME="${HOME}" \
+    --env TERM \
+    --env COLORTERM \
     "$IMAGE_NAME"
