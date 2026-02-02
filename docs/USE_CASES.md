@@ -131,3 +131,19 @@ git diff --staged | gemini-toolbox "Write a semantic commit message for these ch
 ```
 *   **Workflow:** Automating the tedious parts of version control.
 *   **Advantage:** Consistency and speed.
+
+## 11. The Autonomous Agent (Bot)
+**Persona:** Developer / Automation Engineer
+**Goal:** Run complex tasks in the background without intervention.
+
+Launch a session with a specific task. The agent will execute the task and can either exit or stay open for you to review.
+
+```bash
+# Launch from the Hub UI
+# 1. Open the Launch Wizard
+# 2. Select project and profile
+# 3. Enter task: "Refactor the authentication logic to use JWT"
+# 4. Uncheck 'Interactive' if you want it to exit after finishing.
+```
+*   **Workflow:** Delegating long-running refactors or documentation updates.
+*   **Advantage:** Multi-tasking; the bot works in its own container while you work on other features.
