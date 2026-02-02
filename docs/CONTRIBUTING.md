@@ -25,6 +25,7 @@ This project uses a "Hybrid Agent" workflow designed for speed and clarity.
 *   **Python:** Follow `images/gemini-hub/docs/ENGINEERING_STANDARDS.md`.
 *   **Bash:** Use `shellcheck`.
 *   **Testing:** New features must include tests (or manual verification steps documented in the PR).
+*   **CLI Updates:** If you add or modify CLI flags/arguments, you **MUST** update the corresponding bash completion script in `completions/`.
 
 ### 5. Task Sizing
 Every issue **MUST** have a complexity label. If unsure, estimate.
