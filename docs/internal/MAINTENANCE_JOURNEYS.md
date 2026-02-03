@@ -110,3 +110,37 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Launch a standard CLI session detached.
     *   Run `gemini-toolbox --bash connect <cli-session-id>`.
     *   **Verify:** You get a `bash` shell inside the *CLI* container (inspecting the agent's environment).
+
+## 🧹 Journey 9: The Cleaner (Lifecycle)
+**Goal:** Verify containers are ephemeral and cleanup commands work.
+
+1.  **Ephemeral Check:**
+    *   Run `gemini-toolbox "quick task"`.
+    *   **Verify:** After output, run `docker ps -a`. The container should NOT exist (due to `--rm`).
+2.  **Hub Cleanup:**
+    *   Start Hub: `gemini-hub -d --key ...`.
+    *   Run `gemini-toolbox stop-hub`.
+    *   **Verify:** `gemini-hub-service` container is removed.
+
+## 🆙 Journey 10: The Updater (Maintenance)
+**Goal:** Verify update mechanisms.
+
+1.  **Explicit Update:**
+    *   Run `gemini-toolbox update`.
+    *   **Verify:** It attempts to `docker pull` the latest image tags.
+2.  **Stale Warning (Manual Sim):**
+    *   (Advanced) Manually tag an old image as `latest`.
+    *   Run `gemini-toolbox`.
+    *   **Verify:** A warning about the image being >7 days old appears.
+
+## 📂 Journey 11: The Custom Mounter (Volumes)
+**Goal:** Verify manual volume injection.
+
+1.  **Mount Host File:**
+    *   Create a dummy file: `touch /tmp/host-secret.txt`.
+    *   Run `gemini-toolbox -v /tmp/host-secret.txt:/tmp/secret.txt --bash -c "cat /tmp/secret.txt"`.
+    *   **Verify:** Output matches content of `host-secret.txt`.
+2.  **Mount Profile Extra-Args:**
+    *   Add `--volume /tmp/data:/data` to a profile's `extra-args`.
+    *   Run with that profile.
+    *   **Verify:** `/data` exists inside the container.
