@@ -1,135 +1,105 @@
-# 🗺️ Gemini CLI Toolbox: User Guide & Use Cases
+# 🗺️ Gemini CLI Toolbox: User Guide
 
-This document describes standard "User Paths" or "Journeys" when using the project. It outlines the diverse ways you can utilize the Gemini CLI Toolbox to enhance your development workflow, from daily coding to mobile management and DevOps automation.
+Welcome to the Gemini CLI Toolbox. This guide explores the diverse ways you can use this tool to enhance your workflow, from daily coding assistance to managing infrastructure and working remotely.
 
 ---
 
-## 1. The Daily Driver (VS Code Companion)
-Use the toolbox as your primary AI assistant directly inside VS Code. It automatically connects to the companion extension to read your editor context and apply diffs.
+## 1. Seamless VS Code Integration
+**The Scenario:** You are deep in a complex refactor. You need AI help, but you don't want to constantly copy-paste code into a web browser, and you certainly don't want to clutter your host machine with CLI dependencies.
 
+**The Solution:** Run the toolbox directly inside VS Code's integrated terminal.
 ```bash
-# In VS Code Terminal
 gemini-toolbox
 ```
-
-**Step-by-Step Journey:**
-1.  User opens a terminal in VS Code.
-2.  Runs `gemini-toolbox`.
-3.  The container starts, automatically detects the VS Code environment, and connects to the host's Companion Extension.
-4.  User types: `"Refactor the current file to use async/await"`.
-5.  Gemini reads the context from the IDE, generates a diff, and applies it.
-6.  User reviews and commits.
-
-*   **Advantage:** Zero setup on the host machine; keeps your node_modules/python env clean.
+It automatically detects your environment and connects to the **Gemini CLI Companion** extension. You can simply say *"Refactor the selected code to use async/await"* or *"Explain this file"*. The agent sees exactly what you see and can even apply diffs directly to your files.
 
 ---
 
-## 2. The Mobile Commander (Remote Access)
-Code, debug, or fix production issues from your phone or tablet via VPN. The **Gemini Hub** provides a full terminal interface accessible from anywhere.
+## 2. Coding from Anywhere (Remote Access)
+**The Scenario:** A production issue hits while you're away from your desk. You only have your phone or tablet, but you need full terminal access to your dev machine to fix it.
 
+**The Solution:** Leave your session running in "Remote Mode" on your desktop.
 ```bash
-# On your Desktop
-gemini-toolbox --remote tskey-auth-xxxxxx
+gemini-toolbox --remote
 ```
-
-**Step-by-Step Journey:**
-1.  User starts a remote session from the desktop before leaving: `gemini-toolbox --remote`.
-2.  Later, from a phone/tablet, the user opens `http://gemini-hub:8888`.
-3.  User taps the active project card.
-4.  A web terminal opens. User interacts with Gemini to diagnose the issue.
-5.  **Bonus:** User needs to edit a config file manually. They launch a new **Bash** session from the Hub's "New Session" wizard and use `vim` in the browser.
-
-*   **Advantage:** Full desktop-class development power on any mobile device.
+Then, connect from anywhere using the **Gemini Hub** (`http://gemini-hub:8888`) over your Tailscale VPN. You get a full, responsive terminal on your mobile device, allowing you to debug, run commands, or even edit files with `vim` just as if you were sitting at your keyboard.
 
 ---
 
-## 3. The Autonomous Agent (Bot)
-Delegate complex, long-running tasks to a background bot while you focus on other work.
+## 3. Autonomous Assistants (Bots)
+**The Scenario:** You have a tedious, long-running task—like finding all "TODO" comments in a legacy codebase and summarizing them in a report—that distracts you from your main work.
 
-**Step-by-Step Journey:**
-1.  User opens the Gemini Hub.
-2.  User clicks "+ New Session" and selects a project.
-3.  In the "Initial Task" field, they type: `"Search the codebase for TODOs and create a report in docs/TODO_REPORT.md"`.
-4.  They uncheck **Interactive** and click **Launch**.
-5.  The Hub starts a detached container. Gemini executes the task in the background.
-6.  User checks the Hub logs later to confirm completion.
+**The Solution:** Delegate it. Open the **Gemini Hub**, click **New Session**, and enter your task:
+> *"Scan the codebase for TODOs and create a prioritized report in docs/TECHNICAL_DEBT.md"*
 
-*   **Advantage:** Multi-tasking; the bot works in its own container while you work on other features.
+Uncheck "Interactive" and click Launch. The toolbox spins up a dedicated container to handle this chore in the background, freeing you to focus on feature work.
 
 ---
 
-## 4. The Polyglot Builder (Docker-Powered)
-Build and test projects in any language (Rust, Go, Python) without cluttering your host machine with SDKs. The agent uses your host's Docker engine to run the necessary tools.
+## 4. The Universal Builder (No SDKs Required)
+**The Scenario:** You need to build or test a project in a language you don't use often (e.g., Rust, Go, Python) and you don't want to install the entire toolchain on your host.
 
+**The Solution:** Let the agent use Docker.
 ```bash
-gemini-toolbox "Run the tests for this Rust project using cargo"
+gemini-toolbox "Run the tests for this Rust project"
 ```
-*   **Workflow:** The agent can run `docker run --rm -v $(pwd):/app -w /app rust:latest cargo test`.
-*   **Advantage:** Keeps your host free of multiple SDK versions and build tools. It leverages your host's Docker cache for fast image reuse.
+Because the toolbox shares your host's Docker socket, the agent can spin up a temporary `rust` container, mount your code, and run `cargo test`. It uses your host's image cache, so it's instant, but your host OS remains clean of SDK clutter.
 
 ---
 
-## 5. The DevOps Architect (Docker-out-of-Docker)
-Manage your host's Docker containers and infrastructure using natural language.
+## 5. Infrastructure as Conversation
+**The Scenario:** You need a Postgres database and a Redis cache to run integration tests, but you don't want to write the `docker-compose.yml` file from scratch.
 
+**The Solution:** Just ask for it.
 ```bash
 gemini-toolbox "Spin up a Postgres container and a Redis container for testing"
 ```
-*   **Workflow:** The agent writes a `docker-compose.yml` and runs `docker compose up -d`.
-*   **Advantage:** The agent can act on the infrastructure, not just talk about it.
+The agent understands your infrastructure needs and can directly interact with the Docker daemon to start, stop, and manage services for you.
 
 ---
 
-## 6. The Isolated Auditor (Security Sandbox)
-Safely analyze untrusted code or repositories in a strictly isolated sandbox. The agent is trapped in the container with no access to your host's Docker daemon or IDE.
+## 6. The Safety Sandbox
+**The Scenario:** You've downloaded a GitHub repository from an unknown source to audit it, but you're worried about running its code or even letting an AI execute parts of it on your machine.
 
+**The Solution:** Lock it down.
 ```bash
 gemini-toolbox --no-docker --no-ide
 ```
-
-**Step-by-Step Journey:**
-1.  User clones the repo into a temporary folder.
-2.  User runs `gemini-toolbox --no-docker --no-ide`.
-3.  This ensures the agent is strictly trapped in the container with no access to the host's Docker socket or IDE.
-4.  User asks: `"Analyze this shell script for any malicious network calls"`.
-
-*   **Outcome:** Secure, isolated analysis of untrusted code.
+This launches **Strict Sandbox Mode**. The agent is trapped inside the container with **no access** to your host's Docker daemon or your IDE. It can read and analyze the files in the folder you mounted, but it cannot escape or affect your system configuration.
 
 ---
 
-## 7. The Experimenter (Multi-Profile)
-Switch contexts instantly between work, personal, and experimental profiles. Each profile maintains its own history and configuration.
+## 7. Context Switching (Profiles)
+**The Scenario:** You work on both personal projects and confidential client work. You need to ensure that your command history, secret keys, and project contexts never mix.
 
+**The Solution:** Use Profiles.
 ```bash
-# For Client A
-gemini-toolbox --profile ~/.gemini-profiles/client-a
+# Morning: Client Work
+gemini-toolbox --profile ~/.gemini-profiles/acme-corp
+
+# Evening: Hobby Project
+gemini-toolbox --profile ~/.gemini-profiles/hobby
 ```
-
-**Step-by-Step Journey:**
-1.  User runs `gemini-toolbox --profile ~/.gemini-profiles/experiment`.
-2.  This uses a clean configuration profile (isolated history).
-3.  User performs various operations. If satisfied, they push the changes.
-4.  If not, they simply delete the profile or the container.
-
-*   **Advantage:** Clean separation of experimental work from the daily stable environment.
+Each profile has its own isolated history, cookies, and configuration. Switching contexts is as simple as changing a flag.
 
 ---
 
-## 8. The Log Analyzer (Piping & Scripting)
-Pipe system logs or error dumps directly into the AI for instant analysis.
+## 8. Instant Log Analysis
+**The Scenario:** You are staring at a massive, cryptic error log on a server and need immediate insight.
 
+**The Solution:** Pipe it.
 ```bash
 cat /var/log/syslog | tail -n 50 | gemini-toolbox "Identify the root cause of these errors"
 ```
-*   **Advantage:** fast, terminal-native integration.
+The toolbox accepts standard input, making it a powerful addition to your Unix piping workflows.
 
 ---
 
-## 9. The Git Librarian
-Automate git workflows like generating commit messages or changelogs.
+## 9. Automating Git
+**The Scenario:** You've finished a feature but dread writing the detailed commit message or changelog entry.
 
+**The Solution:** Automate the toil.
 ```bash
-# Generate a commit message for staged changes
 git diff --staged | gemini-toolbox "Write a semantic commit message for these changes"
 ```
-*   **Advantage:** Consistency and speed.
+The agent analyzes your actual code changes and generates a precise, professional commit message for you to review.
