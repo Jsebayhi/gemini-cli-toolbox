@@ -115,8 +115,7 @@ When you run `gemini-toolbox --profile /path/to/my-profile`, the toolbox treats 
 ```text
 /path/to/my-profile/
 ├── .gemini/            # [Auto-Generated] The actual home of the Gemini CLI state (history, cookies, keys).
-├── extra-args          # [User-Created] A text file containing persistent flags.
-└── secrets/            # [User-Created] A place to store project-specific secrets or env files.
+└── extra-args          # [User-Created] A text file containing persistent flags.
 ```
 
 ### Why Nested `.gemini`?
