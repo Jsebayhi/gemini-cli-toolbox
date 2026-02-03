@@ -1,6 +1,6 @@
-# Gemini CLI Toolbox: Use Case Catalog
+# 🗺️ Gemini CLI Toolbox: User Guide & Use Cases
 
-This document outlines the diverse ways you can utilize the Gemini CLI Toolbox to enhance your development workflow. From daily coding to mobile management and DevOps automation, the toolbox adapts to your needs.
+This document describes standard "User Paths" or "Journeys" when using the project. It outlines the diverse ways you can utilize the Gemini CLI Toolbox to enhance your development workflow, from daily coding to mobile management and DevOps automation.
 
 ---
 
@@ -14,10 +14,20 @@ By running the toolbox inside VS Code's integrated terminal, you get context-awa
 # In VS Code Terminal
 gemini-toolbox
 ```
-*   **Workflow:** "Refactor this function", "Explain the selected code", "Fix the linting errors in this file".
+
+**Step-by-Step Journey:**
+1.  User opens a terminal in VS Code.
+2.  Runs `gemini-toolbox`.
+3.  The container starts, automatically detects the VS Code environment, and connects to the host's Companion Extension.
+4.  User types: `"Refactor the current file to use async/await"`.
+5.  Gemini reads the context from the IDE, generates a diff, and applies it.
+6.  User reviews and commits.
+
 *   **Advantage:** Zero setup on the host machine; keeps your node_modules/python env clean.
 
-## 2. The Mobile Commander (iPad/Phone)
+---
+
+## 2. The Mobile Commander (Remote Access)
 **Persona:** Digital Nomad / On-Call Engineer
 **Goal:** Code or fix bugs while away from the desk.
 
@@ -27,10 +37,37 @@ Use the **Gemini Hub** to access your session from anywhere via Tailscale.
 # On your Desktop
 gemini-toolbox --remote tskey-auth-xxxxxx
 ```
-*   **Workflow:** Open `http://gemini-hub:8888` on your phone. Tap your project. You now have a full terminal with the Gemini agent.
-*   **Advantage:** Full coding power on a tablet without SSH apps or complex setups.
 
-## 3. The Polyglot Builder (Docker-Powered)
+**Step-by-Step Journey:**
+1.  User starts a remote session from the desktop before leaving: `gemini-toolbox --remote`.
+2.  Later, from a phone/tablet, the user opens `http://gemini-hub:8888`.
+3.  User taps the active project card.
+4.  A web terminal opens. User interacts with Gemini to diagnose the issue.
+5.  **Bonus:** User needs to edit a config file manually. They launch a new **Bash** session from the Hub's "New Session" wizard and use `vim` in the browser.
+
+*   **Advantage:** Full desktop-class development power on any mobile device.
+
+---
+
+## 3. The Autonomous Agent (Bot)
+**Persona:** Developer / Automation Engineer
+**Goal:** Run complex tasks in the background without intervention.
+
+Launch a session with a specific task. The agent will execute the task and can either exit or stay open for you to review.
+
+**Step-by-Step Journey:**
+1.  User opens the Gemini Hub.
+2.  User clicks "+ New Session" and selects a project.
+3.  In the "Initial Task" field, they type: `"Search the codebase for TODOs and create a report in docs/TODO_REPORT.md"`.
+4.  They uncheck **Interactive** and click **Launch**.
+5.  The Hub starts a detached container. Gemini executes the task in the background.
+6.  User checks the Hub logs later to confirm completion.
+
+*   **Advantage:** Multi-tasking; the bot works in its own container while you work on other features.
+
+---
+
+## 4. The Polyglot Builder (Docker-Powered)
 **Persona:** Java/Scala/Go/Rust Developer
 **Goal:** Build and test any language without installing SDKs on your host.
 
@@ -42,7 +79,9 @@ gemini-toolbox "Run the tests for this Rust project using cargo"
 *   **Workflow:** The agent can run `docker run --rm -v $(pwd):/app -w /app rust:latest cargo test`.
 *   **Advantage:** Keeps your host free of multiple SDK versions and build tools. It leverages your host's Docker cache for fast image reuse.
 
-## 4. The DevOps Architect (Docker-out-of-Docker)
+---
+
+## 5. The DevOps Architect (Docker-out-of-Docker)
 **Persona:** SRE / Platform Engineer
 **Goal:** Manage containers and infrastructure.
 
@@ -54,7 +93,50 @@ gemini-toolbox "Spin up a Postgres container and a Redis container for testing"
 *   **Workflow:** The agent writes a `docker-compose.yml` and runs `docker compose up -d`.
 *   **Advantage:** The agent can act on the infrastructure, not just talk about it.
 
-## 5. The Log Analyzer (Piping & Scripting)
+---
+
+## 6. The Isolated Auditor (Security Sandbox)
+**Persona:** Security Researcher
+**Goal:** Analyze a suspicious third-party repository safely.
+
+If you downloaded a suspicious repo, you don't want an AI agent executing code on your host. Use the **Strict Sandbox** mode.
+
+```bash
+gemini-toolbox --no-docker --no-ide
+```
+
+**Step-by-Step Journey:**
+1.  User clones the repo into a temporary folder.
+2.  User runs `gemini-toolbox --no-docker --no-ide`.
+3.  This ensures the agent is strictly trapped in the container with no access to the host's Docker socket or IDE.
+4.  User asks: `"Analyze this shell script for any malicious network calls"`.
+
+*   **Outcome:** Secure, isolated analysis of untrusted code.
+
+---
+
+## 7. The Experimenter (Multi-Profile)
+**Persona:** Freelancer / Consultant
+**Goal:** Try a complex refactor or keep client contexts separate.
+
+Use configuration directories to maintain separate histories, prompts, and login sessions for different contexts.
+
+```bash
+# For Client A
+gemini-toolbox --profile ~/.gemini-profiles/client-a
+```
+
+**Step-by-Step Journey:**
+1.  User runs `gemini-toolbox --profile ~/.gemini-profiles/experiment`.
+2.  This uses a clean configuration profile (isolated history).
+3.  User performs various operations. If satisfied, they push the changes.
+4.  If not, they simply delete the profile or the container.
+
+*   **Advantage:** Clean separation of experimental work from the daily stable environment.
+
+---
+
+## 8. The Log Analyzer (Piping & Scripting)
 **Persona:** Sysadmin
 **Goal:** Analyze logs or errors instantly.
 
@@ -63,63 +145,11 @@ You can pipe data into the toolbox for a one-shot analysis.
 ```bash
 cat /var/log/syslog | tail -n 50 | gemini-toolbox "Identify the root cause of these errors"
 ```
-*   **Workflow:** Quick triage of system state.
 *   **Advantage:** fast, terminal-native integration.
 
-## 6. The Isolated Auditor (Security Sandbox)
-**Persona:** Security Researcher
-**Goal:** Analyze untrusted code safely.
+---
 
-If you downloaded a suspicious repo, you don't want an AI agent executing code on your host. Use the **Strict Sandbox** mode.
-
-```bash
-gemini-toolbox --no-docker --no-ide
-```
-*   **Workflow:** "Explain what this obfuscated script does."
-*   **Advantage:** The agent is trapped in the container. It cannot access your host's Docker daemon to break out, and network access can be restricted.
-
-## 7. The Persona Switcher (Multi-Profile)
-**Persona:** Freelancer / Consultant
-**Goal:** Keep client contexts separate.
-
-Use configuration directories to maintain separate histories, prompts, and login sessions for different contexts.
-
-```bash
-# For Client A
-gemini-toolbox --config ~/.gemini-client-a
-
-# For Personal Projects
-gemini-toolbox --config ~/.gemini-personal
-```
-*   **Workflow:** Switching contexts without polluting command history.
-*   **Advantage:** Clean separation of concerns.
-
-## 8. The Early Adopter (Preview Channel)
-**Persona:** Gemini Enthusiast
-**Goal:** Test the latest features before they are stable.
-
-Google releases updates frequently. The toolbox builds a preview image every week.
-
-```bash
-gemini-toolbox --preview
-```
-*   **Workflow:** Trying out new beta commands or capabilities.
-*   **Advantage:** Access to bleeding-edge features without breaking your stable setup.
-
-## 9. The Headless Server (Remote Workspace)
-**Persona:** Cloud Developer
-**Goal:** A persistent workspace in the cloud.
-
-Run the toolbox on a VPS (EC2/Droplet) and connect to it from your laptop via the Hub.
-
-```bash
-# On Server (inside a tmux or systemd service)
-gemini-toolbox --remote $TS_KEY
-```
-*   **Workflow:** You connect via VPN. The session stays alive even if you disconnect.
-*   **Advantage:** Long-running tasks, high-bandwidth environment, accessible from any device.
-
-## 10. The Git Librarian
+## 9. The Git Librarian
 **Persona:** Open Source Maintainer
 **Goal:** Automate documentation and changelogs.
 
@@ -129,21 +159,4 @@ Use the agent to generate commit messages or update docs based on changes.
 # Generate a commit message for staged changes
 git diff --staged | gemini-toolbox "Write a semantic commit message for these changes"
 ```
-*   **Workflow:** Automating the tedious parts of version control.
 *   **Advantage:** Consistency and speed.
-
-## 11. The Autonomous Agent (Bot)
-**Persona:** Developer / Automation Engineer
-**Goal:** Run complex tasks in the background without intervention.
-
-Launch a session with a specific task. The agent will execute the task and can either exit or stay open for you to review.
-
-```bash
-# Launch from the Hub UI
-# 1. Open the Launch Wizard
-# 2. Select project and profile
-# 3. Enter task: "Refactor the authentication logic to use JWT"
-# 4. Uncheck 'Interactive' if you want it to exit after finishing.
-```
-*   **Workflow:** Delegating long-running refactors or documentation updates.
-*   **Advantage:** Multi-tasking; the bot works in its own container while you work on other features.
