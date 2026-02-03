@@ -5,10 +5,7 @@ This document describes standard "User Paths" or "Journeys" when using the proje
 ---
 
 ## 1. The Daily Driver (VS Code Companion)
-**Persona:** Full-time Developer
-**Goal:** Seamless AI assistance inside the IDE.
-
-By running the toolbox inside VS Code's integrated terminal, you get context-aware assistance. The container mounts your current project and communicates with the IDE extension.
+Use the toolbox as your primary AI assistant directly inside VS Code. It automatically connects to the companion extension to read your editor context and apply diffs.
 
 ```bash
 # In VS Code Terminal
@@ -28,10 +25,7 @@ gemini-toolbox
 ---
 
 ## 2. The Mobile Commander (Remote Access)
-**Persona:** Digital Nomad / On-Call Engineer
-**Goal:** Code or fix bugs while away from the desk.
-
-Use the **Gemini Hub** to access your session from anywhere via Tailscale.
+Code, debug, or fix production issues from your phone or tablet via VPN. The **Gemini Hub** provides a full terminal interface accessible from anywhere.
 
 ```bash
 # On your Desktop
@@ -50,10 +44,7 @@ gemini-toolbox --remote tskey-auth-xxxxxx
 ---
 
 ## 3. The Autonomous Agent (Bot)
-**Persona:** Developer / Automation Engineer
-**Goal:** Run complex tasks in the background without intervention.
-
-Launch a session with a specific task. The agent will execute the task and can either exit or stay open for you to review.
+Delegate complex, long-running tasks to a background bot while you focus on other work.
 
 **Step-by-Step Journey:**
 1.  User opens the Gemini Hub.
@@ -68,10 +59,7 @@ Launch a session with a specific task. The agent will execute the task and can e
 ---
 
 ## 4. The Polyglot Builder (Docker-Powered)
-**Persona:** Java/Scala/Go/Rust Developer
-**Goal:** Build and test any language without installing SDKs on your host.
-
-The toolbox connects to your host's Docker daemon. Instead of heavy images with pre-installed SDKs, the agent can use Docker to run the appropriate build tools for your project.
+Build and test projects in any language (Rust, Go, Python) without cluttering your host machine with SDKs. The agent uses your host's Docker engine to run the necessary tools.
 
 ```bash
 gemini-toolbox "Run the tests for this Rust project using cargo"
@@ -82,10 +70,7 @@ gemini-toolbox "Run the tests for this Rust project using cargo"
 ---
 
 ## 5. The DevOps Architect (Docker-out-of-Docker)
-**Persona:** SRE / Platform Engineer
-**Goal:** Manage containers and infrastructure.
-
-The toolbox connects to your host's Docker socket. The agent can control your Docker daemon.
+Manage your host's Docker containers and infrastructure using natural language.
 
 ```bash
 gemini-toolbox "Spin up a Postgres container and a Redis container for testing"
@@ -96,10 +81,7 @@ gemini-toolbox "Spin up a Postgres container and a Redis container for testing"
 ---
 
 ## 6. The Isolated Auditor (Security Sandbox)
-**Persona:** Security Researcher
-**Goal:** Analyze a suspicious third-party repository safely.
-
-If you downloaded a suspicious repo, you don't want an AI agent executing code on your host. Use the **Strict Sandbox** mode.
+Safely analyze untrusted code or repositories in a strictly isolated sandbox. The agent is trapped in the container with no access to your host's Docker daemon or IDE.
 
 ```bash
 gemini-toolbox --no-docker --no-ide
@@ -116,10 +98,7 @@ gemini-toolbox --no-docker --no-ide
 ---
 
 ## 7. The Experimenter (Multi-Profile)
-**Persona:** Freelancer / Consultant
-**Goal:** Try a complex refactor or keep client contexts separate.
-
-Use configuration directories to maintain separate histories, prompts, and login sessions for different contexts.
+Switch contexts instantly between work, personal, and experimental profiles. Each profile maintains its own history and configuration.
 
 ```bash
 # For Client A
@@ -137,10 +116,7 @@ gemini-toolbox --profile ~/.gemini-profiles/client-a
 ---
 
 ## 8. The Log Analyzer (Piping & Scripting)
-**Persona:** Sysadmin
-**Goal:** Analyze logs or errors instantly.
-
-You can pipe data into the toolbox for a one-shot analysis.
+Pipe system logs or error dumps directly into the AI for instant analysis.
 
 ```bash
 cat /var/log/syslog | tail -n 50 | gemini-toolbox "Identify the root cause of these errors"
@@ -150,10 +126,7 @@ cat /var/log/syslog | tail -n 50 | gemini-toolbox "Identify the root cause of th
 ---
 
 ## 9. The Git Librarian
-**Persona:** Open Source Maintainer
-**Goal:** Automate documentation and changelogs.
-
-Use the agent to generate commit messages or update docs based on changes.
+Automate git workflows like generating commit messages or changelogs.
 
 ```bash
 # Generate a commit message for staged changes
