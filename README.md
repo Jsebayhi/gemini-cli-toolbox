@@ -73,7 +73,7 @@ The Toolbox isn't just a wrapper; it's a bridge between your host and a secure e
 
 Want to go deeper? Follow these guides to master the Toolbox:
 
-1.  **[User Guide & Use Cases](docs/USE_CASES.md) (10 min):** A comprehensive guide to workflows, user journeys, and features for every persona (DevOps, Mobile, Security).
+1.  **[User Guide & Use Cases](docs/USER_GUIDE.md) (10 min):** A comprehensive guide to workflows, user journeys, and features for every persona (DevOps, Mobile, Security).
 2.  **[Architecture & Features](docs/ARCHITECTURE_AND_FEATURES.md) (20 min):** Deep dive into the internal mechanics (DooD, IDE protocols, networking).
 3.  **[Architecture Decisions (ADRs)](adr/) (Reference):** Historical record of design choices.
 
