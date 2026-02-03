@@ -88,8 +88,16 @@ The Hub is a standalone container (`gemini-hub-service`) that acts as a discover
 #### 1. Discovery & Connection
 *   **Mesh Discovery:** It queries the local Tailscale socket to find any active `gem-` peers on your network.
 *   **Web Proxy:** It provides a Web UI to launch `ttyd` (Web Terminal) sessions connecting to those peers.
+*   **Access:**
+    *   **Mobile/Remote:** `http://gemini-hub:8888` (via MagicDNS)
+    *   **Local Desktop:** `http://localhost:8888`
 
-#### 2. Remote Session Management
+#### 2. Hybrid Mode (Localhost Optimization)
+The Hub is smart enough to know where it is running.
+*   **Scenario:** You are browsing the Hub from the same computer running the containers.
+*   **Optimization:** Instead of routing traffic through the VPN (which adds latency), the Hub detects local containers and provides a **"LOCAL"** badge. Clicking this connects you directly via `localhost`, ensuring zero-latency performance.
+
+#### 3. Remote Session Management
 The Hub is not just a passive list; it is an active **Remote Job Runner**.
 *   **Launch Wizard:** From the Hub UI, you can start *new* sessions (CLI or Bash) in any workspace it has access to.
 *   **Autonomous Bots:** You can dispatch autonomous tasks (e.g., "Refactor this module") directly from the dashboard without opening a terminal.
