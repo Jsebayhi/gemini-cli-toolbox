@@ -102,6 +102,35 @@ We mount standard cache directories from your host to speed up builds:
 *   `~/.cache/pip` (Python)
 *   `~/go/pkg` (Go)
 
-### Configuration Profiles
-User history and login cookies are stored in `~/.gemini` (mounted to `/home/gemini/.gemini`).
-*   **Isolation:** By changing the `--config` path, you completely swap the agent's memory/context.
+---
+
+## 👤 6. Configuration Profiles (Multi-Account)
+
+The toolbox supports advanced context isolation through **Configuration Profiles**. This is essential for users who manage multiple accounts (e.g., Work vs. Personal) or distinct environments.
+
+### The `--profile` Architecture
+When you run `gemini-toolbox --profile /path/to/my-profile`, the toolbox treats that directory as a **Workspace Root**, not just a simple config folder.
+
+**Directory Structure:**
+```text
+/path/to/my-profile/
+├── .gemini/            # [Auto-Generated] The actual home of the Gemini CLI state (history, cookies, keys).
+├── extra-args          # [User-Created] A text file containing persistent flags.
+└── secrets/            # [User-Created] A place to store project-specific secrets or env files.
+```
+
+### Why Nested `.gemini`?
+Unlike the legacy `--config` flag (which mounts the target directory directly to `/home/gemini/.gemini`), the `--profile` flag mounts the target to a parent directory and nests the tool's state inside a hidden `.gemini` folder.
+*   **Benefit:** This keeps the profile root clean, allowing you to store your own configuration files (`extra-args`, `.env`, etc.) alongside the tool's state without mixing them.
+
+### Persistent Arguments (`extra-args`)
+You can define persistent runtime arguments for a specific profile by creating a file named `extra-args` in the profile root.
+*   **Format:** One flag per line (or space-separated).
+*   **Usage:** Automatically loaded whenever you use this profile.
+
+**Example `extra-args`:**
+```bash
+--no-ide
+--volume "/mnt/data/work-docs:/docs"
+--env "MY_API_KEY=secret"
+```
