@@ -118,9 +118,13 @@ When you run `gemini-toolbox --profile /path/to/my-profile`, the toolbox treats 
 └── extra-args          # [User-Created] A text file containing persistent flags.
 ```
 
-### Why Nested `.gemini`?
-Unlike the legacy `--config` flag (which mounts the target directory directly to `/home/gemini/.gemini`), the `--profile` flag mounts the target to a parent directory and nests the tool's state inside a hidden `.gemini` folder.
-*   **Benefit:** This keeps the profile root clean, allowing you to store your own configuration files (`extra-args`, `.env`, etc.) alongside the tool's state without mixing them.
+### Separation of State and Configuration
+The `--profile` flag is designed to keep your workspace organized by separating your settings from the tool's internal data:
+
+*   **User-Managed (The Root):** The directory you pass to `--profile` is your space. You can place your `extra-args` file or other project-specific notes here.
+*   **Tool-Managed (The `.gemini` folder):** The toolbox automatically creates a hidden `.gemini/` subdirectory to store history, cookies, and keys.
+
+This nesting ensures that your configuration files are not buried among hundreds of auto-generated session and cache files, making the profile easier to manage and version control.
 
 ### Persistent Arguments (`extra-args`)
 You can define persistent runtime arguments for a specific profile by creating a file named `extra-args` in the profile root.
