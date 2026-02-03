@@ -1,88 +1,78 @@
 # 🛠️ Internal Maintenance Journeys (QA Matrix)
 
-This document tracks all supported user paths and variants to ensure no regressions during updates.
+This document tracks the full end-to-end user journeys for regression testing. Unlike unit tests, these verify the cohesion between the CLI, the Hub, and the Docker container across time and devices.
 
-## 🧪 Test Matrix
+---
 
-### J1: Local Default
-1. Run `gemini-toolbox`.
-2. Verify interactive Gemini CLI opens in the current folder.
-3. Verify state is saved in `~/.gemini`.
+## 🔁 Journey 1: The Commuter (Cross-Device Continuity)
+**Goal:** Verify session persistence and connectivity handoff between local and remote clients.
 
-### J2: Local Profile
-1. Run `gemini-toolbox --profile /tmp/prof`.
-2. Verify state is saved in `/tmp/prof/.gemini` (nested).
+1.  **Start on Desktop:**
+    *   Run `gemini-toolbox --remote`.
+    *   Verify the CLI starts and the Hub URL is displayed.
+    *   Start a long-running task (e.g., `gemini -i "List all files"`).
+2.  **Switch to Mobile:**
+    *   Open Hub on phone (`http://gemini-hub:8888`).
+    *   Tap the session card.
+    *   Verify you can see the previous output and type new commands.
+3.  **Return to Desktop:**
+    *   Run `gemini-toolbox connect <session-id>`.
+    *   Verify you re-attach to the *same* tmux session (history preserved).
 
-### J3: Remote Default
-1. Run `gemini-toolbox --remote`.
-2. Verify Hub starts and is accessible via `http://localhost:8888`.
-3. Verify session is accessible via Tailscale IP.
+## 🎭 Journey 2: The Context Switcher (Profiles)
+**Goal:** Verify isolation of state and configuration between profiles.
 
-### J4: Remote Profile
-1. Run `gemini-toolbox --remote --profile /tmp/prof`.
-2. Verify remote connectivity using isolated profile storage.
+1.  **Profile A (Work):**
+    *   Run `gemini-toolbox --profile /tmp/work`.
+    *   Ask Gemini to "Remember my name is Alice".
+    *   Exit.
+2.  **Profile B (Personal):**
+    *   Run `gemini-toolbox --profile /tmp/personal`.
+    *   Ask Gemini "What is my name?".
+    *   **Verify:** It does *not* know your name (Isolation confirmed).
+3.  **Persistence:**
+    *   Run `gemini-toolbox --profile /tmp/work` again.
+    *   Ask "What is my name?".
+    *   **Verify:** It remembers "Alice".
 
-### J5: Hub Launch
-1. Open Hub UI.
-2. Use "New Session" wizard to launch a container.
-3. Verify new session appears in the list and is connectable.
+## 🤖 Journey 3: The Automation Loop (Bots & Hub)
+**Goal:** Verify the autonomous agent flow from the Hub UI.
 
-### M1: Strict Sandbox
-1. Run `gemini-toolbox --no-docker`.
-2. Verify `docker ps` fails inside the container (socket not mounted).
+1.  **Launch Bot:**
+    *   Open Hub on Desktop.
+    *   Click "New Session".
+    *   Enter Task: `"echo 'Hello World' > test.txt"`.
+    *   Uncheck "Interactive".
+    *   Click Launch.
+2.  **Verify Execution:**
+    *   Wait for the container to exit (status update in Hub).
+    *   Check the host folder for `test.txt`.
+3.  **Inspect:**
+    *   Launch a **Bash** session from the Hub in the same folder.
+    *   Run `cat test.txt`.
+    *   **Verify:** Content is "Hello World".
 
-### M2: No IDE
-1. Run `gemini-toolbox --no-ide`.
-2. Verify `GEMINI_CLI_IDE_*` environment variables are missing.
+## 🛡️ Journey 4: The Paranoid Auditor (Sandboxing)
+**Goal:** Verify security constraints.
 
-### M3: Bash Mode
-1. Run `gemini-toolbox --bash`.
-2. Verify you are dropped into a raw `bash` shell instead of Gemini.
+1.  **Launch Restricted:**
+    *   Run `gemini-toolbox --no-docker --no-ide`.
+2.  **Attempt Breakout:**
+    *   Run `docker ps`.
+    *   **Verify:** Command fails (socket missing).
+    *   Run `env`.
+    *   **Verify:** No `GEMINI_CLI_IDE_*` variables present.
 
-### M4: Preview Channel
-1. Run `gemini-toolbox --preview`.
-2. Verify the Docker image tag used is `...:latest-preview`.
+## 🔄 Journey 5: The Hot-Swapper (Hub Dynamic Config)
+**Goal:** Verify the Hub adapts to new workspaces on the fly.
 
-### M5: One-Shot Task
-1. Run `gemini-toolbox "say hello"`.
-2. Verify agent responds and the container exits immediately.
-
-### M6: Interactive Task
-1. Run `gemini-toolbox -i "say hello"`.
-2. Verify agent responds and the session remains open.
-
-### M7: Legacy Config
-1. Run `gemini-toolbox --config /tmp/conf`.
-2. Verify state is saved directly in `/tmp/conf` (no nesting).
-
-### T1: Attach (CLI)
-1. Launch a session.
-2. Run `gemini-toolbox connect <ID>`.
-3. Verify you attach to the existing `tmux` session.
-
-### T2: Attach (Bash)
-1. Launch a bash session.
-2. Run `gemini-toolbox connect <ID>`.
-3. Verify you enter the existing container.
-
-### T3: Hub Smart Restart
-1. Launch a remote session in `/dirA`.
-2. Launch another remote session in `/dirB`.
-3. Verify Hub prompts to "Merge and Restart" to include the new path.
-
-### T4: Stop Hub
-1. Run `gemini-toolbox stop-hub`.
-2. Verify the Hub container is stopped and removed.
-
-### E1: Profile Persistence
-1. Add a flag (e.g., `--no-ide`) to `/tmp/prof/extra-args`.
-2. Run `gemini-toolbox --profile /tmp/prof`.
-3. Verify the flag is automatically applied.
-
-### E2: Hub Bot
-1. Launch an "Autonomous Bot" from the Hub UI.
-2. Verify it executes the task and handles the interactive toggle correctly.
-
-### E3: Hybrid Access (Localhost)
-1. Access Hub via `localhost:8888`.
-2. Verify the primary link uses `localhost` and a "VPN" badge is shown as fallback.
+1.  **Start Hub:**
+    *   Run `gemini-hub` (or `gemini-toolbox --remote` in `/folderA`).
+2.  **Add Scope:**
+    *   Run `gemini-toolbox --remote` in `/folderB`.
+    *   **Verify:** The script detects the running Hub doesn't have `/folderB` mounted.
+    *   **Verify:** It prompts to "Merge and Restart".
+    *   Confirm the restart.
+3.  **Check Visibility:**
+    *   Refresh the Hub UI.
+    *   **Verify:** Both `/folderA` and `/folderB` are available in the "New Session" wizard.
