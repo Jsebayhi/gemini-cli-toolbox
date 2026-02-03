@@ -25,10 +25,8 @@ The core philosophy of this toolbox is **Host Protection**. By running the agent
 The [Gemini CLI Companion](https://github.com/google/gemini-cli) extension for VS Code normally expects the CLI to run locally. We trick it into working with Docker.
 
 1.  **Environment Variables:** The toolbox script detects if it's running inside VS Code (`TERM_PROGRAM=vscode`).
-2.  **Passthrough:** It captures the extension's connection details:
-    *   `GEMINI_CLI_IDE_SERVER_PORT`
-    *   `GEMINI_CLI_IDE_AUTH_TOKEN`
-3.  **Networking Patch:** It forces the CLI to connect to `127.0.0.1` (the host) instead of `localhost` (the container) by overriding `GEMINI_CLI_IDE_SERVER_HOST`. This works because we use `--net=host`.
+2.  **Passthrough:** It captures the extension's connection details (`GEMINI_CLI_IDE_SERVER_PORT`, `GEMINI_CLI_IDE_AUTH_TOKEN`).
+3.  **The Patch:** Our Docker image includes a **patched version of the Gemini CLI** that allows it to connect to the host IDE at `127.0.0.1` (forced via `GEMINI_CLI_IDE_SERVER_HOST`) instead of expecting a local process. This bypasses the default "localhost only" security restriction of the CLI when running inside a container.
 
 ### Path Mirroring
 For the extension to apply diffs, the file paths inside the container must match the file paths in VS Code.
