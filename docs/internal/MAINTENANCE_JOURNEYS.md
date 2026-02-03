@@ -4,7 +4,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
 
 ---
 
-## 🔁 Journey 1: The Commuter (Cross-Device Continuity)
+## 🔁 Journey 1: Cross-Device Continuity
 **Goal:** Verify session persistence and connectivity handoff between local and remote clients.
 
 1.  **Start on Desktop:**
@@ -19,7 +19,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run `gemini-toolbox connect <session-id>`.
     *   Verify you re-attach to the *same* tmux session (history preserved).
 
-## 🎭 Journey 2: The Context Switcher (Profiles)
+## 🎭 Journey 2: Profiles & Isolation
 **Goal:** Verify isolation of state and configuration between profiles.
 
 1.  **Profile A (Work):**
@@ -35,7 +35,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Ask "What is my name?".
     *   **Verify:** It remembers "Alice".
 
-## 🤖 Journey 3: The Automation Loop (Bots & Hub)
+## 🤖 Journey 3: Bots & Hub Integration
 **Goal:** Verify the autonomous agent flow from the Hub UI.
 
 1.  **Launch Bot:**
@@ -52,7 +52,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run `cat test.txt`.
     *   **Verify:** Content is "Hello World".
 
-## 🛡️ Journey 4: The Paranoid Auditor (Sandboxing)
+## 🛡️ Journey 4: Sandboxing & Security
 **Goal:** Verify security constraints.
 
 1.  **Launch Restricted:**
@@ -63,7 +63,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run `env`.
     *   **Verify:** No `GEMINI_CLI_IDE_*` variables present.
 
-## 🔄 Journey 5: The Hot-Swapper (Hub Dynamic Config)
+## 🔄 Journey 5: Hub Dynamic Config
 **Goal:** Verify the Hub adapts to new workspaces on the fly.
 
 1.  **Start Hub:**
@@ -77,7 +77,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Refresh the Hub UI.
     *   **Verify:** Both `/folderA` and `/folderB` are available in the "New Session" wizard.
 
-## 🐚 Journey 6: The Scripter (Bash & Pipes)
+## 🐚 Journey 6: Bash & Scripting
 **Goal:** Verify non-interactive plumbing and scripting capabilities.
 
 1.  **Bash One-Liner:**
@@ -87,7 +87,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run `echo "System Error 500" | gemini-toolbox "Explain this error"`.
     *   **Verify:** Agent receives the piped input and responds contextually.
 
-## 🏚️ Journey 7: The Legacy User (Standard Config)
+## 🏚️ Journey 7: Legacy Config Compatibility
 **Goal:** Verify backward compatibility with the simple `--config` flag.
 
 1.  **Launch Legacy:**
@@ -97,7 +97,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Restart the session.
     *   **Verify:** History is restored from that directory.
 
-## 🔌 Journey 8: The Power User (Manual Connections)
+## 🔌 Journey 8: Manual & Cross-Mode Connections
 **Goal:** Verify manual session management and attaching.
 
 1.  **Launch Detached Bash:**
@@ -111,7 +111,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run `gemini-toolbox --bash connect <cli-session-id>`.
     *   **Verify:** You get a `bash` shell inside the *CLI* container (inspecting the agent's environment).
 
-## 🧹 Journey 9: The Cleaner (Lifecycle)
+## 🧹 Journey 9: Lifecycle & Cleanup
 **Goal:** Verify containers are ephemeral and cleanup commands work.
 
 1.  **Ephemeral Check:**
@@ -122,7 +122,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run `gemini-toolbox stop-hub`.
     *   **Verify:** `gemini-hub-service` container is removed.
 
-## 🆙 Journey 10: The Updater (Maintenance)
+## 🆙 Journey 10: Update Mechanism
 **Goal:** Verify update mechanisms.
 
 1.  **Explicit Update:**
@@ -133,7 +133,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run `gemini-toolbox`.
     *   **Verify:** A warning about the image being >7 days old appears.
 
-## 📂 Journey 11: The Custom Mounter (Volumes)
+## 📂 Journey 11: Volume Mounts
 **Goal:** Verify manual volume injection.
 
 1.  **Mount Host File:**
@@ -145,7 +145,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Run with that profile.
     *   **Verify:** `/data` exists inside the container.
 
-## 💻 Journey 12: The IDE Companion (VS Code)
+## 💻 Journey 12: VS Code Integration
 **Goal:** Verify the container correctly connects to the host's IDE extension.
 
 1.  **Integrated Terminal:**
@@ -157,7 +157,7 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   (Requires extension installed) Ask Gemini: "What file is currently open?".
     *   **Verify:** It correctly identifies the active editor file.
 
-## 📝 Journey 13: The Remote Editor (Vim)
+## 📝 Journey 13: Remote Editing (Vim)
 **Goal:** Verify text editing capabilities in a remote web terminal.
 
 1.  **Launch Remote Bash:**
