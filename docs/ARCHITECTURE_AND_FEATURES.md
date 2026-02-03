@@ -95,7 +95,11 @@ The Hub is a standalone container (`gemini-hub-service`) that acts as a discover
 #### 2. Hybrid Mode (Localhost Optimization)
 The Hub is smart enough to know where it is running.
 *   **Scenario:** You are browsing the Hub from the same computer running the containers.
-*   **Optimization:** Instead of routing traffic through the VPN (which adds latency), the Hub detects local containers and provides a **"LOCAL"** badge. Clicking this connects you directly via `localhost`, ensuring zero-latency performance.
+*   **Optimization:** Instead of routing traffic through the VPN (which adds latency), the Hub attempts to reach the container via `localhost`.
+*   **Behavior:**
+    *   **Priority:** If reachable, the **primary link** on the session card automatically switches to `localhost`.
+    *   **Fallback:** A **"VPN"** badge appears alongside the status indicator. This allows you to explicitly choose the Tailscale IP even if local access is available.
+    *   **Remote:** If you are on a different device (phone/tablet), the Hub detects `localhost` is unreachable and defaults the primary link to the VPN.
 
 #### 3. Remote Session Management
 The Hub is not just a passive list; it is an active **Remote Job Runner**.
