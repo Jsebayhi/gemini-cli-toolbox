@@ -29,6 +29,27 @@ Users and autonomous agents need a way to perform experimental work (refactoring
 *   **Mechanism:** Use filesystem snapshots (Btrfs/ZFS) or OverlayFS mounts.
 *   **Decision:** Rejected as overengineering. Stick to standard Git tooling for maximum compatibility.
 
+## User Journeys
+
+The sandbox feature is designed to support the following high-level workflows:
+
+1.  **The Fresh Start (New Feature):** A user wants to start work on a new branch in an isolated folder. The CLI handles branch creation (`git worktree add -b`) automatically.
+2.  **The PR Repair (Existing Branch):** An agent (or human) needs to fix a bug in an existing branch. The CLI detects the branch and sets up the worktree correctly.
+3.  **The Autonomous Bot (Task Isolation):** A bot is launched with a specific instruction. It works in a sandbox to avoid locking the user's main working directory or polluting it with build artifacts.
+4.  **The Parallel Multi-Tasker:** A user launches multiple agents on different branches simultaneously. Each lives in its own worktree, avoiding `index.lock` conflicts.
+5.  **The Risky Reviewer:** A user wants to inspect a PR with potential side effects. Using `--isolation container` ensures the code remains entirely within Docker.
+
+## Proposed Decision: Smart Branching Logic
+
+To ensure a seamless UX, the branching logic is **built into the `gemini-toolbox` wrapper**. The agent inside the container does not need to handle Git plumbing to start working.
+
+### Branch Resolution Protocol:
+1.  **Branch Provided + Exists:** `git worktree add [path] [branch]`
+2.  **Branch Provided + New:** `git worktree add -b [branch] [path]`
+3.  **No Branch Provided:**
+    *   Generates a UUID-based branch name (e.g., `gem-sandbox-a1b2`).
+    *   Uses a `detached HEAD` if the intent is purely experimental.
+
 ## Proposed Decision: Dual-Mode Isolation
 
 We will implement a unified `--sandbox` (or `--isolation`) flag that supports two distinct modes:
