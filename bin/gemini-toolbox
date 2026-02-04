@@ -81,7 +81,8 @@ setup_worktree() {
     # 1. Determine Branch Name
     if [[ -z "$INPUT" ]]; then
         # Interactive Exploration (Detached HEAD)
-        local UUID=$(head -c 8 /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)
+        local UUID
+        UUID=$(head -c 8 /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)
         FOLDER_NAME="exploration-${UUID}"
         echo ">> Worktree: Interactive Exploration (Detached HEAD)"
     elif [[ "$INPUT" =~ [[:space:]] ]]; then
@@ -90,7 +91,8 @@ setup_worktree() {
         
         # Call Gemini Pre-Flight (One-shot container)
         # We assume the image is already resolved (IMAGE_NAME available from main scope)
-        local SLUG=$(docker run --rm \
+        local SLUG
+        SLUG=$(docker run --rm \
             -v "${HOST_CONF_DIR}:/home/gemini/.gemini" \
             "${IMAGE_NAME}" \
             --model gemini-2.5-flash \
