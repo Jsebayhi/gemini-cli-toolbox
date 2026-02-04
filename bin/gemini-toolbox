@@ -28,6 +28,7 @@ show_help() {
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"
+    echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be branch name or task."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
     echo "  --detached           Start the container in background and exit (useful for Hub)"
     echo "  --help               Show this help message"
@@ -41,6 +42,92 @@ show_help() {
     echo "  gemini-toolbox chat"
     echo "  gemini-toolbox --remote tskey-auth-xxxx chat"
     echo "  gemini-toolbox --config ~/.gemini-work -- --help"
+}
+
+# Worktree Setup Function
+setup_worktree() {
+    local INPUT="$1"
+    local WORKTREE_BASE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${PROJECT_NAME}}"
+    local BRANCH_NAME=""
+    local FOLDER_NAME=""
+    local TASK_TO_INJECT=""
+
+    # Ensure git is available
+    if ! command -v git &> /dev/null; then
+        echo "Error: 'git' is required for --worktree but not found." >&2
+        exit 1
+    fi
+
+    # 1. Determine Branch Name
+    if [[ -z "$INPUT" ]]; then
+        # Interactive Exploration (Detached HEAD)
+        local UUID=$(head -c 8 /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)
+        FOLDER_NAME="exploration-${UUID}"
+        echo ">> Worktree: Interactive Exploration (Detached HEAD)"
+    elif [[ "$INPUT" =~ [[:space:]] ]]; then
+        # Task Provided -> Pre-Flight Naming
+        echo ">> Worktree: Task detected. Generating branch name..."
+        
+        # Call Gemini Pre-Flight (One-shot container)
+        # We assume the image is already resolved (IMAGE_NAME available from main scope)
+        local SLUG=$(docker run --rm \
+            -v "${HOST_CONF_DIR}:/home/gemini/.gemini" \
+            "${IMAGE_NAME}" \
+            --model gemini-1.5-flash \
+            "You are a git branch naming utility. Slugify the input task into a concise branch name. Return ONLY the slug. Do not analyze the codebase or provide explanations. Task: $INPUT")
+        
+        # Cleanup potential carriage returns or whitespace
+        SLUG=$(echo "$SLUG" | tr -d '\r' | tr -d '[:space:]')
+
+        # Fallback if empty or error
+        if [[ -z "$SLUG" || "$SLUG" == *"Error"* ]]; then
+            SLUG="gem-task-$(date +%s)"
+            echo ">> Warning: Failed to generate name. Using fallback: $SLUG"
+        fi
+        
+        BRANCH_NAME="$SLUG"
+        FOLDER_NAME="$SLUG"
+        TASK_TO_INJECT="$INPUT"
+        echo ">> Generated Branch: $BRANCH_NAME"
+    else
+        # Explicit Branch Name
+        BRANCH_NAME="$INPUT"
+        # Sanitize for folder name (replace / with -)
+        FOLDER_NAME="${INPUT//\//-}"
+        echo ">> Worktree: Explicit Branch '$BRANCH_NAME'"
+    fi
+
+    local WORKTREE_PATH="${WORKTREE_BASE}/${FOLDER_NAME}"
+
+    # 2. Create Worktree
+    if [ -d "$WORKTREE_PATH" ]; then
+        echo ">> Worktree already exists at: $WORKTREE_PATH"
+        # We could add validation here to ensure it matches the requested branch
+    else
+        echo ">> Creating worktree at: $WORKTREE_PATH"
+        mkdir -p "$(dirname "$WORKTREE_PATH")"
+        
+        if [[ -n "$BRANCH_NAME" ]]; then
+            # Check if branch exists
+            if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+                git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
+            else
+                git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
+            fi
+        else
+            # Detached HEAD
+            git worktree add --detach "$WORKTREE_PATH" HEAD
+        fi
+    fi
+    
+    # 3. Update Global PROJECT_DIR to point to worktree
+    # This ensures the main container mounts the worktree instead of the original repo
+    PROJECT_DIR="$WORKTREE_PATH"
+    
+    # 4. Inject Task if needed (so the Agent receives it)
+    if [[ -n "$TASK_TO_INJECT" ]]; then
+        ARGS+=("$TASK_TO_INJECT")
+    fi
 }
 
 # 0. Pre-scan for Config & Load Extra Args
@@ -128,6 +215,18 @@ while [[ $# -gt 0 ]]; do
             shift
         fi
         shift 
+        ;;
+    --worktree)
+        ENABLE_WORKTREE=true
+        # Optional argument: Check if next arg exists AND does NOT start with '-'
+        # This allows 'gemini-toolbox --worktree' (detached) vs 'gemini-toolbox --worktree feat/x'
+        if [[ -n "$2" && "$2" != -* ]]; then
+            WORKTREE_INPUT="$2"
+            shift
+        else
+            WORKTREE_INPUT=""
+        fi
+        shift
         ;;
     --docker-args) 
         read -ra SPLIT_ARGS <<< "$2"
@@ -226,6 +325,11 @@ if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
 else
     # Fallback to remote image
     IMAGE_NAME="$REMOTE_TAG"
+fi
+
+# 2.2.1 Setup Worktree (if requested)
+if [ "$ENABLE_WORKTREE" = true ]; then
+    setup_worktree "$WORKTREE_INPUT"
 fi
 
 # 2.3 Handle Explicit Update
