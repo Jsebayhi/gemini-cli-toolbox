@@ -65,14 +65,23 @@ If the `--worktree` flag is used in a directory that is not part of a Git reposi
 
 ## Alternatives Considered
 
-### 1. Pure Container Isolation (`--isolation container`)
-*   **Idea:** Create the worktree inside a Docker Volume or the container's internal filesystem (or a temporary path like `/tmp`).
-*   **Pros:** Theoretically "zero footprint" on the host disk's primary partitions.
-*   **Cons:** 
-    *   **IDE Friction:** Prevents the host's VS Code from accessing the files, breaking one of the core mandates of the toolbox.
-    *   **Complexity:** Requires complex orchestration to manage volumes or temporary paths that must be shared between the "Pre-flight" naming container and the "Main" agent container.
-    *   **Redundancy:** The `disk` mode using `$XDG_CACHE_HOME` already provides sufficient isolation from the user's primary workspace.
-*   **Decision:** **REJECTED.** The marginal benefit of "container-only" storage does not outweigh the loss of developer productivity (IDE access) and the maintenance burden of a dual-path implementation.
+### 1. Project-Local Sandboxes (`.gemini/worktrees`)
+*   **Idea:** Keep the worktrees inside a hidden folder within the project.
+*   **Reason for Rejection:** Git worktrees cannot easily reside inside the parent worktree without recursion issues. It also pollutes the primary project directory, violating the "Zero Clutter" principle.
+
+### 2. Relative Sibling Paths (`../project-sandbox`)
+*   **Idea:** Create the worktree as a sibling directory.
+*   **Reason for Rejection:** Highly fragile. The parent directory might be read-only, part of a different volume, or a disorganized "Downloads" folder. It creates "clutter sprawl" across the user's filesystem.
+
+### 3. Pure Container Isolation (`--isolation container`)
+*   **Idea:** Create the worktree inside a Docker Volume or a temporary path like `/tmp`.
+*   **Reason for Rejection:** 
+    *   **IDE Friction:** Prevents host-based IDEs (VS Code) from accessing the files, breaking a core mandate of the toolbox.
+    *   **Redundancy:** `$XDG_CACHE_HOME` already provides sufficient isolation without the complexity of managing internal Docker volumes for Git operations.
+
+### 4. Filesystem-Level Snapshots (OverlayFS / Btrfs CoW)
+*   **Idea:** Use Copy-on-Write snapshots or OverlayFS mounts.
+*   **Reason for Rejection:** Significant overengineering. Requires specific filesystem support or elevated privileges (`sudo`). Native `git worktree` is idiomatic, portable, and natively understands branch logic.
 
 ## Trade-offs and Arbitrages
 
