@@ -29,6 +29,7 @@ show_help() {
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"
     echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be branch name or task."
+    echo "  --isolation <mode>   Isolation mode for worktree: 'disk' (default) or 'container'."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
     echo "  --detached           Start the container in background and exit (useful for Hub)"
     echo "  --help               Show this help message"
@@ -47,7 +48,19 @@ show_help() {
 # Worktree Setup Function
 setup_worktree() {
     local INPUT="$1"
-    local WORKTREE_BASE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${PROJECT_NAME}}"
+    local MODE="${ISOLATION_MODE:-disk}"
+    local WORKTREE_BASE=""
+    
+    if [[ "$MODE" == "container" ]]; then
+        # Container mode: use a truly ephemeral temp dir on the host
+        # that we will attempt to clean up or just leave to the OS /tmp reaper.
+        WORKTREE_BASE="/tmp/gemini-toolbox/worktrees/${PROJECT_NAME}"
+        echo ">> Isolation: CONTAINER (Ephemeral Host Path)"
+    else
+        WORKTREE_BASE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${PROJECT_NAME}}"
+        echo ">> Isolation: DISK (Persistent Cache)"
+    fi
+
     local BRANCH_NAME=""
     local FOLDER_NAME=""
     local TASK_TO_INJECT=""
@@ -202,6 +215,7 @@ REMOTE_MODE=false
 TAILSCALE_KEY="${GEMINI_REMOTE_KEY:-}"
 ENABLE_DOCKER=true
 DETACHED_MODE=false
+ISOLATION_MODE="disk"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -213,6 +227,7 @@ while [[ $# -gt 0 ]]; do
     --project)     PROJECT_DIR="$2";   shift; shift ;;
     --bash)        USE_BASH=true;      shift ;;
     --detached)    DETACHED_MODE=true; shift ;;
+    --isolation)   ISOLATION_MODE="$2"; shift; shift ;;
     --remote)      
         REMOTE_MODE=true
         # Optional argument: Check if next arg exists AND starts with 'tskey-'
