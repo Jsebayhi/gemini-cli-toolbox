@@ -35,11 +35,12 @@ We will implement a unified `--sandbox` (or `--isolation`) flag that supports tw
 
 ### 1. `disk` Mode (Default for Interactive Sessions)
 Designed for human developers.
-*   Worktrees are created at `${GEMINI_WORKTREE_ROOT}/${PROJECT_NAME}/${BRANCH_OR_UUID}`.
+*   **Location:** Defaults to `$XDG_CACHE_HOME/gemini-toolbox/worktrees/${PROJECT_NAME}/${BRANCH_OR_UUID}`. This adheres to Linux standards for cached/transient data. Users can override this by setting `GEMINI_WORKTREE_ROOT`.
 *   The Toolbox automatically mounts this path into the container.
 *   **Cleanup:** The Hub will implement a "Stateless Reaper" protocol.
-    *   Every session start `touch`es a `.gemini-last-used` marker.
-    *   The Hub scans for markers older than X days and flags/removes the directory.
+    *   **Mechanism:** Standard directory timestamp monitoring.
+    *   The Hub periodically scans the root folder for directories with a modification time (`mtime`) older than 30 days.
+    *   Stale directories are removed, followed by a `git worktree prune` to clean up metadata.
 
 ### 2. `container` Mode (Default for Autonomous/Bot Sessions)
 Designed for ephemeral, automated tasks.
