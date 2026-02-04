@@ -64,6 +64,13 @@ setup_worktree() {
         exit 1
     fi
 
+    # Ensure the repository has at least one commit (HEAD exists)
+    if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+        echo "Error: Cannot create a worktree from an empty repository." >&2
+        echo "       Please create an initial commit (e.g., 'git commit --allow-empty -m \"Initial commit\"') and try again." >&2
+        exit 1
+    fi
+
     # 1. Determine Branch Name
     if [[ -z "$INPUT" ]]; then
         # Interactive Exploration (Detached HEAD)
