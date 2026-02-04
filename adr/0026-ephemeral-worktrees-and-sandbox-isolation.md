@@ -65,6 +65,13 @@ If the `--worktree` flag is used in a directory that is not part of a Git reposi
 2.  Display a clear error message: `Error: --worktree can only be used within a Git repository.`
 3.  Exit with a non-zero status code without launching the container or creating directories.
 
+## Empty Repository Handling
+
+If the directory is a Git repository but has no commits (e.g., immediately after `git init`):
+1.  The script will detect that `HEAD` is an invalid reference.
+2.  Display a clear error message: `Error: Cannot create a worktree from an empty repository.`
+3.  Exit with a non-zero status code, advising the user to make an initial commit first.
+
 ## Alternatives Considered
 
 ### 1. Project-Local Sandboxes (`.gemini/worktrees`)
