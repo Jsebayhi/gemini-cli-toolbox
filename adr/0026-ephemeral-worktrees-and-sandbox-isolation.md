@@ -74,10 +74,12 @@ If the `--worktree` flag is used in a directory that is not part of a Git reposi
 *   **Reason for Rejection:** Highly fragile. The parent directory might be read-only, part of a different volume, or a disorganized "Downloads" folder. It creates "clutter sprawl" across the user's filesystem.
 
 ### 3. Pure Container Isolation (`--isolation container`)
-*   **Idea:** Create the worktree inside a Docker Volume or a temporary path like `/tmp`.
+*   **Idea:** Create the worktree inside a Docker Volume or a temporary path like `/tmp`, offering zero host footprint.
+*   **Intended Use Case:** "The Risky Reviewer" - inspecting potentially malicious PRs without any files touching the host disk.
 *   **Reason for Rejection:** 
     *   **IDE Friction:** Prevents host-based IDEs (VS Code) from accessing the files, breaking a core mandate of the toolbox.
-    *   **Redundancy:** `$XDG_CACHE_HOME` already provides sufficient isolation without the complexity of managing internal Docker volumes for Git operations.
+    *   **Complexity:** Requires complex orchestration to manage volumes or temporary paths shared between containers.
+    *   **Decision:** We prioritized developer experience (IDE access) over the extreme isolation required for malware analysis. If "Risky Review" becomes a critical need, we can revisit this as a specialized `gemini-toolbox --secure-review` mode in the future.
 
 ### 4. Filesystem-Level Snapshots (OverlayFS / Btrfs CoW)
 *   **Idea:** Use Copy-on-Write snapshots or OverlayFS mounts.
