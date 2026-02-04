@@ -32,9 +32,14 @@ The worktree feature is designed to support the following high-level workflows:
 To ensure a seamless UX, the branching logic is **built into the `gemini-toolbox` wrapper**.
 
 ### Branch Resolution Protocol:
-1.  **Explicit Branch Provided:** If the user provides a branch name (e.g., `--worktree feat/ui`), the CLI uses it directly for both the Git branch and the folder name.
-2.  **Task Provided (Pre-Flight Naming):** If a task string is provided, a "Pre-Flight" Gemini call generates a slug (e.g., `fix-sidebar-overflow`), which is used for both the branch and the folder.
-3.  **No Input Provided:** Falls back to a UUID-based name or `detached HEAD`.
+1.  **Explicit Branch Provided:** If the user provides a branch name (e.g., `--worktree feat/ui`), the CLI uses it directly.
+2.  **Task Provided (Pre-Flight Naming):** If a task string is provided, a "Pre-Flight" call is made to a **Fast Model** (e.g., Gemini 1.5 Flash).
+    *   **Constraint:** The model is invoked with a strict system instruction: "You are a git branch naming utility. Slugify the input task into a concise branch name. Return ONLY the slug. Do not analyze the codebase or provide explanations."
+    *   The resulting slug is used for both the branch and the folder.
+3.  **No Input Provided (Interactive Exploration):**
+    *   The CLI creates a worktree with a **Detached HEAD** at the current commit.
+    *   The folder is named `exploration-UUID`.
+    *   **Benefit:** Allows the user to browse and experiment without creating a branch. The user can promote the state to a branch at any time using `git checkout -b` from within the worktree.
 
 ### Directory Structure:
 To prevent clutter and allow for project-level management, worktrees are nested by project name:
