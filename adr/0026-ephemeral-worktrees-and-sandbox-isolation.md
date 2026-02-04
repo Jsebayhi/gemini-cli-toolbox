@@ -56,6 +56,7 @@ We will implement a centralized management strategy for ephemeral worktrees on t
     *   **Mechanism:** Standard directory timestamp monitoring (`mtime`).
     *   The Hub periodically scans the project-level folders for directories with an `mtime` older than 30 days.
     *   Stale directories are removed, followed by `git worktree prune`.
+    *   **Orphan Handling:** This stateless approach naturally handles "orphaned" worktrees (where the main repo was deleted) by treating them as standard stale directories.
 
 ## Non-Git Project Handling
 
@@ -95,7 +96,3 @@ If the `--worktree` flag is used in a directory that is not part of a Git reposi
 | **Cleanup** | Scheduled Reaper (mtime) for statelessness |
 | **Speed** | Fast (Local FS) |
 | **Context** | Git-Centric (Requires a repository) |
-
-## Remaining Questions / Risks
-*   **Orphaned Worktrees:** If a user deletes the main repository, the worktree entries in the root become "ghosts". The Reaper must be robust enough to handle directory removal even if the parent Git repo is missing.
-*   **Branch Pollution:** Should automated tasks always use `detached HEAD` unless a branch name is explicitly provided?
