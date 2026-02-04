@@ -104,3 +104,20 @@ The toolbox accepts standard input, making it a powerful addition to your Unix p
 git diff --staged | gemini-toolbox "Write a semantic commit message for these changes"
 ```
 The agent analyzes your actual code changes and generates a precise, professional commit message for you to review.
+
+---
+
+## 10. Risk-Free Experimentation (Worktrees)
+**The Scenario:** You want to try a radical refactor or test a new library, but you don't want to mess up your current workspace or deal with stashing changes.
+
+**The Solution:** Launch an **Ephemeral Worktree**.
+```bash
+# Auto-create a branch named 'refactor-auth' and start working
+gemini-toolbox --worktree "Refactor the authentication logic"
+```
+The toolbox automatically:
+1.  Creates a new, isolated folder for this task.
+2.  Creates a Git branch for you.
+3.  Launches the agent in that clean environment.
+
+Your main working directory remains untouched. If the experiment fails, just delete the branch. If it succeeds, merge it back.

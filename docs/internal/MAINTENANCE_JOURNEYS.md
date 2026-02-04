@@ -193,3 +193,8 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Go to a non-Git directory (e.g., `/tmp`).
     *   Run `gemini-toolbox --worktree`.
     *   **Verify:** CLI exits with `Error: --worktree can only be used within a Git repository.`
+6.  **Bash Isolation:**
+    *   Run `gemini-toolbox --worktree --bash`.
+    *   **Verify:** You are dropped into a Bash shell inside an isolated `exploration-UUID` folder.
+    *   **Verify:** `git log` works (confirming history access).
+    *   **Verify:** `ls -la ..` (Parent directory is Read-Only).
