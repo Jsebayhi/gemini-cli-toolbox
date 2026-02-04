@@ -32,14 +32,15 @@ The worktree feature is designed to support the following high-level workflows:
 To ensure a seamless UX, the branching logic is **built into the `gemini-toolbox` wrapper**.
 
 ### Branch Resolution Protocol:
-1.  **Explicit Branch Provided:** If the user provides a valid branch name (e.g., `feat/ui`), the CLI uses it directly: `git worktree add [path] [branch]`.
-2.  **Task Provided (Pre-Flight Naming):** If the user provides a descriptive task instead of a branch name:
-    *   The CLI performs a "Pre-Flight" one-shot call to the Gemini API using the current profile.
-    *   **Prompt:** "Summarize the following task into a concise, slugified Git branch name. Return ONLY the slug: '$TASK'".
-    *   The resulting slug is used to create the branch and the worktree folder.
-    *   **Fallback:** If the API call fails, the CLI falls back to a UUID-based name or a simple slug of the first few words.
-3.  **No Input Provided:**
-    *   Uses a `detached HEAD` for purely ephemeral exploration.
+1.  **Explicit Branch Provided:** If the user provides a branch name (e.g., `--worktree feat/ui`), the CLI uses it directly for both the Git branch and the folder name.
+2.  **Task Provided (Pre-Flight Naming):** If a task string is provided, a "Pre-Flight" Gemini call generates a slug (e.g., `fix-sidebar-overflow`), which is used for both the branch and the folder.
+3.  **No Input Provided:** Falls back to a UUID-based name or `detached HEAD`.
+
+### Directory Structure:
+To prevent clutter and allow for project-level management, worktrees are nested by project name:
+`$XDG_CACHE_HOME/gemini-toolbox/worktrees/${PROJECT_NAME}/${SANITIZED_BRANCH_NAME}`
+
+*   **Sanitization:** Slashes in branch names (e.g., `feat/ui`) are converted to hyphens (e.g., `feat-ui`) for the folder name to ensure filesystem compatibility and a flat structure within the project subfolder.
 
 ## Proposed Decision: Dual-Mode Isolation
 
@@ -47,12 +48,12 @@ We will implement a unified `--worktree` flag that supports two distinct modes:
 
 ### 1. `disk` Mode (Default for Interactive Sessions)
 Designed for human developers.
-*   **Location:** Defaults to `$XDG_CACHE_HOME/gemini-toolbox/worktrees/${PROJECT_NAME}/${BRANCH_OR_UUID}`. This adheres to Linux standards for cached/transient data. Users can override this by setting `GEMINI_WORKTREE_ROOT`.
+*   **Location:** Defaults to the nested structure described above. Override via `GEMINI_WORKTREE_ROOT`.
 *   The Toolbox automatically mounts this path into the container.
 *   **Cleanup:** The Hub will implement a "Stateless Reaper" protocol.
     *   **Mechanism:** Standard directory timestamp monitoring (`mtime`).
-    *   The Hub periodically scans the root folder for directories with an `mtime` older than 30 days.
-    *   Stale directories are removed, followed by a `git worktree prune`.
+    *   The Hub periodically scans the project-level folders for directories with an `mtime` older than 30 days.
+    *   Stale directories are removed, followed by `git worktree prune`.
 
 ### 2. `container` Mode (Default for Autonomous Sessions)
 Designed for ephemeral, automated tasks.
