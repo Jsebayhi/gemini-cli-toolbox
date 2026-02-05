@@ -48,12 +48,13 @@ To enable full Git functionality inside the container while protecting the user'
 *   **Reason for Rejection:** Highly fragile. The parent directory might be read-only, part of a different volume, or a disorganized "Downloads" folder. It creates "clutter sprawl" across the user's filesystem that is hard to track and clean.
 
 ### 3. Pure Container Isolation (`--isolation container`)
-*   **Idea:** Create the worktree inside a Docker Volume or a truly ephemeral path like `/tmp`.
-*   **Intended Use Case:** "The Risky Reviewer" - inspecting potentially malicious code without any files touching the primary host partitions.
-*   **Reason for Rejection:** 
-    *   **IDE Friction:** Prevents host-based IDEs (VS Code) from accessing the files, breaking a core mandate of the toolbox.
-    *   **Complexity:** Requires complex orchestration to manage volumes or temporary paths shared between the Pre-flight and Main containers.
-    *   **Decision:** We prioritized developer productivity (IDE access) over extreme malware-proof isolation. `$XDG_CACHE_HOME` provides a sufficient middle ground.
+*   **Idea:** Create the worktree inside a Docker Volume or the container's internal filesystem (or a temporary path like `/tmp`).
+*   **Pros:** Theoretically "zero footprint" on the host disk's primary partitions.
+*   **Cons:** 
+    *   **IDE Friction:** Prevents the host's VS Code from accessing the files, breaking one of the core mandates of the toolbox.
+    *   **Complexity:** Requires complex orchestration to manage volumes or temporary paths shared between containers.
+    *   **Redundancy:** The `disk` mode using `$XDG_CACHE_HOME` already provides sufficient isolation from the user's primary workspace.
+*   **Decision:** **REJECTED.** The marginal benefit of "container-only" storage does not outweigh the loss of developer productivity (IDE access) and the maintenance burden of a dual-path implementation. We chose to keep the tool simple and stick to the single, robust disk-based variant.
 
 ### 4. Filesystem-Level Snapshots (OverlayFS / Btrfs CoW)
 *   **Idea:** Use Copy-on-Write snapshots or OverlayFS mounts.
