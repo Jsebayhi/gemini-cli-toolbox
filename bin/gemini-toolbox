@@ -252,6 +252,10 @@ while [[ $# -gt 0 ]]; do
         fi
         shift
         ;;
+    --branch)
+        TARGET_BRANCH="$2"
+        shift; shift
+        ;;
     --docker-args) 
         read -ra SPLIT_ARGS <<< "$2"
         EXTRA_DOCKER_ARGS+=("${SPLIT_ARGS[@]}")
