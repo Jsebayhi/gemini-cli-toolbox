@@ -44,9 +44,10 @@ If a worktree's state is ambiguous (e.g., the parent repo path in the `.git` fil
 
 ## Trade-offs and Arbitrages
 
-| Feature | Decision |
+| Aspect | Implementation |
 | :--- | :--- |
-| **Precision** | High (Uses actual Git state for classification) |
-| **Safety** | High (Defaults to Max Retention for ambiguous/orphaned worktrees) |
-| **Robustness** | High (Handles path mismatches in container environments gracefully) |
+| **Classification Accuracy** | **High** for visible repositories (Git-based); **Conservative Fallback** for orphans. |
+| **Data Safety** | **Maximal** (Ambiguous or unreadable worktrees default to the 90-day limit). |
+| **Environmental Resilience** | **High** (Works reliably across container boundaries and path mismatches). |
+
 
