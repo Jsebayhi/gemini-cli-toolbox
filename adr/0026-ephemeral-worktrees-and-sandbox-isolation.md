@@ -82,5 +82,6 @@ When a task is provided without an explicit branch, the CLI performs a sub-secon
 
 ## Technical Constraints
 
+*   **Non-Git Projects:** The feature requires a Git repository. The CLI checks for a `.git` folder (via `git rev-parse`) and exits gracefully with an error if used in a regular directory.
 *   **Empty Repositories:** Worktree creation is forbidden if the repository has zero commits (no `HEAD`).
 *   **Recursive Worktrees:** Creating a worktree from *within* an existing worktree is forbidden to keep logic simple and robust.
