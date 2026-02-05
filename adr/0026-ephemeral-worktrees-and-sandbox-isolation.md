@@ -32,7 +32,8 @@ To ensure a seamless UX, the branching logic is **built into the `gemini-toolbox
 
 ### Branch Resolution Protocol:
 1.  **Explicit Branch Provided:** If the user provides a branch name (e.g., `--worktree feat/ui`), the CLI uses it directly.
-    *   **Reserved Word Safety:** The CLI ignores reserved command names (`chat`, `update`, `stop-hub`, `connect`) when identifying a branch name to avoid ambiguity during interactive launches.
+    *   **Deterministic Parsing:** To avoid ambiguity between branch names and application arguments, the parser consumes the very next token as the worktree argument unless it starts with a hyphen (`-`).
+    *   **The Terminator (`--`):** Users can use the standard CLI terminator to force a detached worktree session while still providing application arguments (e.g., `gemini-toolbox --worktree -- "Summarize this"`).
 2.  **Task Provided (Pre-Flight Naming):** If a task string is provided, a "Pre-Flight" call is made to a **Fast Model** (e.g., Gemini 2.5 Flash).
     *   **Constraint:** The model is invoked with a strict system instruction: "You are a git branch naming utility. Slugify the input task into a concise branch name. Return ONLY the slug. Do not analyze the codebase or provide explanations."
     *   The resulting slug is used for both the branch and the folder.

@@ -41,6 +41,8 @@ show_help() {
     echo "Examples:"
     echo "  gemini-toolbox chat"
     echo "  gemini-toolbox --remote tskey-auth-xxxx chat"
+    echo "  gemini-toolbox --worktree \"Refactor auth\""
+    echo "  gemini-toolbox --worktree -- \"Summarize this file\""
     echo "  gemini-toolbox --config ~/.gemini-work -- --help"
 }
 
@@ -240,13 +242,9 @@ while [[ $# -gt 0 ]]; do
         ;;
     --worktree)
         ENABLE_WORKTREE=true
-        # Optional argument: Check if next arg exists, is NOT a flag, 
-        # and is NOT a reserved command (toolbox or gemini-cli subcommands)
-        if [[ -n "$2" && "$2" != -* && \
-              "$2" != "update" && "$2" != "stop-hub" && "$2" != "connect" && \
-              "$2" != "mcp" && "$2" != "extensions" && "$2" != "extension" && \
-              "$2" != "skills" && "$2" != "skill" && "$2" != "hooks" && \
-              "$2" != "hook" ]]; then
+        # Optional argument: Check if next arg exists and is NOT a flag
+        # If it's a command/prompt, it will be consumed unless the user uses '--'
+        if [[ -n "$2" && "$2" != -* ]]; then
             WORKTREE_INPUT="$2"
             shift
         else
