@@ -4,49 +4,51 @@
 Accepted
 
 ## Context
-Ephemeral worktrees created in the cache directory (`$XDG_CACHE_HOME/gemini-toolbox/worktrees`) can accumulate over time, consuming significant disk space. We need a way to clean up these workspaces without introducing a stateful database or complex management overhead.
+Ephemeral worktrees created in the cache directory (`$XDG_CACHE_HOME/gemini-toolbox/worktrees`) can accumulate over time, consuming significant disk space. We need a robust, low-maintenance way to clean up these workspaces without introducing a stateful database or a complex management layer that could fail or get out of sync.
 
 ### Constraints & Goals
-1.  **Statelessness:** The Gemini Hub and Toolbox must not rely on a database to track worktrees.
-2.  **Automation:** Cleanup should be passive and require no user intervention.
-3.  **Safety:** We must not delete worktrees that are currently being used or were recently modified.
+1.  **Statelessness:** The Gemini Hub and Toolbox must remain stateless. We will not use an external database to track "active" worktrees.
+2.  **Automation:** Cleanup should be passive. Users should not have to manually run "prune" commands to keep their system healthy.
+3.  **Reliability:** We must avoid "false positives"—deleting a workspace that is still being used for an ongoing experiment.
 
 ## Decision: mtime-Based "Stateless Reaper"
 
 We will implement a cleanup strategy based on standard Unix directory modification times (`mtime`).
 
-### 1. The Reaper Policy
-Any worktree directory that has not been modified for more than **30 days** is considered stale and is eligible for removal.
+### 1. The Reaper Policy (30-Day Window)
+Any worktree directory that has not been modified for more than **30 days** is considered stale. The 30-day window was chosen as an arbitrage between aggressive disk saving and preserving user work-in-progress for long-running experiments.
 
 ### 2. Implementation Mechanism
-The Gemini Hub periodically executes a "Reaper" routine:
+The Gemini Hub periodically executes a "Reaper" routine (implemented via standard `find` logic):
 1.  **Scan:** It recursively scans the project-level worktree folders.
-2.  **Identify:** It identifies directories with an `mtime` older than 30 days.
+2.  **Identify:** It identifies subdirectories with an `mtime` older than 30 days.
 3.  **Remove:** It executes `rm -rf` on the stale directory.
-4.  **Prune:** It follows up with a `git worktree prune` in the main repository (if accessible) to clean up Git's internal metadata references.
+4.  **Prune:** It follows up with a `git worktree prune` in the main repository (if reachable) to remove Git's internal metadata references to the deleted path.
 
-### 3. Orphan Handling
-This stateless approach naturally handles "orphaned" worktrees (where the main repository was deleted or moved). Since the Reaper only looks at the timestamp of the worktree folder itself, it will eventually remove any leftover directories regardless of whether their parent Git repository still exists.
+### 3. Orphan & Error Handling
+This stateless approach is uniquely resilient:
+*   **Deleted Repos:** If a user deletes the main repository, the Reaper still finds and removes the cached worktree because it only relies on the worktree's own folder timestamp.
+*   **Failed Tasks:** If an agent crashes and leaves a half-finished worktree, the Reaper will eventually clean it up.
 
 ## Alternatives Considered (Rejected)
 
-### 1. SQLite Tracking Database
-*   **Idea:** Maintain a centralized list of all active worktrees.
-*   **Reason for Rejection:** Violates the "Stateless Hub" mandate. Adds complexity regarding database migration, corruption, and sync-drift between the DB and the actual filesystem.
+### 1. SQLite/JSON Tracking Database
+*   **Idea:** Maintain a list of all created worktrees and their status.
+*   **Reason for Rejection:** Violates the "Stateless Hub" mandate. It introduces "Sync Drift"—the database might think a worktree exists when the user has already deleted it manually, or vice versa. The filesystem itself is the most accurate database of what actually exists.
 
 ### 2. Marker Files (`.gemini-touch`)
-*   **Idea:** Every session `touch`es a specific file to update the "last used" time.
-*   **Reason for Rejection:** Redundant. The directory's own `mtime` is automatically updated by the OS whenever files inside are changed, providing a reliable "Last Used" signal for free.
+*   **Idea:** Every session `touch`es a specific hidden file to update the "last used" time.
+*   **Reason for Rejection:** Unnecessary I/O. The directory's own `mtime` is automatically updated by the OS whenever files inside are changed, added, or removed. Relying on the OS timestamp is more efficient and "Unix-idiomatic."
 
-### 3. Manual Cleanup Only
-*   **Idea:** Provide a `gemini-toolbox prune` command.
-*   **Reason for Rejection:** Poor UX. Users will forget to run it until they run out of disk space. Automated background cleanup is more robust.
+### 3. Manual Cleanup Only (`gemini-toolbox prune`)
+*   **Idea:** Provide a dedicated command for the user to clean their cache.
+*   **Reason for Rejection:** High friction. Most users will forget to run it until they receive a "Disk Full" error. Automated background maintenance provides a better user experience.
 
 ## Trade-offs and Arbitrages
 
-| Feature | Decision |
-| :--- | :--- |
-| **State** | Stateless (Filesystem is the DB) |
-| **Reliability** | High (Unix standard `mtime`) |
-| **Precision** | Lower (Coarse 30-day window) |
-| **Overhead** | Minimal (Periodic `find` command) |
+| Feature | Decision | Rationale |
+| :--- | :--- | :--- |
+| **State** | Stateless | Prevents data corruption and synchronization issues between the app and the disk. |
+| **Reliability** | Unix `mtime` | Provides a built-in, kernel-level tracking mechanism for free. |
+| **Precision** | 30-day window | Balances the risk of deleting "active" work with the need for disk hygiene. |
+| **Orphanage** | Auto-handling | Ensures the cache doesn't leak if repositories are moved or deleted. |
