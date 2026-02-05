@@ -28,7 +28,7 @@ show_help() {
     echo "  -d, --detach          Start the Hub in the background"
     echo "  --key <key>           Tailscale Auth Key (Required if GEMINI_REMOTE_KEY is not set)"
     echo "  --auto-shutdown       Enable 60s inactivity timeout (Default: Disabled)"
-    echo "  --no-reaper           Disable background worktree cleanup service"
+    echo "  --no-prune            Disable background worktree cleanup service"
     echo "  --workspace <path>    Add a host directory to the list of scannable project roots"
     echo "                        (Can be specified multiple times)"
     echo "  --config-root <path>  Root directory containing configuration profiles"
@@ -46,13 +46,13 @@ show_help() {
 # Parse Args
 MODE="-it"
 AUTO_SHUTDOWN=false
-REAPER_ENABLED=true
+PRUNE_ENABLED=true
 while [[ $# -gt 0 ]]; do
   case $1 in
     -d|--detach) MODE="-d"; shift ;;
     --key)       AUTH_KEY="$2"; shift; shift ;;
     --auto-shutdown) AUTO_SHUTDOWN=true; shift ;;
-    --no-reaper) REAPER_ENABLED=false; shift ;;
+    --no-prune) PRUNE_ENABLED=false; shift ;;
     --workspace) WORKSPACE_ROOTS+=("$2"); shift; shift ;;
     --config-root) CONFIG_ROOT="$2"; shift; shift ;;
     -h|--help)   show_help; exit 0 ;;
@@ -80,8 +80,8 @@ if [ "$AUTO_SHUTDOWN" = true ]; then
     ENV_VARS+=("--env" "HUB_AUTO_SHUTDOWN=1")
 fi
 
-if [ "$REAPER_ENABLED" = false ]; then
-    ENV_VARS+=("--env" "HUB_REAPER_ENABLED=false")
+if [ "$PRUNE_ENABLED" = false ]; then
+    ENV_VARS+=("--env" "HUB_PRUNE_ENABLED=false")
 fi
 
 # --- SMART RESTART LOGIC ---

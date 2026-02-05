@@ -11,18 +11,18 @@ Ephemeral worktrees created in the cache directory (`$XDG_CACHE_HOME/gemini-tool
 2.  **Automation:** Cleanup should be passive. Users should not have to manually run "prune" commands to keep their system healthy.
 3.  **Reliability:** We must avoid "false positives"—deleting a workspace that is still being used for an ongoing experiment.
 
-## Decision: mtime-Based "Stateless Reaper"
+## Decision: mtime-Based "Stateless Pruning"
 
 We will implement a cleanup strategy based on standard Unix directory modification times (`mtime`).
 
-### 1. The Reaper Policy (30-Day Window)
+### 1. The Pruning Policy (30-Day Window)
 Any worktree directory that has not been modified for more than **30 days** is considered stale. The 30-day window was chosen as an arbitrage between aggressive disk saving and preserving user work-in-progress for long-running experiments.
 
 *   **Configurability:** The 30-day default is intended to be configurable by the user. An environment variable (e.g., `GEMINI_WORKTREE_EXPIRY_DAYS`) will allow users to customize the retention period based on their local storage constraints or project requirements.
-*   **Explicit Control:** Automatic cleanup can be completely disabled using the `--no-reaper` flag when starting the Gemini Hub, or by setting the `HUB_REAPER_ENABLED` environment variable to `false`. This is useful for long-running experiments or environments where manual cache management is preferred.
+*   **Explicit Control:** Automatic cleanup can be completely disabled using the `--no-prune` flag when starting the Gemini Hub, or by setting the `HUB_PRUNE_ENABLED` environment variable to `false`. This is useful for long-running experiments or environments where manual cache management is preferred.
 
 ### 2. Implementation Mechanism
-The Gemini Hub periodically executes a "Reaper" routine (implemented via standard `find` logic):
+The Gemini Hub periodically executes a "Pruning" routine (implemented via standard `find` logic):
 1.  **Scan:** It recursively scans the project-level worktree folders.
 2.  **Identify:** It identifies subdirectories with an `mtime` older than 30 days.
 3.  **Remove:** It executes `rm -rf` on the stale directory.
@@ -30,8 +30,8 @@ The Gemini Hub periodically executes a "Reaper" routine (implemented via standar
 
 ### 3. Orphan & Error Handling
 This stateless approach is uniquely resilient:
-*   **Deleted Repos:** If a user deletes the main repository, the Reaper still finds and removes the cached worktree because it only relies on the worktree's own folder timestamp.
-*   **Failed Tasks:** If an agent crashes and leaves a half-finished worktree, the Reaper will eventually clean it up.
+*   **Deleted Repos:** If a user deletes the main repository, the Pruner still finds and removes the cached worktree because it only relies on the worktree's own folder timestamp.
+*   **Failed Tasks:** If an agent crashes and leaves a half-finished worktree, the Pruner will eventually clean it up.
 
 ## Alternatives Considered (Rejected)
 

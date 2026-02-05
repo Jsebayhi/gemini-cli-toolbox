@@ -15,7 +15,7 @@ class Config:
     
     # Features
     HUB_AUTO_SHUTDOWN = os.environ.get("HUB_AUTO_SHUTDOWN", "").lower() in ("1", "true")
-    HUB_REAPER_ENABLED = os.environ.get("HUB_REAPER_ENABLED", "true").lower() in ("1", "true")
+    HUB_PRUNE_ENABLED = os.environ.get("HUB_PRUNE_ENABLED", "true").lower() in ("1", "true")
     
     # Worktree Lifecycle
     WORKTREE_EXPIRY_DAYS = int(os.environ.get("GEMINI_WORKTREE_EXPIRY_DAYS", "30"))

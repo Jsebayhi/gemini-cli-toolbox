@@ -8,29 +8,29 @@ from app.config import Config
 
 logger = logging.getLogger(__name__)
 
-class ReaperService:
+class PruneService:
     """Background service to clean up stale worktrees based on mtime."""
 
     @staticmethod
     def start():
-        """Launch the background reaper thread."""
-        if not Config.HUB_REAPER_ENABLED:
-            logger.info("Worktree Reaper disabled (explicitly toggled off).")
+        """Launch the background prune thread."""
+        if not Config.HUB_PRUNE_ENABLED:
+            logger.info("Worktree Pruning disabled (explicitly toggled off).")
             return
 
-        logger.info(f"Worktree Reaper started (Expiry: {Config.WORKTREE_EXPIRY_DAYS} days).")
-        thread = threading.Thread(target=ReaperService._reaper_loop, daemon=True)
+        logger.info(f"Worktree Pruning started (Expiry: {Config.WORKTREE_EXPIRY_DAYS} days).")
+        thread = threading.Thread(target=PruneService._prune_loop, daemon=True)
         thread.start()
 
     @staticmethod
-    def _reaper_loop():
+    def _prune_loop():
         """Periodic cleanup loop."""
         # Run immediately on start, then every hour
         while True:
             try:
-                ReaperService.prune()
+                PruneService.prune()
             except Exception as e:
-                logger.error(f"Reaper error: {e}")
+                logger.error(f"Pruning error: {e}")
             
             time.sleep(3600)  # Sleep for 1 hour
 

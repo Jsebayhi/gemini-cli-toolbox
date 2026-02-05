@@ -1,10 +1,10 @@
 import os
 import time
 import shutil
-from app.services.reaper import ReaperService
+from app.services.prune import PruneService
 from app.config import Config
 
-def test_reaper_prune(tmp_path):
+def test_prune_prune(tmp_path):
     # Setup mock worktree structure
     worktree_root = tmp_path / "worktrees"
     worktree_root.mkdir()
@@ -30,14 +30,14 @@ def test_reaper_prune(tmp_path):
     os.utime(stale_path, (stale_mtime, stale_mtime))
     
     # Run prune
-    ReaperService.prune()
+    PruneService.prune()
     
     # Verify
     assert fresh_path.exists()
     assert not stale_path.exists()
     assert project_dir.exists()
 
-def test_reaper_skip_non_dir(tmp_path):
+def test_prune_skip_non_dir(tmp_path):
     worktree_root = tmp_path / "worktrees"
     worktree_root.mkdir()
     
@@ -47,17 +47,18 @@ def test_reaper_skip_non_dir(tmp_path):
     Config.WORKTREE_ROOT = str(worktree_root)
     
     # Should not crash
-    ReaperService.prune()
+    PruneService.prune()
     assert dummy_file.exists()
 
-def test_reaper_disabled(mocker):
+def test_prune_disabled(mocker):
     # Setup
-    Config.HUB_REAPER_ENABLED = False
+    Config.HUB_PRUNE_ENABLED = False
     mock_thread = mocker.patch("threading.Thread")
     
     # Run
-    ReaperService.start()
+    PruneService.start()
     
     # Verify
     mock_thread.assert_not_called()
+
 
