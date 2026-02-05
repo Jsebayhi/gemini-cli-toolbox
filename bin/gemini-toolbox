@@ -240,9 +240,9 @@ while [[ $# -gt 0 ]]; do
         ;;
     --worktree)
         ENABLE_WORKTREE=true
-        # Optional argument: Check if next arg exists AND does NOT start with '-'
-        # This allows 'gemini-toolbox --worktree' (detached) vs 'gemini-toolbox --worktree feat/x'
-        if [[ -n "$2" && "$2" != -* ]]; then
+        # Optional argument: Check if next arg exists, is NOT a flag, 
+        # and is NOT a reserved command (chat, update, stop-hub, connect)
+        if [[ -n "$2" && "$2" != -* && "$2" != "chat" && "$2" != "update" && "$2" != "stop-hub" && "$2" != "connect" ]]; then
             WORKTREE_INPUT="$2"
             shift
         else
