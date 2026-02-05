@@ -4,7 +4,7 @@ import shutil
 from app.services.prune import PruneService
 from app.config import Config
 
-def test_prune_prune(tmp_path):
+def test_prune_prune(tmp_path, mocker):
     # Setup mock worktree structure
     worktree_root = tmp_path / "worktrees"
     worktree_root.mkdir()
@@ -32,6 +32,21 @@ def test_prune_prune(tmp_path):
     Config.WORKTREE_ROOT = str(worktree_root)
     Config.WORKTREE_EXPIRY_HEADLESS = 30
     Config.WORKTREE_EXPIRY_BRANCH = 90
+    Config.WORKTREE_EXPIRY_ORPHAN = 90
+    
+    # Mock Git responses
+    def mock_git_run(cmd, **kwargs):
+        path = cmd[2]
+        class MockResult:
+            def __init__(self, code): self.returncode = code
+        
+        if "stale-branch" in path or "fresh" in path:
+            return MockResult(0) # Branch
+        if "exploration" in path:
+            return MockResult(1) # Headless
+        return MockResult(128) # Error
+        
+    mocker.patch("subprocess.run", side_effect=mock_git_run)
     
     now = time.time()
     
@@ -51,6 +66,7 @@ def test_prune_prune(tmp_path):
     assert fresh_headless_path.exists()
     assert not stale_branch_path.exists()
     assert not stale_headless_path.exists()
+
 
 
 def test_prune_skip_non_dir(tmp_path):
