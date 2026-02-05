@@ -180,6 +180,10 @@ if [ -n "$GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS" ]; then
     ENV_VARS+=("--env" "GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS=${GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS}")
 fi
 
+if [ -n "$GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS" ]; then
+    ENV_VARS+=("--env" "GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS=${GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS}")
+fi
+
 # 3. Persistence (Named Volume)
 # We use a Docker Named Volume for the Tailscale state.
 # This keeps the host filesystem clean while preventing "New Device" naming collisions (gemini-hub-1).
