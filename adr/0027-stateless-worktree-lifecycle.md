@@ -19,7 +19,7 @@ We will implement a cleanup strategy based on standard Unix directory modificati
 Any worktree directory that has not been modified for more than **30 days** is considered stale. The 30-day window was chosen as an arbitrage between aggressive disk saving and preserving user work-in-progress for long-running experiments.
 
 *   **Configurability:** The 30-day default is intended to be configurable by the user. An environment variable (e.g., `GEMINI_WORKTREE_EXPIRY_DAYS`) will allow users to customize the retention period based on their local storage constraints or project requirements.
-*   **Explicit Control:** Automatic cleanup can be completely disabled using the `--no-prune` flag when starting the Gemini Hub, or by setting the `HUB_PRUNE_ENABLED` environment variable to `false`. This is useful for long-running experiments or environments where manual cache management is preferred.
+*   **Explicit Control:** Automatic cleanup can be completely disabled using the `--no-worktree-prune` flag when starting the Gemini Hub, or by setting the `HUB_PRUNE_ENABLED` environment variable to `false`. This is useful for long-running experiments or environments where manual cache management is preferred.
 
 ### 2. Implementation Mechanism
 The Gemini Hub periodically executes a "Pruning" routine (implemented via standard `find` logic):
