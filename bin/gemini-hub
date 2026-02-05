@@ -158,6 +158,17 @@ ABS_CONFIG_ROOT=$(realpath -m "$CONFIG_ROOT")
 mkdir -p "$ABS_CONFIG_ROOT"
 EXTRA_MOUNTS+=("-v" "${ABS_CONFIG_ROOT}:${ABS_CONFIG_ROOT}")
 
+# 2.1 Mount Worktree Cache (for Cleanup)
+WORKTREE_CACHE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees}"
+mkdir -p "$WORKTREE_CACHE"
+ABS_WORKTREE_CACHE=$(realpath -m "$WORKTREE_CACHE")
+EXTRA_MOUNTS+=("-v" "${ABS_WORKTREE_CACHE}:${ABS_WORKTREE_CACHE}")
+ENV_VARS+=("--env" "GEMINI_WORKTREE_ROOT=${ABS_WORKTREE_CACHE}")
+
+if [ -n "$GEMINI_WORKTREE_EXPIRY_DAYS" ]; then
+    ENV_VARS+=("--env" "GEMINI_WORKTREE_EXPIRY_DAYS=${GEMINI_WORKTREE_EXPIRY_DAYS}")
+fi
+
 # 3. Persistence (Named Volume)
 # We use a Docker Named Volume for the Tailscale state.
 # This keeps the host filesystem clean while preventing "New Device" naming collisions (gemini-hub-1).
