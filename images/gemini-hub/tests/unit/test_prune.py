@@ -16,26 +16,42 @@ def test_prune_prune(tmp_path):
     fresh_path = project_dir / "fresh"
     fresh_path.mkdir()
     
-    # 2. Stale worktree (should be deleted)
-    stale_path = project_dir / "stale"
-    stale_path.mkdir()
+    # 2. Stale branch worktree (90d default, set to 100d -> delete)
+    stale_branch_path = project_dir / "stale-branch"
+    stale_branch_path.mkdir()
+    
+    # 3. Fresh headless worktree (should stay)
+    fresh_headless_path = project_dir / "exploration-fresh"
+    fresh_headless_path.mkdir()
+    
+    # 4. Stale headless worktree (30d default, set to 40d -> delete)
+    stale_headless_path = project_dir / "exploration-stale"
+    stale_headless_path.mkdir()
     
     # Mock config
     Config.WORKTREE_ROOT = str(worktree_root)
-    Config.WORKTREE_EXPIRY_DAYS = 1 # 1 day for test
+    Config.WORKTREE_EXPIRY_HEADLESS = 30
+    Config.WORKTREE_EXPIRY_BRANCH = 90
     
-    # Manipulate mtime of the stale path
-    # Set it to 2 days ago
-    stale_mtime = time.time() - (2 * 86400)
-    os.utime(stale_path, (stale_mtime, stale_mtime))
+    now = time.time()
+    
+    # Set branch stale (100 days)
+    mtime_branch = now - (100 * 86400)
+    os.utime(stale_branch_path, (mtime_branch, mtime_branch))
+    
+    # Set headless stale (40 days)
+    mtime_headless = now - (40 * 86400)
+    os.utime(stale_headless_path, (mtime_headless, mtime_headless))
     
     # Run prune
     PruneService.prune()
     
     # Verify
     assert fresh_path.exists()
-    assert not stale_path.exists()
-    assert project_dir.exists()
+    assert fresh_headless_path.exists()
+    assert not stale_branch_path.exists()
+    assert not stale_headless_path.exists()
+
 
 def test_prune_skip_non_dir(tmp_path):
     worktree_root = tmp_path / "worktrees"

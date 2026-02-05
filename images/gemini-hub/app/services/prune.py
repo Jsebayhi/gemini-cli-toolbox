@@ -18,7 +18,7 @@ class PruneService:
             logger.info("Worktree Pruning disabled (explicitly toggled off).")
             return
 
-        logger.info(f"Worktree Pruning started (Expiry: {Config.WORKTREE_EXPIRY_DAYS} days).")
+        logger.info(f"Worktree Pruning started (Expiry: {Config.WORKTREE_EXPIRY_HEADLESS}d headless / {Config.WORKTREE_EXPIRY_BRANCH}d branch).")
         thread = threading.Thread(target=PruneService._prune_loop, daemon=True)
         thread.start()
 
@@ -42,7 +42,8 @@ class PruneService:
             logger.debug(f"Worktree root {root} does not exist. Skipping prune.")
             return
 
-        expiry_seconds = Config.WORKTREE_EXPIRY_DAYS * 86400
+        expiry_headless_sec = Config.WORKTREE_EXPIRY_HEADLESS * 86400
+        expiry_branch_sec = Config.WORKTREE_EXPIRY_BRANCH * 86400
         now = time.time()
         
         pruned_count = 0
@@ -58,26 +59,26 @@ class PruneService:
                 if not os.path.isdir(worktree_path):
                     continue
                 
+                # Determine expiry based on folder prefix
+                is_headless = worktree_dir.startswith("exploration-")
+                expiry_seconds = expiry_headless_sec if is_headless else expiry_branch_sec
+                
                 # Check directory mtime
                 mtime = os.path.getmtime(worktree_path)
                 age = now - mtime
                 
                 if age > expiry_seconds:
-                    logger.info(f"Pruning stale worktree: {worktree_path} (Age: {int(age/86400)} days)")
+                    type_label = "headless" if is_headless else "branch"
+                    logger.info(f"Pruning stale {type_label} worktree: {worktree_path} (Age: {int(age/86400)} days)")
                     try:
-                        # 1. Recursive removal of the directory
+                        # Recursive removal of the directory
                         shutil.rmtree(worktree_path)
                         pruned_count += 1
-                        
-                        # 2. Attempt 'git worktree prune' in any project that might still exist
-                        # We try to find the parent repo. Usually it's in one of HUB_ROOTS.
-                        # For simplicity, we just trigger it if we find a .git in typical locations
-                        # or rely on the fact that Git handles missing worktree folders lazily.
                     except Exception as e:
                         logger.error(f"Failed to remove {worktree_path}: {e}")
 
         if pruned_count > 0:
-            logger.info(f"Reaper finished. Removed {pruned_count} directories.")
+            logger.info(f"Pruning finished. Removed {pruned_count} directories.")
             # Final global prune call to clean up Git metadata
             # This requires access to a git repo. We can't easily guarantee which one.
             # But the Hub often runs gemini-toolbox which can be used or just 'git'.

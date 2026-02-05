@@ -15,11 +15,16 @@ Ephemeral worktrees created in the cache directory (`$XDG_CACHE_HOME/gemini-tool
 
 We will implement a cleanup strategy based on standard Unix directory modification times (`mtime`).
 
-### 1. The Pruning Policy (30-Day Window)
-Any worktree directory that has not been modified for more than **30 days** is considered stale. The 30-day window was chosen as an arbitrage between aggressive disk saving and preserving user work-in-progress for long-running experiments.
+### 1. The Pruning Policy (Differentiated Retention)
+To balance between disk hygiene and long-term project context, we apply different retention periods based on the worktree's intent:
 
-*   **Configurability:** The 30-day default is intended to be configurable by the user. An environment variable (e.g., `GEMINI_WORKTREE_EXPIRY_DAYS`) will allow users to customize the retention period based on their local storage constraints or project requirements.
-*   **Explicit Control:** Automatic cleanup can be completely disabled using the `--no-worktree-prune` flag when starting the Gemini Hub, or by setting the `HUB_WORKTREE_PRUNE_ENABLED` environment variable to `false`. This is useful for long-running experiments or environments where manual cache management is preferred.
+*   **Headless Worktrees (30 days):** Workspaces created without an explicit branch name (folder prefix `exploration-`) are considered transient and are pruned after 30 days of inactivity.
+*   **Branch Worktrees (90 days):** Workspaces associated with a named branch are considered high-context and are preserved for 90 days.
+
+*   **Configurability:** Both defaults can be overridden via environment variables:
+    *   `GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS` (Default: 30)
+    *   `GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS` (Default: 90)
+*   **Explicit Control:** Automatic cleanup can be completely disabled using the `--no-worktree-prune` flag when starting the Gemini Hub, or by setting the `HUB_WORKTREE_PRUNE_ENABLED` environment variable to `false`.
 
 ### 2. Implementation Mechanism
 The Gemini Hub periodically executes a "Pruning" routine (implemented via standard `find` logic):
