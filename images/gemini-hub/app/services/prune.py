@@ -44,6 +44,9 @@ class PruneService:
 
         expiry_headless_sec = Config.WORKTREE_EXPIRY_HEADLESS * 86400
         expiry_branch_sec = Config.WORKTREE_EXPIRY_BRANCH * 86400
+        # Safety Limit: Maximum of any configured retention
+        expiry_safety_sec = max(expiry_headless_sec, expiry_branch_sec)
+        
         now = time.time()
         
         pruned_count = 0
@@ -69,20 +72,18 @@ class PruneService:
                     )
                     
                     if result.returncode == 0:
-                        is_headless = False
+                        expiry_seconds = expiry_branch_sec
                         type_label = "branch"
                     elif result.returncode == 1:
-                        is_headless = True
+                        expiry_seconds = expiry_headless_sec
                         type_label = "headless"
                     else:
-                        # Safety Default: Treat as Branch (Long retention) for orphans/errors
-                        is_headless = False
+                        # Safety Default: Max retention for orphans/errors
+                        expiry_seconds = expiry_safety_sec
                         type_label = "ambiguous/orphan"
                 except Exception:
-                    is_headless = False
+                    expiry_seconds = expiry_safety_sec
                     type_label = "error/fallback"
-
-                expiry_seconds = expiry_headless_sec if is_headless else expiry_branch_sec
                 
                 # Check directory mtime
                 mtime = os.path.getmtime(worktree_path)

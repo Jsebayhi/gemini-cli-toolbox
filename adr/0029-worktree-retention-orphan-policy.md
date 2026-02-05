@@ -20,7 +20,7 @@ The Pruner classifies worktrees into two tiers based on their Git `HEAD` state:
 | :--- | :--- | :--- | :--- |
 | **Branch** (`symbolic-ref` success) | **Persistent** | 90 Days | `GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS` |
 | **Headless** (`symbolic-ref` failure) | **Transient** | 30 Days | `GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS` |
-| **Orphan/Error** (Cmd fails) | **Unknown (Safe)**| 90 Days | `GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS` |
+| **Orphan/Error** (Cmd fails) | **Unknown (Safe)**| Max Configured | `max(Headless, Branch)` |
 
 ### 2. Implementation Mechanism
 The Hub runs `git -C <path> symbolic-ref -q HEAD` for each candidate directory:
@@ -29,8 +29,8 @@ The Hub runs `git -C <path> symbolic-ref -q HEAD` for each candidate directory:
 *   **Other/Error:** Indicates an orphaned worktree or a path resolution error (common in containerized environments).
 
 ### 3. Orphan Safety Policy
-If a worktree's state is ambiguous (e.g., the parent repo path in the `.git` file cannot be resolved from within the Hub container), the system **defaults to the Maximum Retention (90 days)**.
-*   **Rationale:** Data preservation is prioritized over disk optimization. Ambiguous workspaces are treated as high-context until proven otherwise.
+If a worktree's state is ambiguous (e.g., the parent repo path in the `.git` file cannot be resolved from within the Hub container), the system **defaults to the maximum of all configured retention periods**.
+*   **Rationale:** Data preservation is prioritized over disk optimization. By taking the `max()` of all thresholds, we ensure that no work is lost due to misclassification, even if the user has customized the headless or branch thresholds.
 
 ## Alternatives Considered
 
@@ -47,7 +47,7 @@ If a worktree's state is ambiguous (e.g., the parent repo path in the `.git` fil
 | Aspect | Implementation |
 | :--- | :--- |
 | **Classification Accuracy** | **High** for visible repositories (Git-based); **Conservative Fallback** for orphans. |
-| **Data Safety** | **Maximal** (Ambiguous or unreadable worktrees default to the 90-day limit). |
+| **Data Safety** | **Maximal** (Ambiguous worktrees default to the `max()` of all configured limits). |
 | **Environmental Resilience** | **High** (Works reliably across container boundaries and path mismatches). |
 
 
