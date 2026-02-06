@@ -18,15 +18,18 @@ RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
 # Patch IDE Host Detection
 # The CLI forces 'host.docker.internal' in Docker, but the VS Code extension
 # only accepts '127.0.0.1'. We patch it to respect GEMINI_CLI_IDE_SERVER_HOST.
-RUN TARGET_FILE=$(npm root -g)/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/ide/ide-client.js \
-    && if grep -q "export function getIdeServerHost() {" "$TARGET_FILE"; then \
-        echo "Applying function-level patch for new CLI version..."; \
+RUN CORE_DIR=$(npm root -g)/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/ide \
+    && TARGET_FILE="" \
+    && if [ -f "$CORE_DIR/ide-connection-utils.js" ]; then TARGET_FILE="$CORE_DIR/ide-connection-utils.js"; \
+       elif [ -f "$CORE_DIR/ide-client.js" ]; then TARGET_FILE="$CORE_DIR/ide-client.js"; fi \
+    && if [ -n "$TARGET_FILE" ] && grep -q "export function getIdeServerHost() {" "$TARGET_FILE"; then \
+        echo "Applying function-level patch for new CLI version to $TARGET_FILE..."; \
         sed -i "s/export function getIdeServerHost() {/export function getIdeServerHost() { if (process.env.GEMINI_CLI_IDE_SERVER_HOST) return process.env.GEMINI_CLI_IDE_SERVER_HOST;/" "$TARGET_FILE"; \
-    elif grep -q "return isInContainer ? 'host.docker.internal' : '127.0.0.1'" "$TARGET_FILE"; then \
-        echo "Applying line-level patch for legacy CLI version..."; \
+    elif [ -n "$TARGET_FILE" ] && grep -q "return isInContainer ? 'host.docker.internal' : '127.0.0.1'" "$TARGET_FILE"; then \
+        echo "Applying line-level patch for legacy CLI version to $TARGET_FILE..."; \
         sed -i "s/return isInContainer ? 'host.docker.internal' : '127.0.0.1'/return process.env.GEMINI_CLI_IDE_SERVER_HOST || (isInContainer ? 'host.docker.internal' : '127.0.0.1')/" "$TARGET_FILE"; \
     else \
-        echo "Error: Failed to find IDE host detection logic in $TARGET_FILE. Upstream code may have changed." && exit 1; \
+        echo "Error: Failed to find IDE host detection logic in $CORE_DIR. Upstream code may have changed." && exit 1; \
     fi
 
 # 4. Copy Entrypoint
