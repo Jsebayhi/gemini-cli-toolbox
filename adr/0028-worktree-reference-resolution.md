@@ -14,7 +14,7 @@ We have implemented a priority-based resolution system that handles explicit fla
 
 | Input Pattern | Logic Applied | Resulting Branch | Resulting Task |
 | :--- | :--- | :--- | :--- |
-| `--branch X ...` | **Explicit Override** | `X` | Remaining Args |
+| `--name X ...` | **Explicit Override** | `X` | Remaining Args |
 | `[Existing Branch] ...` | **Auto-Detection** | `[Existing Branch]` | Remaining Args |
 | `[New Name] [Task]` | **Manual Naming** | `[New Name]` | `[Task]` |
 | (No arguments) | **Safe Default** | `Detached HEAD` | None |
@@ -25,16 +25,17 @@ To avoid maintaining brittle keyword lists, the parser uses a "strongest signal"
 2.  **Verify:** It checks if this argument matches an existing local branch (via `git show-ref`).
 3.  **Result:**
     *   **If Branch exists:** It is used as the context. Remaining arguments are passed to the agent.
-    *   **If Branch does NOT exist:** The argument is used as the **New Branch Name**. Remaining arguments are passed as the Task.
+    *   **If Branch does NOT exist:** The argument is used as the **New Branch/Folder Name**. Remaining arguments are passed as the Task.
     *   **Fallback:** If no arguments are provided, it defaults to a detached HEAD exploration (`exploration-UUID`).
 
 ### 3. Naming & Sanitization
 *   **Philosophy:** Predictability over automation.
+*   **Terminology:** We use the term **Name** to represent the 1:1 mapping between the worktree folder and the Git branch.
 *   **Sanitization:** The tool replaces slashes (`/`) with dashes (`-`) for the filesystem folder name to ensure compatibility, but preserves the Git branch name exactly as provided by the user.
 
 ## User Journeys
 
-*   **Explicit Context:** `gemini-toolbox --worktree --branch feat/ui "Fix buttons"` -> Uses `feat/ui`.
+*   **Explicit Context:** `gemini-toolbox --worktree --name feat/ui "Fix buttons"` -> Uses `feat/ui`.
 *   **Manual Naming:** `gemini-toolbox --worktree fix-auth "Refactor login"` -> Creates `fix-auth` branch, passes task to agent.
 *   **Resume Work:** `gemini-toolbox --worktree fix-auth` -> Detects `fix-auth` exists, enters it, and starts an interactive session.
 *   **Multi-Session Collaboration:** `gemini-toolbox --worktree fix-auth` (in two different terminals) -> Both sessions share the same `fix-auth` worktree, allowing for concurrent agent/human collaboration in the same isolated environment.
@@ -46,7 +47,7 @@ To avoid maintaining brittle keyword lists, the parser uses a "strongest signal"
 | :--- | :--- | :--- |
 | **Logic** | Heuristic (Strongest Signal) | Balances ease-of-use with Git robustness. |
 | **Naming** | Manual / Explicit | Removes dependencies on complex pre-flight containers. |
-| **Safety** | Explicit `--branch` always wins | Provides a guarantee for ambiguous cases. |
+| **Safety** | Explicit `--name` always wins | Provides a guarantee for ambiguous cases. |
 | **Reliability** | Deterministic | "What you type is what you get" avoids AI hallucinations. |
 
 ## Related Decisions

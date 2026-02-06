@@ -112,8 +112,8 @@ The agent analyzes your actual code changes and generates a precise, professiona
 
 **The Solution:** Launch an **Ephemeral Worktree**.
 ```bash
-# Auto-create a branch named 'refactor-auth' and start working
-gemini-toolbox --worktree "Refactor the authentication logic"
+# Create a named worktree 'refactor-auth' and start working
+gemini-toolbox --worktree refactor-auth "Refactor the authentication logic"
 ```
 The toolbox automatically:
 1.  Creates a new, isolated folder for this task.
@@ -121,6 +121,7 @@ The toolbox automatically:
 3.  Launches the agent in that clean environment.
 
 Your main working directory remains untouched. If the experiment fails, just delete the branch. If it succeeds, merge it back.
+
 
 ---
 

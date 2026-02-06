@@ -28,7 +28,8 @@ show_help() {
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"
-    echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be branch name or task."
+    echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be name or task."
+    echo "  --name <str>         Explicit name for the worktree folder and branch."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
     echo "  --detached           Start the container in background and exit (useful for Hub)"
     echo "  --help               Show this help message"
@@ -80,10 +81,10 @@ setup_worktree() {
     fi
 
     # 1. Resolve Branch & Context
-    if [[ -n "$TARGET_BRANCH" ]]; then
+    if [[ -n "$TARGET_NAME" ]]; then
         # Case A: Explicit Flag Wins
-        BRANCH_NAME="$TARGET_BRANCH"
-        echo ">> Worktree: Using explicit branch '$BRANCH_NAME'"
+        BRANCH_NAME="$TARGET_NAME"
+        echo ">> Worktree: Using explicit name '$BRANCH_NAME'"
     elif [[ ${#ARGS[@]} -gt 0 ]]; then
         # Case B: Manual Naming (First Arg)
         # The user provided a string (e.g., "fix-bug" or "feature/new-ui")
@@ -235,8 +236,8 @@ while [[ $# -gt 0 ]]; do
         ENABLE_WORKTREE=true
         shift
         ;;
-    --branch)
-        TARGET_BRANCH="$2"
+    --name)
+        TARGET_NAME="$2"
         shift; shift
         ;;
     --docker-args) 
