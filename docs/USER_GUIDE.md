@@ -113,7 +113,7 @@ The agent analyzes your actual code changes and generates a precise, professiona
 **The Solution:** Launch an **Ephemeral Worktree**.
 ```bash
 # Create a named worktree 'refactor-auth' and start working
-gemini-toolbox --worktree refactor-auth "Refactor the authentication logic"
+gemini-toolbox --worktree --name refactor-auth "Refactor the authentication logic"
 ```
 The toolbox automatically:
 1.  Creates a new, isolated folder for this task.
@@ -131,9 +131,9 @@ Your main working directory remains untouched. If the experiment fails, just del
 **The Solution:** Launch a second session in the same worktree.
 ```bash
 # Terminal 1: Background task
-gemini-toolbox --worktree my-feature "Write exhaustive unit tests for app/services" &
+gemini-toolbox --worktree --name my-feature "Write exhaustive unit tests for app/services" &
 
 # Terminal 2: Interactive session in the SAME worktree
-gemini-toolbox --worktree my-feature
+gemini-toolbox --worktree --name my-feature
 ```
 Because the toolbox detects that the worktree `my-feature` already exists, it simply joins the existing isolated environment without creating new branches. This allows for powerful human-agent or agent-agent collaboration in a single, clean workspace.

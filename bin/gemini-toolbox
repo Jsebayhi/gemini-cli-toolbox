@@ -49,10 +49,12 @@ show_help() {
 
 # Worktree Setup Function
 setup_worktree() {
-    local WORKTREE_BASE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${PROJECT_NAME}}"
+    local WORKTREE_BASE="${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${PROJECT_NAME}"
+    # Use environment variable if provided, otherwise default
+    WORKTREE_BASE="${GEMINI_WORKTREE_ROOT:-$WORKTREE_BASE}"
+    
     local BRANCH_NAME=""
     local FOLDER_NAME=""
-    local TASK_STRING=""
 
     # Ensure git is available
     if ! command -v git &> /dev/null; then
@@ -80,37 +82,21 @@ setup_worktree() {
         exit 1
     fi
 
-    # 1. Resolve Branch & Context
+    # 1. Resolve Identity
     if [[ -n "$TARGET_NAME" ]]; then
-        # Case A: Explicit Flag Wins
+        # Case A: Explicit Naming
         BRANCH_NAME="$TARGET_NAME"
+        # Replace slashes with dashes for the filesystem folder
+        FOLDER_NAME="${BRANCH_NAME//\//-}"
+        # Sanitize to ensure it's filesystem safe
+        FOLDER_NAME=$(echo "$FOLDER_NAME" | tr -cd '[:alnum:]-._')
         echo ">> Worktree: Using explicit name '$BRANCH_NAME'"
-    elif [[ ${#ARGS[@]} -gt 0 ]]; then
-        # Case B: Manual Naming (First Arg)
-        # The user provided a string (e.g., "fix-bug" or "feature/new-ui")
-        # We use this EXACTLY as provided for the branch name.
-        BRANCH_NAME="${ARGS[0]}"
-        
-        # We treat the REST of the args (if any) as the task
-        if [[ ${#ARGS[@]} -gt 1 ]]; then
-             TASK_STRING="${ARGS[*]:1}"
-        fi
-        
-        echo ">> Worktree: Using provided name '$BRANCH_NAME'"
     else
-        # Case C: Interactive Exploration (Detached HEAD)
+        # Case B: Anonymous Exploration (Detached HEAD)
         local UUID
         UUID=$(head -c 8 /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)
         FOLDER_NAME="exploration-${UUID}"
-        echo ">> Worktree: Interactive Exploration (Detached HEAD)"
-    fi
-
-    # Determine Folder Name (Sanitize slashes)
-    if [[ -z "$FOLDER_NAME" ]]; then
-        # Replace slashes with dashes for the filesystem folder
-        FOLDER_NAME="${BRANCH_NAME//\//-}"
-        # Sanitize to ensure it's filesystem safe (basic check)
-        FOLDER_NAME=$(echo "$FOLDER_NAME" | tr -cd '[:alnum:]-._')
+        echo ">> Worktree: Anonymous Exploration (Detached HEAD)"
     fi
 
     local WORKTREE_PATH="${WORKTREE_BASE}/${FOLDER_NAME}"
@@ -137,13 +123,6 @@ setup_worktree() {
     
     # 3. Update Global PROJECT_DIR to point to worktree
     PROJECT_DIR="$WORKTREE_PATH"
-
-    # 4. Inject Task if needed (so the Agent receives it)
-    # If we peeled off the first arg as the branch name, inject the rest
-    if [[ -n "$TASK_STRING" ]]; then
-        # We replace the ARGS list with just the task string
-        ARGS=("$TASK_STRING")
-    fi
 }
 
 # 0. Pre-scan for Config & Load Extra Args

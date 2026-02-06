@@ -4,29 +4,25 @@
 Accepted
 
 ## Context
-When a user launches a session with `--worktree`, the tool needs a deterministic way to decide which Git reference (branch) to use and how to handle positional arguments. We want a robust, predictable experience that follows the principle of "What you type is what you get."
+When a user launches a session with `--worktree`, the tool needs a deterministic way to decide which Git reference (branch) to use and how to handle positional arguments. We want a robust, predictable experience that eliminates ambiguity and follows the principle of "Explicit over Implicit."
 
-## Decision: Manual Resolution Hierarchy
+## Decision: Explicit Resolution Policy
 
-We have implemented a priority-based resolution system that handles explicit flags, existing branches, and manual naming.
+We have implemented a binary resolution system that handles only two states: Explicitly Named and Anonymous.
 
 ### 1. The Priority Matrix
 
-| Input Pattern | Logic Applied | Resulting Branch | Resulting Task |
+| Input Pattern | Resolution Logic | Resulting Context | Resulting Task |
 | :--- | :--- | :--- | :--- |
-| `--name X ...` | **Explicit Override** | `X` | Remaining Args |
-| `[Existing Branch] ...` | **Auto-Detection** | `[Existing Branch]` | Remaining Args |
-| `[New Name] [Task]` | **Manual Naming** | `[New Name]` | `[Task]` |
-| (No arguments) | **Safe Default** | `Detached HEAD` | None |
+| `--name MY-ID ...` | **Explicit Naming** | Branch & Folder: **`MY-ID`** | All positional args |
+| (No arguments) | **Anonymous Exploration** | Branch: **`Detached HEAD`** <br> Folder: **`exploration-UUID`** | None |
+| `[Prompt String]` | **Anonymous Task** | Branch: **`Detached HEAD`** <br> Folder: **`exploration-UUID`** | All positional args |
 
-### 2. The Syntactic Heuristic (Non-Consuming Peek)
-To avoid maintaining brittle keyword lists, the parser uses a "strongest signal" heuristic:
-1.  **Peek:** The tool peeks at the first positional argument.
-2.  **Verify:** It checks if this argument matches an existing local branch (via `git show-ref`).
-3.  **Result:**
-    *   **If Branch exists:** It is used as the context. Remaining arguments are passed to the agent.
-    *   **If Branch does NOT exist:** The argument is used as the **New Branch/Folder Name**. Remaining arguments are passed as the Task.
-    *   **Fallback:** If no arguments are provided, it defaults to a detached HEAD exploration (`exploration-UUID`).
+### 2. Elimination of Positional Detection
+To ensure 100% reliability and avoid "The Branch named 'Fix'" bug, we have **REJECTED** the use of positional arguments for identifying branches.
+*   The first positional argument is **never** used as a branch name.
+*   The only way to create or target a named worktree is via the explicit `--name` flag.
+*   This ensures that any prompt passed to the agent (e.g., `gemini-toolbox --worktree "Refactor the auth"`) is correctly handled as a task, not as an attempt to create a branch named `Refactor`.
 
 ### 3. Naming & Sanitization
 *   **Philosophy:** Predictability over automation.
@@ -35,20 +31,19 @@ To avoid maintaining brittle keyword lists, the parser uses a "strongest signal"
 
 ## User Journeys
 
-*   **Explicit Context:** `gemini-toolbox --worktree --name feat/ui "Fix buttons"` -> Uses `feat/ui`.
-*   **Manual Naming:** `gemini-toolbox --worktree fix-auth "Refactor login"` -> Creates `fix-auth` branch, passes task to agent.
-*   **Resume Work:** `gemini-toolbox --worktree fix-auth` -> Detects `fix-auth` exists, enters it, and starts an interactive session.
-*   **Multi-Session Collaboration:** `gemini-toolbox --worktree fix-auth` (in two different terminals) -> Both sessions share the same `fix-auth` worktree, allowing for concurrent agent/human collaboration in the same isolated environment.
-*   **Safe Exploration:** `gemini-toolbox --worktree` -> Creates a detached HEAD worktree.
+*   **Explicit Context:** `gemini-toolbox --worktree --name feat/ui "Fix buttons"` -> Creates/Uses `feat/ui` branch and folder.
+*   **Safe Exploration (with task):** `gemini-toolbox --worktree "Refactor login"` -> Creates an anonymous `exploration-UUID` folder with a detached HEAD and passes the task to the agent.
+*   **Multi-Session Collaboration:** `gemini-toolbox --worktree --name fix-auth` (in two terminals) -> Both sessions share the same `fix-auth` worktree.
+*   **Blind Exploration:** `gemini-toolbox --worktree` -> Creates an anonymous detached HEAD worktree with no task.
 
 ## Trade-offs and Arbitrages
 
 | Aspect | Implementation | Rationale |
 | :--- | :--- | :--- |
-| **Logic** | Heuristic (Strongest Signal) | Balances ease-of-use with Git robustness. |
-| **Naming** | Manual / Explicit | Removes dependencies on complex pre-flight containers. |
-| **Safety** | Explicit `--name` always wins | Provides a guarantee for ambiguous cases. |
-| **Reliability** | Deterministic | "What you type is what you get" avoids AI hallucinations. |
+| **Logic** | Binary (Explicit vs Anon) | Maximizes reliability by removing all heuristics. |
+| **Naming** | Manual Only | Eliminates fragile dependencies on AI or keyword peeking. |
+| **Safety** | Detached by Default | Prevents accidental branch creation when users provide tasks. |
+| **Reliability** | Deterministic | "Explicit is better than implicit." |
 
 ## Related Decisions
 *   **ADR 0030**: Rejection of Automatic Task-Based Naming.
