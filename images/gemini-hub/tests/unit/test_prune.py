@@ -1,6 +1,5 @@
 import os
 import time
-import shutil
 from app.services.prune import PruneService
 from app.config import Config
 
