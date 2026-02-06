@@ -101,10 +101,14 @@ setup_worktree() {
             local SLUG
             SLUG=$(docker run --rm \
                 "${EXTRA_DOCKER_ARGS[@]}" \
+                --volume "${ORIGINAL_PROJECT_DIR}:${ORIGINAL_PROJECT_DIR}:ro" \
+                --workdir "${ORIGINAL_PROJECT_DIR}" \
                 -v "${HOST_CONF_DIR}:/home/gemini/.gemini" \
                 "${IMAGE_NAME}" \
                 --model gemini-2.5-flash \
-                "You are a git branch naming utility. Slugify the input task into a concise branch name. Return ONLY the slug. Do not analyze the codebase or provide explanations. Task: $TASK_STRING")
+                "You are a git branch naming utility. Slugify the input task into a concise branch name. 
+                 You have READ-ONLY access to the project for context. Return ONLY the slug. 
+                 Do not provide explanations. Task: $TASK_STRING")
             
             SLUG=$(echo "$SLUG" | tr -d '\r' | tr -d '[:space:]')
             if [[ -z "$SLUG" || "$SLUG" == *"Error"* ]]; then
