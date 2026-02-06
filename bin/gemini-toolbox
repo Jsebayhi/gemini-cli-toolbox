@@ -85,42 +85,19 @@ setup_worktree() {
         BRANCH_NAME="$TARGET_BRANCH"
         echo ">> Worktree: Using explicit branch '$BRANCH_NAME'"
     elif [[ ${#ARGS[@]} -gt 0 ]]; then
-        # Case B: Smart Detection
-        local PEEK="${ARGS[0]}"
-        # Check if first arg is an existing branch
-        if git show-ref --verify --quiet "refs/heads/$PEEK" || git show-ref --verify --quiet "refs/remotes/origin/$PEEK"; then
-            BRANCH_NAME="$PEEK"
-            # Consume the branch name from positional args
-            ARGS=("${ARGS[@]:1}")
-            echo ">> Worktree: Detected existing branch '$BRANCH_NAME'"
-        else
-            # Case C: It's a task -> AI Naming
-            TASK_STRING="${ARGS[*]}"
-            echo ">> Worktree: Task detected. Generating branch name..."
-            
-            local SLUG
-            SLUG=$(docker run --rm \
-                "${EXTRA_DOCKER_ARGS[@]}" \
-                --volume "${ORIGINAL_PROJECT_DIR}:${ORIGINAL_PROJECT_DIR}:ro" \
-                --workdir "${ORIGINAL_PROJECT_DIR}" \
-                -v "${HOST_CONF_DIR}:/home/gemini/.gemini" \
-                "${IMAGE_NAME}" \
-                --model gemini-2.5-flash \
-                "You are a git branch naming utility. Slugify the input task into a concise branch name. 
-                 You have READ-ONLY access to the project for context. Return ONLY the slug. 
-                 Do not provide explanations. Task: $TASK_STRING")
-            
-            SLUG=$(echo "$SLUG" | tr -d '\r' | tr -d '[:space:]')
-            if [[ -z "$SLUG" || "$SLUG" == *"Error"* ]]; then
-                SLUG="gem-task-$(date +%s)"
-                echo ">> Warning: Failed to generate name. Using fallback: $SLUG"
-            fi
-            
-            BRANCH_NAME="$SLUG"
-            echo ">> Generated Branch: $BRANCH_NAME"
+        # Case B: Manual Naming (First Arg)
+        # The user provided a string (e.g., "fix-bug" or "feature/new-ui")
+        # We use this EXACTLY as provided for the branch name.
+        BRANCH_NAME="${ARGS[0]}"
+        
+        # We treat the REST of the args (if any) as the task
+        if [[ ${#ARGS[@]} -gt 1 ]]; then
+             TASK_STRING="${ARGS[*]:1}"
         fi
+        
+        echo ">> Worktree: Using provided name '$BRANCH_NAME'"
     else
-        # Case D: Interactive Exploration (Detached HEAD)
+        # Case C: Interactive Exploration (Detached HEAD)
         local UUID
         UUID=$(head -c 8 /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)
         FOLDER_NAME="exploration-${UUID}"
@@ -129,7 +106,10 @@ setup_worktree() {
 
     # Determine Folder Name (Sanitize slashes)
     if [[ -z "$FOLDER_NAME" ]]; then
+        # Replace slashes with dashes for the filesystem folder
         FOLDER_NAME="${BRANCH_NAME//\//-}"
+        # Sanitize to ensure it's filesystem safe (basic check)
+        FOLDER_NAME=$(echo "$FOLDER_NAME" | tr -cd '[:alnum:]-._')
     fi
 
     local WORKTREE_PATH="${WORKTREE_BASE}/${FOLDER_NAME}"
@@ -158,8 +138,10 @@ setup_worktree() {
     PROJECT_DIR="$WORKTREE_PATH"
 
     # 4. Inject Task if needed (so the Agent receives it)
+    # If we peeled off the first arg as the branch name, inject the rest
     if [[ -n "$TASK_STRING" ]]; then
-        ARGS+=("$TASK_STRING")
+        # We replace the ARGS list with just the task string
+        ARGS=("$TASK_STRING")
     fi
 }
 

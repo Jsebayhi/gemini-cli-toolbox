@@ -13,7 +13,7 @@ When a user launches a session with `--worktree`, the tool needs to decide which
 
 ## Decision: Smart Resolution Priority
 
-We have implemented a deterministic resolution hierarchy that combines explicit flags, auto-detection, and AI-powered inference.
+We have implemented a deterministic resolution hierarchy that combines explicit flags and manual naming.
 
 ### 1. The Priority Matrix
 When `--worktree` is enabled, the Git reference is resolved using the following priority:
@@ -22,7 +22,7 @@ When `--worktree` is enabled, the Git reference is resolved using the following 
 | :--- | :--- | :--- | :--- |
 | `--branch X ...` | **Explicit Override** | `X` | Remaining Args |
 | `[Existing Branch] ...` | **Auto-Detection** | `[Existing Branch]` | Remaining Args |
-| `[Task String] ...` | **AI Naming** | `ai-generated-slug` | `[Task String]` |
+| `[New Name] [Task]` | **Manual Naming** | `[New Name]` | `[Task]` |
 | (No arguments) | **Safe Default** | `Detached HEAD` | None |
 
 ### 2. The Syntactic Heuristic (Non-Consuming Peek)
@@ -31,42 +31,36 @@ To avoid brittle keyword lists (which require constant updates as the CLI subcom
 2.  **Verify:** It checks if this argument matches an existing local branch (via `git show-ref`).
 3.  **Result:**
     *   **If Branch exists:** It is consumed as the **Context**. The remaining arguments are passed to the agent.
-    *   **If Branch does NOT exist:** The entire argument list is treated as the **Intent**, triggering the Pre-Flight AI naming logic.
-    *   **Fallback:** If the argument contains spaces, it is automatically treated as an **Intent** (Task), bypassing the branch check.
+    *   **If Branch does NOT exist:** The argument is treated as the **New Branch Name**. The remaining arguments are treated as the Task.
+    *   **Fallback:** If no arguments are provided, it defaults to a detached HEAD exploration.
 
-### 3. Pre-Flight AI Naming (Gemini 2.5 Flash)
-When a task is provided without an explicit branch, the CLI performs a one-shot call to **Gemini 2.5 Flash**.
-*   **Performance:** Using a "Flash" model ensures this naming step is sub-second.
-*   **System Instruction:** *"You are a git branch naming utility. Slugify the input task into a concise branch name. Return ONLY the slug. Do not analyze the codebase or provide explanations."*
-*   **Resumability:** If the AI generates a name that already exists in the worktree cache, the tool automatically reuses the existing worktree, enabling resumable multi-session tasks.
+### 3. Manual Naming & Fallback
+We explicitly **REJECT** automatic AI-based branch naming (see Alternatives Considered).
+*   **Philosophy:** "What you type is what you get."
+*   **Mechanism:** If the user provides `gemini-toolbox --worktree fix-bug`, we create a branch named `fix-bug`.
+*   **Sanitization:** The tool sanitizes the input string (replacing slashes with dashes for the folder name) but preserves the branch name as-is.
 
 ## User Journeys
 
-*   **The Fresh Start:** `gemini-toolbox --worktree "Refactor the auth models"` -> AI creates `refactor-auth-models` branch.
+*   **The Fresh Start:** `gemini-toolbox --worktree feature/auth "Refactor login"` -> Creates `feature/auth` branch, passes "Refactor login" to agent.
 *   **The PR Repair (Resumable):** `gemini-toolbox --worktree fix/bug-123 chat` -> Tool detects branch, sets up worktree, and starts interactive chat.
-*   **The Explicit Context:** `gemini-toolbox --worktree --branch feat/ui "Fix buttons"` -> Guaranteed to use `feat/ui` regardless of whether the prompt mentions other branches.
-*   **The Named Monitoring Session:** `gemini-toolbox --worktree "Monitoring the CI failures"` -> Creates a named workspace for an interactive session, allowing the user to return to the same context later.
+*   **The Explicit Context:** `gemini-toolbox --worktree --branch feat/ui "Fix buttons"` -> Guaranteed to use `feat/ui`.
 *   **Safe Exploration:** `gemini-toolbox --worktree` (No args) -> Creates a detached HEAD worktree.
 
 ## Alternatives Considered (Rejected)
 
-### 1. Hardcoded Reserved Keywords
-*   **Idea:** Ignore common commands like `chat`, `hooks`, or `update` when parsing branches.
-*   **Reason for Rejection:** Too brittle. Requires manual updates whenever the `gemini-cli` adds new subcommands.
-
-### 2. Mandatory CLI Terminator (`--`)
-*   **Idea:** Force users to separate worktree branch from task using `--`.
-*   **Reason for Rejection:** Poor UX. Users often forget the terminator, leading to the "branch named 'chat'" bug.
-
-### 3. UUID-Only Branch Naming
-*   **Idea:** Generate random branch names for every worktree.
-*   **Reason for Rejection:** Makes the Hub and filesystem impossible to navigate for humans. Semantic names provide critical context.
+### 1. Automatic AI Branch Naming
+*   **Idea:** Pass the task description to a Gemini Flash model to generate a slug (e.g., "Refactor the auth" -> `refactor-auth`).
+*   **Reason for Rejection:**
+    *   **Fragility:** Requires a complex "Pre-Flight" container with full environment propagation (Auth, Network, Proxies).
+    *   **Unpredictability:** Users found it confusing when the generated name didn't match their mental model.
+    *   **Security:** Requires mounting the project (Read-Only) to provide context, which increases the attack surface.
 
 ## Trade-offs and Arbitrages
 
 | Feature | Decision | Rationale |
 | :--- | :--- | :--- |
 | **Logic** | Heuristic (Strongest Signal) | Balances ease-of-use with Git robustness. |
-| **AI Model** | Gemini 2.5 Flash | Ensures the naming call doesn't slow down session startup. |
-| **Safety** | Explicit `--branch` always wins | Provides an escape hatch for cases where the heuristic might fail. |
-| **Naming** | Semantic over Random | Improves navigability of the worktree cache. |
+| **Naming** | Manual / Explicit | Removes dependencies on complex pre-flight containers and Auth. |
+| **Safety** | Explicit \`--branch\` always wins | Provides an escape hatch for cases where the heuristic might fail. |
+| **Reliability** | "What you type is what you get" | Prevents confusion from unpredictable AI slug generation. |
