@@ -28,12 +28,7 @@ The syntactic heuristic (peeking at the first arg) was inherently unreliable. A 
 Mounting the project (even in Read-Only mode) just to generate a branch name was deemed an unnecessary security risk. It gave a "pre-flight" agent access to source code before the user had a chance to verify the session's sandbox settings.
 
 ## Final Decision
-We adopted **Explicit Resolution Policy** (ADR 0028):
-*   **Philosophy**: "Explicit is better than implicit."
-*   **Mechanism**:
-    *   **--name**: For explicit identification and persistence.
-    *   **exploration-UUID**: For anonymous, safe, and disposable tasks.
-*   **Outcome**: The tool is now 100% predictable, requires no pre-flight network calls, and eliminates the risk of "junk" folders in the worktree cache.
+We have rejected the automatic task-based branch naming feature to simplify future maintenance and ensure system stability. The potential UX benefits did not outweigh the long-term operational costs and the risk of unpredictable behavior in production environments.
 
 ## Trade-offs Summary
 
