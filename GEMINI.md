@@ -99,6 +99,7 @@ Discovery tools (like `gemini-hub`) rely on this structure.
 ### Docker Hub Publishing
 *   **Mechanism:** The `README.md` is the source of truth for both GitHub and Docker Hub.
 *   **Transformation:** Docker Hub does not support relative links (e.g., `docs/foo.md`). The CI pipeline (via `make docker-readme`) dynamically generates a temporary `README_DOCKER.md`, replacing all relative links with absolute GitHub URLs before publishing.
+*   **Cross-Platform Linking:** You **MUST** maintain explicit, high-visibility links to both the GitHub repository and the Docker Hub page at the top of the `README.md`. This ensures that users landing on Docker Hub can find the source code and documentation, and users on GitHub can find the official images.
 *   **Rule:** When writing `README.md`, use relative links for better GitHub navigation. Trust the CI to fix them for Docker Hub.
 --- End of Context from: GEMINI.md ---
 

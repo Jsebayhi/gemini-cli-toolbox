@@ -145,5 +145,5 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
-          short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion."
+          short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion, Git Worktree."
           readme-filepath: ./README_DOCKER.md

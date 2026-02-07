@@ -3,8 +3,10 @@
 [![CI](https://github.com/Jsebayhi/gemini-cli-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/Jsebayhi/gemini-cli-toolbox/actions)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jsebayhi/gemini-cli-toolbox)](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)
 
+**[GitHub](https://github.com/Jsebayhi/gemini-cli-toolbox) | [Docker Hub](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)**
+
 > **The zero-config, ultra-secure home for your Gemini AI agent.**
-> Run the Gemini CLI in a Dockerized sandbox that keeps your host system clean while staying fully integrated with your tools (VS Code, Docker, VPN).
+> Run the Gemini CLI in a Dockerized sandbox that keeps your host system clean while staying fully integrated with your tools (VS Code, Docker, VPN, git worktree).
 
 ---
 
@@ -16,7 +18,7 @@
 *   **🐳 Docker-Powered:** Extends the agent to any language. Build and test projects (Rust, PHP) using your host's Docker images, saving bandwidth and setup time.
 *   **📦 Persistent Caching:** Mounts your host's `~/.m2`, `~/.gradle`, and `~/.npm` caches for instant builds.
 *   **📱 Remote Access:** Code from your phone via Tailscale VPN.
-*   **🌳 Ephemeral Worktrees:** Launch isolated clones of your repo for risk-free refactors or parallel tasks without touching your primary working directory.
+*   **🌳 Ephemeral Worktrees:** Launch isolated worktrees of your repo for risk-free refactors or parallel tasks without touching your primary working directory.
 *   **🔑 Multi-Profile:** Switch seamlessly between personal, work, and bot accounts using different config dirs.
 
 ---
@@ -67,7 +69,7 @@ The Toolbox isn't just a wrapper; it's a bridge between your host and a secure e
 *   **The Hub:** A built-in web dashboard (`http://gemini-hub:8888`) to discover and manage multiple active sessions from any device connected to the VPN.
 
 ### 🌳 4. Ephemeral Worktrees
-*   **Zero-Risk Refactors:** Use `--worktree` to launch the agent in a dedicated, isolated clone of your repository. Your main working directory remains untouched.
+*   **Zero-Risk Refactors:** Use `--worktree` to launch the agent in a dedicated, isolated worktree of your repository. Your main working directory remains untouched.
 *   **Surgical Mounts:** The toolbox mounts your project Read-Only (`:ro`) to protect source code, while keeping the `.git` directory Read-Write (`:rw`) to allow the agent to commit and branch safely.
 *   **Automatic Cleanup:** The Hub automatically prunes stale worktrees after 30 days (anonymous) or 90 days (named branches), keeping your cache clean.
 
@@ -114,7 +116,7 @@ gemini-toolbox --worktree "Try migrating to ESM"
 # Or create a persistent, named branch for a feature
 gemini-toolbox --worktree --name feat/api "Implement the new REST endpoints"
 ```
-The agent works in a clean clone of your repo. If the experiment fails, simply exit—the Hub will clean it up later.
+The agent works in an isolated environment. If the experiment fails, simply exit—the Hub will clean it up later.
 
 ### 🕒 Recent Paths
 The Hub wizard automatically remembers your last 3 paths (stored in your browser's `localStorage`), making it effortless to jump back into a project from mobile.
