@@ -168,3 +168,53 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Make changes and save (`:wq`).
     *   **Verify:** `cat test_edit.txt` shows changes.
     *   **Verify:** Latency/Rendering is usable (uses `ttyd`).
+
+## 🌳 Journey 14: Ephemeral Worktrees
+**Goal:** Verify isolation and explicit naming logic using Git Worktrees.
+
+1.  **Named Worktree (New Branch):**
+    *   In a Git repo, run `gemini-toolbox --worktree --name feat/test-branch`.
+    *   **Verify:** A new worktree is created in `~/.cache/gemini-toolbox/worktrees/{project}/feat-test-branch`.
+    *   **Verify:** A new Git branch `feat/test-branch` is created.
+2.  **Anonymous Exploration (with Task):**
+    *   Run `gemini-toolbox --worktree "Analyze this bug"`.
+    *   **Verify:** Worktree is created with a folder named `exploration-UUID`.
+    *   **Verify:** Git is in `detached HEAD` state.
+    *   **Verify:** The agent receives "Analyze this bug" as the task.
+3.  **Multi-Session Collaboration:**
+    *   In Terminal A, run `gemini-toolbox --worktree --name shared-task`.
+    *   In Terminal B, run `gemini-toolbox --worktree --name shared-task`.
+    *   **Verify:** Terminal B detects "Worktree already exists" and enters the SAME directory.
+4.  **Blind Exploration:**
+    *   Run `gemini-toolbox --worktree`.
+    *   **Verify:** Creates an anonymous `exploration-UUID` folder with no task.
+5.  **Safety Check (Non-Git):**
+    *   Go to `/tmp`. Run `gemini-toolbox --worktree`.
+    *   **Verify:** CLI exits with error: `Error: --worktree can only be used within a Git repository.`
+6.  **Surgical Mount Verification:**
+    *   Launch any worktree.
+    *   Inside the session, run `touch ../test.txt`.
+    *   **Verify:** Command fails (`Read-only file system`) because the parent repo is mounted `:ro`.
+    *   Inside the session, run `git commit --allow-empty -m "test"`.
+    *   **Verify:** Command succeeds because the `.git` directory is mounted `:rw`.
+
+## 🧹 Journey 15: Worktree Pruning & Lifecycle
+**Goal:** Verify the Hub's background cleanup service and retention tiers.
+
+1.  **Retention Tiers (Simulated):**
+    *   (Requires Hub running) Manually create three folders in the worktree cache:
+        *   `headless-old` (mtime > 30 days ago, detached HEAD state).
+        *   `branch-old` (mtime > 90 days ago, branch state).
+        *   `orphan-old` (mtime > 90 days ago, corrupted .git file).
+2.  **Wait for Prune:**
+    *   Wait for the hourly prune cycle or restart the Hub.
+    *   **Verify:** `headless-old` is deleted.
+    *   **Verify:** `branch-old` is deleted.
+    *   **Verify:** `orphan-old` is deleted (Safe fallback).
+3.  **Fresh Data Preservation:**
+    *   Create a fresh worktree `fresh-anon` (mtime = now).
+    *   **Verify:** It is NOT deleted during pruning.
+4.  **Disabled Pruning:**
+    *   Start Hub with `--no-worktree-prune`.
+    *   Create a stale worktree.
+    *   **Verify:** It is NOT deleted (Toggled off confirmed).

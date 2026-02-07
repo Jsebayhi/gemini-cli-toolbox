@@ -15,6 +15,17 @@ class Config:
     
     # Features
     HUB_AUTO_SHUTDOWN = os.environ.get("HUB_AUTO_SHUTDOWN", "").lower() in ("1", "true")
+    HUB_WORKTREE_PRUNE_ENABLED = os.environ.get("HUB_WORKTREE_PRUNE_ENABLED", "true").lower() in ("1", "true")
+    
+    # Worktree Lifecycle
+    WORKTREE_EXPIRY_HEADLESS = int(os.environ.get("GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS", "30"))
+    WORKTREE_EXPIRY_BRANCH = int(os.environ.get("GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS", "90"))
+    WORKTREE_EXPIRY_ORPHAN = int(os.environ.get("GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS", "90"))
+    
+    # The Hub container sees the host cache if it is mounted. 
+    # We will assume it is mounted at /host-cache for now, or just use the absolute host path if we can.
+    # Actually, the Hub needs to know WHERE the worktrees are on the container's FS.
+    WORKTREE_ROOT = os.environ.get("GEMINI_WORKTREE_ROOT", "/home/gemini/.cache/gemini-toolbox/worktrees")
     
     @classmethod
     def validate(cls):

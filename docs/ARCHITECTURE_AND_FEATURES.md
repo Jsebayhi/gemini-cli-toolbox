@@ -119,7 +119,32 @@ gemini-hub \
 
 ---
 
-## 📦 5. Caching & Persistence
+## 🌳 5. Ephemeral Worktrees & Isolation
+
+The `--worktree` feature allows you to launch isolated sessions that do not pollute your main working directory. It leverages Git's native `worktree` functionality to provide high-fidelity environments that are compatible with host-based tools (like VS Code).
+
+### The "Pre-Flight" Naming Logic
+To provide a seamless experience, the toolbox handles branch naming automatically using AI:
+1.  **Input:** User runs `gemini-toolbox --worktree "Fix login bug"`.
+2.  **Naming Call:** The toolbox performs a fast, one-shot call to **Gemini 2.5 Flash**.
+3.  **Result:** The model returns a slugified branch name (e.g., `fix-login-bug`).
+4.  **Creation:** The toolbox runs `git worktree add -b fix-login-bug [path]`.
+
+### Directory Structure & Management
+Worktrees are stored in a project-nested cache:
+`$XDG_CACHE_HOME/gemini-toolbox/worktrees/{PROJECT_NAME}/{BRANCH_NAME}/`
+
+*   **Sanitization:** Slashes in branch names (e.g., `feat/ui`) are converted to hyphens (`feat-ui`) for the folder name.
+*   **Safety:** The feature only works within a Git repository. If run outside one, it gracefully exits with an error message.
+
+### Stateless Cleanup (The Reaper)
+To manage disk space without a database, the Gemini Hub implements a "Stateless Reaper":
+*   **Mechanism:** It scans the worktree cache folders for directory modification times (`mtime`).
+*   **Policy:** Any worktree older than 30 days is automatically removed, followed by a `git worktree prune` to clean up Git metadata.
+
+---
+
+## 📦 6. Caching & Persistence
 
 To make the ephemeral container practical, we selectively persist critical data.
 
@@ -127,13 +152,16 @@ To make the ephemeral container practical, we selectively persist critical data.
 We mount standard cache directories from your host to speed up builds:
 *   `~/.m2` (Maven)
 *   `~/.gradle` (Gradle)
+*   `~/.sbt` (SBT/Scala)
+*   `~/.ivy2` (Ivy)
+*   `~/.cache/coursier` (Coursier)
+*   `~/go/pkg/mod` (Go)
+*   `~/.cache/go-build` (Go)
 *   `~/.npm` (Node)
-*   `~/.cache/pip` (Python)
-*   `~/go/pkg` (Go)
 
 ---
 
-## 👤 6. Configuration Profiles (Multi-Account)
+## 👤 7. Configuration Profiles (Multi-Account)
 
 The toolbox supports advanced context isolation through **Configuration Profiles**. This is essential for users who manage multiple accounts (e.g., Work vs. Personal) or distinct environments.
 

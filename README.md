@@ -86,6 +86,7 @@ Want to go deeper? Follow these guides to master the Toolbox:
 | :--- | :--- |
 | **Simple Chat** | `gemini-toolbox` |
 | **One-shot Task** | `gemini-toolbox "Fix the linting errors in src/"` |
+| **Experimental** | `gemini-toolbox --worktree "Refactor auth"` |
 | **Beta Features** | `gemini-toolbox --preview` |
 | **Remote Coding** | `gemini-toolbox --remote` |
 | **Disposable Shell**| `gemini-toolbox --bash` |

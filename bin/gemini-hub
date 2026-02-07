@@ -28,6 +28,7 @@ show_help() {
     echo "  -d, --detach          Start the Hub in the background"
     echo "  --key <key>           Tailscale Auth Key (Required if GEMINI_REMOTE_KEY is not set)"
     echo "  --auto-shutdown       Enable 60s inactivity timeout (Default: Disabled)"
+    echo "  --no-worktree-prune   Disable background worktree cleanup service"
     echo "  --workspace <path>    Add a host directory to the list of scannable project roots"
     echo "                        (Can be specified multiple times)"
     echo "  --config-root <path>  Root directory containing configuration profiles"
@@ -45,11 +46,13 @@ show_help() {
 # Parse Args
 MODE="-it"
 AUTO_SHUTDOWN=false
+PRUNE_ENABLED=true
 while [[ $# -gt 0 ]]; do
   case $1 in
     -d|--detach) MODE="-d"; shift ;;
     --key)       AUTH_KEY="$2"; shift; shift ;;
     --auto-shutdown) AUTO_SHUTDOWN=true; shift ;;
+    --no-worktree-prune) PRUNE_ENABLED=false; shift ;;
     --workspace) WORKSPACE_ROOTS+=("$2"); shift; shift ;;
     --config-root) CONFIG_ROOT="$2"; shift; shift ;;
     -h|--help)   show_help; exit 0 ;;
@@ -75,6 +78,10 @@ ENV_VARS=()
 
 if [ "$AUTO_SHUTDOWN" = true ]; then
     ENV_VARS+=("--env" "HUB_AUTO_SHUTDOWN=1")
+fi
+
+if [ "$PRUNE_ENABLED" = false ]; then
+    ENV_VARS+=("--env" "HUB_WORKTREE_PRUNE_ENABLED=false")
 fi
 
 # --- SMART RESTART LOGIC ---
@@ -157,6 +164,25 @@ ROOT_PATHS_LIST=${ROOT_PATHS_LIST%:}
 ABS_CONFIG_ROOT=$(realpath -m "$CONFIG_ROOT")
 mkdir -p "$ABS_CONFIG_ROOT"
 EXTRA_MOUNTS+=("-v" "${ABS_CONFIG_ROOT}:${ABS_CONFIG_ROOT}")
+
+# 2.1 Mount Worktree Cache (for Cleanup)
+WORKTREE_CACHE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees}"
+mkdir -p "$WORKTREE_CACHE"
+ABS_WORKTREE_CACHE=$(realpath -m "$WORKTREE_CACHE")
+EXTRA_MOUNTS+=("-v" "${ABS_WORKTREE_CACHE}:${ABS_WORKTREE_CACHE}")
+ENV_VARS+=("--env" "GEMINI_WORKTREE_ROOT=${ABS_WORKTREE_CACHE}")
+
+if [ -n "$GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS" ]; then
+    ENV_VARS+=("--env" "GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS=${GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS}")
+fi
+
+if [ -n "$GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS" ]; then
+    ENV_VARS+=("--env" "GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS=${GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS}")
+fi
+
+if [ -n "$GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS" ]; then
+    ENV_VARS+=("--env" "GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS=${GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS}")
+fi
 
 # 3. Persistence (Named Volume)
 # We use a Docker Named Volume for the Tailscale state.

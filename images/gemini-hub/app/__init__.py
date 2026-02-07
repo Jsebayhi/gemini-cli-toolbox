@@ -3,6 +3,7 @@ from app.config import Config
 from app.web.routes import web
 from app.api.routes import api
 from app.services.monitor import MonitorService
+from app.services.prune import PruneService
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -19,5 +20,6 @@ def create_app(config_class=Config):
     # Note: In development with reloader, this might start twice. 
     # Production usage via gunicorn is preferred.
     MonitorService.start()
+    PruneService.start()
     
     return app
