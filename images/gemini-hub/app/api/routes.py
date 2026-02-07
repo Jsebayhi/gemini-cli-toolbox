@@ -50,12 +50,14 @@ def launch():
     session_type = data.get('session_type', 'cli')
     task = data.get('task')
     interactive = data.get('interactive', True)
+    image_variant = data.get('image_variant', 'standard')
+    docker_enabled = data.get('docker_enabled', True)
     
     if not project_path:
         return jsonify({"error": "Project path required"}), 400
         
     try:
-        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive)
+        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled)
         if result["returncode"] == 0:
             result["status"] = "success"
             return jsonify(result)

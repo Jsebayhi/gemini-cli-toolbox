@@ -321,6 +321,8 @@ async function doLaunch() {
     const loader = document.getElementById('launch-loader');
     const config = document.getElementById('config-select').value;
     const sessionType = document.getElementById('session-type-select').value;
+    const imageVariant = document.getElementById('image-variant-select').value;
+    const dockerEnabled = document.getElementById('docker-check').checked;
     const task = document.getElementById('task-input').value;
     const interactive = document.getElementById('interactive-check').checked;
     const results = document.getElementById('launch-results');
@@ -341,6 +343,8 @@ async function doLaunch() {
                 project_path: currentPath,
                 config_profile: config,
                 session_type: sessionType,
+                image_variant: imageVariant,
+                docker_enabled: dockerEnabled,
                 task: task,
                 interactive: interactive
             })
