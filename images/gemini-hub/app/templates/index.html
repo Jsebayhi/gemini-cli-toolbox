@@ -101,6 +101,22 @@
                     </select>
                 </div>
 
+                <div style="display: flex; gap: 15px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Image Variant</label>
+                        <select id="image-variant-select" class="filter-select" style="width:100%;">
+                            <option value="standard">Standard</option>
+                            <option value="preview">Preview (Beta)</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Toolbox Features</label>
+                        <label class="filter-checkbox" style="font-size:0.85rem; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="docker-check" checked> Docker Integration
+                        </label>
+                    </div>
+                </div>
+
                 <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
                         <label style="display: block; font-size: 0.85rem; color: var(--text-dim);">Initial Task</label>
