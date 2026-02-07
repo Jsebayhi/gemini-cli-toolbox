@@ -52,6 +52,7 @@ def launch():
     interactive = data.get('interactive', True)
     image_variant = data.get('image_variant', 'standard')
     docker_enabled = data.get('docker_enabled', True)
+    ide_enabled = data.get('ide_enabled', True)
     worktree_mode = data.get('worktree_mode', False)
     worktree_name = data.get('worktree_name')
     
@@ -59,7 +60,7 @@ def launch():
         return jsonify({"error": "Project path required"}), 400
         
     try:
-        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled, worktree_mode, worktree_name)
+        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled, worktree_mode, worktree_name, ide_enabled)
         if result["returncode"] == 0:
             result["status"] = "success"
             return jsonify(result)

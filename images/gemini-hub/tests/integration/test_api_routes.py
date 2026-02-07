@@ -148,6 +148,7 @@ def test_launch_full_options(client):
             "project_path": "/mock/root/project",
             "image_variant": "preview",
             "docker_enabled": False,
+            "ide_enabled": False,
             "worktree_mode": True,
             "worktree_name": "feat/api"
         }
@@ -162,6 +163,7 @@ def test_launch_full_options(client):
         cmd = args[0]
         assert "--preview" in cmd
         assert "--no-docker" in cmd
+        assert "--no-ide" in cmd
         assert "--worktree" in cmd
         assert "--name" in cmd
         assert "feat/api" in cmd

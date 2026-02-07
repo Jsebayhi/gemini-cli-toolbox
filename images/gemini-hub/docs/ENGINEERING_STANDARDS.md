@@ -136,6 +136,14 @@ While we follow the Testing Trophy, we still enforce high coverage standards to 
 
     *   **Guideline:** "Prioritize Integration Tests for API Endpoints." Tests that verify the *behavior* of the API (input -> output) are more resilient to refactoring than unit tests that verify the *implementation details* of a service.
 
+## 6. CLI Parity Mandate
+
+The Gemini Hub acts as a remote extension of the `gemini-toolbox` CLI. To ensure a consistent user experience across all platforms (Terminal, Mobile, Web):
+
+*   **Mandate:** Every configuration flag and behavioral option available in the `gemini-toolbox` script **must** have a corresponding representation in the Hub's UI and API.
+*   **Drift Prevention:** When a new flag is added to the CLI, it is a **required task** to implement the same option in the Hub's launch wizard and backend launcher service within the same PR.
+*   **Coverage:** This includes toggles for security (Docker, IDE), image variants (Preview), and isolation modes (Worktrees).
+
 
 
 ### 5.7 File System Testing

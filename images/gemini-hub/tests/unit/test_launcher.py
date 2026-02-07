@@ -95,3 +95,21 @@ def test_launch_with_worktree():
             assert "--name" in cmd
             assert "feat/new-ui" in cmd
 
+def test_launch_with_no_ide():
+    """Test launch with IDE integration disabled."""
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "OK"
+        mock_run.return_value.stderr = ""
+        
+        with patch("app.config.Config.HUB_ROOTS", ["/mock/root"]):
+            result = LauncherService.launch(
+                "/mock/root/project", 
+                ide_enabled=False
+            )
+            
+            assert result["returncode"] == 0
+            args, _ = mock_run.call_args
+            cmd = args[0]
+            assert "--no-ide" in cmd
+

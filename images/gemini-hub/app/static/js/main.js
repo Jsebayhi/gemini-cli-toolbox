@@ -332,6 +332,7 @@ async function doLaunch() {
     const sessionType = document.getElementById('session-type-select').value;
     const imageVariant = document.getElementById('image-variant-select').value;
     const dockerEnabled = document.getElementById('docker-check').checked;
+    const ideEnabled = document.getElementById('ide-check').checked;
     const worktreeMode = document.getElementById('worktree-check').checked;
     const worktreeName = document.getElementById('worktree-name').value;
     const task = document.getElementById('task-input').value;
@@ -356,6 +357,7 @@ async function doLaunch() {
                 session_type: sessionType,
                 image_variant: imageVariant,
                 docker_enabled: dockerEnabled,
+                ide_enabled: ideEnabled,
                 worktree_mode: worktreeMode,
                 worktree_name: worktreeName,
                 task: task,

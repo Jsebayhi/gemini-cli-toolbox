@@ -111,9 +111,14 @@
                     </div>
                     <div style="flex: 1;">
                         <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Toolbox Features</label>
-                        <label class="filter-checkbox" style="font-size:0.85rem; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="docker-check" checked> Docker Integration
-                        </label>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <label class="filter-checkbox" style="font-size:0.8rem; padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 4px; display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="docker-check" checked> Docker Integration
+                            </label>
+                            <label class="filter-checkbox" style="font-size:0.8rem; padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 4px; display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="ide-check" checked> VS Code Integration
+                            </label>
+                        </div>
                     </div>
                 </div>
 
