@@ -16,6 +16,7 @@
 *   **🐳 Docker-Powered:** Extends the agent to any language. Build and test projects (Rust, PHP) using your host's Docker images, saving bandwidth and setup time.
 *   **📦 Persistent Caching:** Mounts your host's `~/.m2`, `~/.gradle`, and `~/.npm` caches for instant builds.
 *   **📱 Remote Access:** Code from your phone via Tailscale VPN.
+*   **🌳 Ephemeral Worktrees:** Launch isolated clones of your repo for risk-free refactors or parallel tasks without touching your primary working directory.
 *   **🔑 Multi-Profile:** Switch seamlessly between personal, work, and bot accounts using different config dirs.
 
 ---
@@ -65,6 +66,11 @@ The Toolbox isn't just a wrapper; it's a bridge between your host and a secure e
 *   **Tailscale VPN:** Start a session with `--remote` to access it from your phone, tablet, or another PC via a secure mesh network.
 *   **The Hub:** A built-in web dashboard (`http://gemini-hub:8888`) to discover and manage multiple active sessions from any device connected to the VPN.
 
+### 🌳 4. Ephemeral Worktrees
+*   **Zero-Risk Refactors:** Use `--worktree` to launch the agent in a dedicated, isolated clone of your repository. Your main working directory remains untouched.
+*   **Surgical Mounts:** The toolbox mounts your project Read-Only (`:ro`) to protect source code, while keeping the `.git` directory Read-Write (`:rw`) to allow the agent to commit and branch safely.
+*   **Automatic Cleanup:** The Hub automatically prunes stale worktrees after 30 days (anonymous) or 90 days (named branches), keeping your cache clean.
+
 📖 **[Read the full Architecture & Features Deep Dive](docs/ARCHITECTURE_AND_FEATURES.md)** for technical details on DooD, IDE mirroring, and VPN logic.
 
 ---
@@ -86,7 +92,8 @@ Want to go deeper? Follow these guides to master the Toolbox:
 | :--- | :--- |
 | **Simple Chat** | `gemini-toolbox` |
 | **One-shot Task** | `gemini-toolbox "Fix the linting errors in src/"` |
-| **Experimental** | `gemini-toolbox --worktree "Refactor auth"` |
+| **Isolated Exploration** | `gemini-toolbox --worktree` |
+| **Named Worktree** | `gemini-toolbox --worktree --name feat/auth` |
 | **Beta Features** | `gemini-toolbox --preview` |
 | **Remote Coding** | `gemini-toolbox --remote` |
 | **Disposable Shell**| `gemini-toolbox --bash` |
@@ -97,6 +104,17 @@ Isolate your environments using configuration profiles.
 # Use a specific profile (e.g., Work vs Personal)
 gemini-toolbox --profile ~/.gemini-profiles/work
 ```
+
+### 🌳 Isolated Exploration (Worktrees)
+Launch a parallel session without stashing or committing your current work.
+```bash
+# Create an anonymous, isolated worktree for a quick experiment
+gemini-toolbox --worktree "Try migrating to ESM"
+
+# Or create a persistent, named branch for a feature
+gemini-toolbox --worktree --name feat/api "Implement the new REST endpoints"
+```
+The agent works in a clean clone of your repo. If the experiment fails, simply exit—the Hub will clean it up later.
 
 ### 🕒 Recent Paths
 The Hub wizard automatically remembers your last 3 paths (stored in your browser's `localStorage`), making it effortless to jump back into a project from mobile.
@@ -117,6 +135,13 @@ Inside a profile directory (when using `--profile`), create a file named `extra-
 Keep your command history across container restarts:
 ```bash
 gemini-toolbox -v ~/.gemini_bash_history:/home/gemini/.bash_history --bash
+```
+
+### 📂 Customizing Worktree Cache
+By default, worktrees are stored in `~/.cache/gemini-toolbox/worktrees`. Override this with:
+```bash
+export GEMINI_WORKTREE_ROOT="/mnt/fast-ssd/worktrees"
+gemini-toolbox --worktree
 ```
 
 ---
