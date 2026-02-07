@@ -74,3 +74,24 @@ def test_launch_with_variant_and_docker():
             assert "--preview" in cmd
             assert "--no-docker" in cmd
 
+def test_launch_with_worktree():
+    """Test launch with worktree mode and explicit name."""
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "OK"
+        mock_run.return_value.stderr = ""
+        
+        with patch("app.config.Config.HUB_ROOTS", ["/mock/root"]):
+            result = LauncherService.launch(
+                "/mock/root/project", 
+                worktree_mode=True,
+                worktree_name="feat/new-ui"
+            )
+            
+            assert result["returncode"] == 0
+            args, _ = mock_run.call_args
+            cmd = args[0]
+            assert "--worktree" in cmd
+            assert "--name" in cmd
+            assert "feat/new-ui" in cmd
+

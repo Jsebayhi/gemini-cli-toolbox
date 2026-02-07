@@ -237,7 +237,16 @@ async function goToConfig() {
     typeSelect.onchange = toggleTaskInput;
     toggleTaskInput(); // Init state
     
+    // Init Worktree State
+    toggleWorktreeInput();
+    
     showStep('step-config');
+}
+
+function toggleWorktreeInput() {
+    const isChecked = document.getElementById('worktree-check').checked;
+    const optionsDiv = document.getElementById('worktree-options');
+    optionsDiv.style.display = isChecked ? 'block' : 'none';
 }
 
 function toggleTaskInput() {
@@ -323,6 +332,8 @@ async function doLaunch() {
     const sessionType = document.getElementById('session-type-select').value;
     const imageVariant = document.getElementById('image-variant-select').value;
     const dockerEnabled = document.getElementById('docker-check').checked;
+    const worktreeMode = document.getElementById('worktree-check').checked;
+    const worktreeName = document.getElementById('worktree-name').value;
     const task = document.getElementById('task-input').value;
     const interactive = document.getElementById('interactive-check').checked;
     const results = document.getElementById('launch-results');
@@ -345,6 +356,8 @@ async function doLaunch() {
                 session_type: sessionType,
                 image_variant: imageVariant,
                 docker_enabled: dockerEnabled,
+                worktree_mode: worktreeMode,
+                worktree_name: worktreeName,
                 task: task,
                 interactive: interactive
             })

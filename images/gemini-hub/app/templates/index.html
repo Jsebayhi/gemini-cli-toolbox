@@ -118,6 +118,21 @@
                 </div>
 
                 <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Isolation Mode</label>
+                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px;">
+                        <label class="filter-checkbox" style="font-size:0.85rem; margin-bottom: 8px; display: block;">
+                            <input type="checkbox" id="worktree-check" onchange="toggleWorktreeInput()"> Launch in Ephemeral Worktree
+                        </label>
+                        <div id="worktree-options" style="display:none; padding-left: 20px;">
+                            <input type="text" id="worktree-name" class="filter-input" style="width:100%; font-size: 0.8rem;" placeholder="Optional: Branch/Worktree Name">
+                            <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 3px;">
+                                Leave empty for anonymous exploration.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
                         <label style="display: block; font-size: 0.85rem; color: var(--text-dim);">Initial Task</label>
                         <label class="filter-checkbox" style="font-size:0.75rem;">
