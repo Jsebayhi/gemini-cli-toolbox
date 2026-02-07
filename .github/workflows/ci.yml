@@ -78,10 +78,17 @@ jobs:
       - name: Build & Tag (CI Mode)
         run: make ci
 
+      - name: Set Scan Targets
+        id: scan_targets
+        run: |
+          echo "CLI_IMAGE=$(make print-image-cli)" >> $GITHUB_ENV
+          echo "PREVIEW_IMAGE=$(make print-image-preview)" >> $GITHUB_ENV
+          echo "HUB_IMAGE=$(make print-image-hub)" >> $GITHUB_ENV
+
       - name: Security Scan (Gemini CLI)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'gemini-cli-toolbox/cli:latest'
+          image-ref: ${{ env.CLI_IMAGE }}
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -90,7 +97,16 @@ jobs:
       - name: Security Scan (Gemini Preview)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'gemini-cli-toolbox/cli-preview:latest'
+          image-ref: ${{ env.PREVIEW_IMAGE }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
+
+      - name: Security Scan (Gemini Hub)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.HUB_IMAGE }}
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
