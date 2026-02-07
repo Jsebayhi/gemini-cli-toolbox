@@ -11,7 +11,13 @@ PORT="8888"
 # Auth Key
 AUTH_KEY="${GEMINI_REMOTE_KEY:-}"
 WORKSPACE_ROOTS=()
-CONFIG_ROOT="${HOME}/.gemini/configs"
+CONFIG_ROOT="${GEMINI_HUB_CONFIG_ROOT:-${HOME}/.gemini/configs}"
+
+# Load from environment if present (space-separated)
+if [ -n "$GEMINI_HUB_WORKSPACES" ]; then
+    read -ra WS_ARRAY <<< "$GEMINI_HUB_WORKSPACES"
+    WORKSPACE_ROOTS+=("${WS_ARRAY[@]}")
+fi
 
 # Auto-detect config root fallback
 if [ ! -d "$CONFIG_ROOT" ] && [ -d "${HOME}/.gemini-profiles" ]; then
@@ -33,10 +39,12 @@ show_help() {
     echo "                        (Can be specified multiple times)"
     echo "  --config-root <path>  Root directory containing configuration profiles"
     echo "                        (Default: ~/.gemini/configs or ~/.gemini-profiles)"
+    echo "  --service             Run in non-interactive foreground mode (for systemd)"
     echo "  -h, --help            Show this help message"
     echo ""
     echo "Commands:"
     echo "  stop                  Stop the running Gemini Hub service"
+    echo "  setup-autostart       Create a systemd user service for the Hub"
     echo ""
     echo "Examples:"
     echo "  gemini-hub --key tskey-auth-xxxx"
@@ -50,6 +58,7 @@ PRUNE_ENABLED=true
 while [[ $# -gt 0 ]]; do
   case $1 in
     -d|--detach) MODE="-d"; shift ;;
+    --service)   MODE=""; shift ;;
     --key)       AUTH_KEY="$2"; shift; shift ;;
     --auto-shutdown) AUTO_SHUTDOWN=true; shift ;;
     --no-worktree-prune) PRUNE_ENABLED=false; shift ;;
@@ -61,14 +70,89 @@ while [[ $# -gt 0 ]]; do
         docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || echo ">> Hub is not running."
         exit 0
         ;;
+    setup-autostart)
+        SETUP_AUTOSTART=true
+        shift
+        ;;
     *)           echo "Error: Unknown argument '$1'"; show_help; exit 1 ;;
   esac
 done
 
-if [ -z "$AUTH_KEY" ]; then
-    echo "Error: TAILSCALE_KEY is required for the Hub."
-    echo "Run 'gemini-hub --help' for usage instructions."
-    exit 1
+if [ "$SETUP_AUTOSTART" = true ]; then
+    echo ">> Setting up Gemini Hub autostart..."
+    
+    # 1. Ensure Auth Key is available
+    if [ -z "$AUTH_KEY" ]; then
+        echo -n ">> Enter Tailscale Auth Key (leave empty if already authenticated): "
+        read -s AUTH_KEY
+        echo ""
+    fi
+
+    # 2. Prepare Environment File
+    mkdir -p "${HOME}/.gemini"
+    ENV_FILE="${HOME}/.gemini/hub.env"
+    echo ">> Creating $ENV_FILE..."
+    {
+        echo "# Gemini Hub Configuration"
+        echo "GEMINI_REMOTE_KEY=$AUTH_KEY"
+        # Join workspace roots with space
+        echo "GEMINI_HUB_WORKSPACES=\"${WORKSPACE_ROOTS[*]}\""
+        echo "GEMINI_HUB_CONFIG_ROOT=$CONFIG_ROOT"
+    } > "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+
+    # 3. Create Systemd Service
+    SERVICE_DIR="${HOME}/.config/systemd/user"
+    mkdir -p "$SERVICE_DIR"
+    SERVICE_FILE="${SERVICE_DIR}/gemini-hub.service"
+    
+    # Resolve absolute path to this script
+    REAL_SOURCE="${BASH_SOURCE[0]}"
+    while [ -h "$REAL_SOURCE" ]; do
+        DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+        REAL_SOURCE="$(readlink "$REAL_SOURCE")"
+        [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
+    done
+    SCRIPT_PATH=$(realpath "$REAL_SOURCE")
+
+    echo ">> Creating $SERVICE_FILE..."
+    cat <<EOF > "$SERVICE_FILE"
+[Unit]
+Description=Gemini Hub Service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=$ENV_FILE
+ExecStart=$SCRIPT_PATH --service
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+
+    echo ">> Setup complete!"
+    echo ">> To enable and start the service, run:"
+    echo "   systemctl --user daemon-reload"
+    echo "   systemctl --user enable gemini-hub"
+    echo "   systemctl --user start gemini-hub"
+    echo ""
+    echo ">> To update settings (workspaces, keys):"
+    echo "   1. Edit $ENV_FILE"
+    echo "   2. systemctl --user restart gemini-hub"
+    echo ""
+    echo ">> You can check the logs with: journalctl --user -u gemini-hub -f"
+    exit 0
+fi
+
+if [ -z "$AUTH_KEY" ] && ! [ "$MODE" = "" ]; then
+    # In service mode, we might rely on existing state, but let's check if it's running
+    if [ -z "$(docker ps -q -f name="^/${CONTAINER_NAME}$")" ]; then
+         # Only error if NOT already authenticated in the container? 
+         # Hard to check from host. Let's keep the requirement for now or allow empty.
+         echo "Warning: No Auth Key provided. Hub will only start if already authenticated."
+    fi
 fi
 
 # Prepare Docker Args for Mounts

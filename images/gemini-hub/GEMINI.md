@@ -43,6 +43,13 @@ docker run --rm -it \
     gemini-cli-toolbox/hub:latest
 ```
 
+### Service Mode (Autostart)
+The Hub can be configured to run as a systemd user service on Linux.
+1. Run `gemini-hub setup-autostart`.
+2. Follow instructions to enable/start via `systemctl --user`.
+
+The service mode uses the `--service` flag in `bin/gemini-hub` to run in non-interactive foreground mode, and loads configuration from `~/.gemini/hub.env`.
+
 ## 5. Known Peculiarities & Gotchas
 
 ### Host Networking

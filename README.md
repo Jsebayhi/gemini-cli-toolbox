@@ -67,6 +67,10 @@ The Toolbox isn't just a wrapper; it's a bridge between your host and a secure e
 ### 📱 3. Remote & Mobile Freedom
 *   **Tailscale VPN:** Start a session with `--remote` to access it from your phone, tablet, or another PC via a secure mesh network.
 *   **The Hub:** A built-in web dashboard (`http://gemini-hub:8888`) to discover and manage multiple active sessions from any device connected to the VPN.
+*   **Autostart (Linux):** Run the Hub automatically on boot as a systemd user service:
+    ```bash
+    gemini-hub setup-autostart
+    ```
 
 ### 🌳 4. Ephemeral Worktrees
 *   **Zero-Risk Refactors:** Use `--worktree` to launch the agent in a dedicated, isolated worktree of your repository. Your main working directory remains untouched.
