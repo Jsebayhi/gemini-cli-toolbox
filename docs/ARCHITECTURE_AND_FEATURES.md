@@ -123,24 +123,25 @@ gemini-hub \
 
 The `--worktree` feature allows you to launch isolated sessions that do not pollute your main working directory. It leverages Git's native `worktree` functionality to provide high-fidelity environments that are compatible with host-based tools (like VS Code).
 
-### The "Pre-Flight" Naming Logic
-To provide a seamless experience, the toolbox handles branch naming automatically using AI:
-1.  **Input:** User runs `gemini-toolbox --worktree "Fix login bug"`.
-2.  **Naming Call:** The toolbox performs a fast, one-shot call to **Gemini 2.5 Flash**.
-3.  **Result:** The model returns a slugified branch name (e.g., `fix-login-bug`).
-4.  **Creation:** The toolbox runs `git worktree add -b fix-login-bug [path]`.
+### Explicit Resolution Policy
+To ensure 100% reliability, the toolbox follows an **Explicit over Implicit** resolution logic:
+*   **Named Environments:** Use `--name <str>` to create or join a persistent, named worktree.
+*   **Anonymous Exploration:** Running `--worktree` without a name (or just with a prompt) creates a disposable `exploration-UUID` folder.
+*   **Safety:** Positional arguments are never used for naming; they are strictly treated as the "Task" for the agent.
 
-### Directory Structure & Management
-Worktrees are stored in a project-nested cache:
-`$XDG_CACHE_HOME/gemini-toolbox/worktrees/{PROJECT_NAME}/{BRANCH_NAME}/`
-
-*   **Sanitization:** Slashes in branch names (e.g., `feat/ui`) are converted to hyphens (`feat-ui`) for the folder name.
-*   **Safety:** The feature only works within a Git repository. If run outside one, it gracefully exits with an error message.
+### Surgical Mount Strategy
+To balance power with protection, worktrees use a unique mounting strategy:
+1.  **Worktree Root (RW):** The worktree directory itself is mounted Read-Write.
+2.  **Parent Repo (RO):** The parent repository is mounted **Read-Only** (`:ro`) to provide context and history while protecting the original source code.
+3.  **Git Metadata (RW):** The parent's `.git` directory is explicitly mounted **Read-Write** (`:rw`) to allow the agent to commit, create branches, and manage Git state.
 
 ### Stateless Cleanup (The Reaper)
-To manage disk space without a database, the Gemini Hub implements a "Stateless Reaper":
-*   **Mechanism:** It scans the worktree cache folders for directory modification times (`mtime`).
-*   **Policy:** Any worktree older than 30 days is automatically removed, followed by a `git worktree prune` to clean up Git metadata.
+The Gemini Hub implements a 3-tier background pruner to manage the worktree cache without a database:
+1.  **Headless (30 Days):** Anonymous explorations are cleaned up quickly.
+2.  **Branches (90 Days):** Named worktrees are preserved longer for persistent feature work.
+3.  **Orphans (90 Days):** Ambiguous or unreadable worktrees default to maximal retention for safety.
+
+The reaper uses Unix `mtime` for aging and Git introspection for classification.
 
 ---
 
