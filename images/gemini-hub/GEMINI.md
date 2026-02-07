@@ -55,6 +55,15 @@ The Hub uses `--net=host` to ensure reliable peer discovery and MagicDNS resolut
 ### Auto-Shutdown
 The Hub will automatically terminate after **60 seconds** of inactivity (when no hostnames starting with `gem-` are detected in the Tailnet). This is intentional to save resources and VPN license seats.
 
+### Worktree Pruning
+The Hub runs a background `PruneService` to manage the ephemeral worktree cache.
+*   **Toggle:** `HUB_WORKTREE_PRUNE_ENABLED` (Default: `true`).
+*   **Retention Periods:**
+    *   `GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS`: Retention for anonymous/headless worktrees (Default: `30`).
+    *   `GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS`: Retention for named branch worktrees (Default: `90`).
+    *   `GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS`: Retention for ambiguous or unreadable worktrees (Default: `90`).
+*   **Mechanism:** Uses `git symbolic-ref` for classification and directory `mtime` for aging.
+
 ### Naming Constraint
 The Hub relies on the naming convention documented in the root `GEMINI.md`. It extracts project names and types by parsing hostnames from the right side, assuming the type segment (e.g., `geminicli`) contains no hyphens.
 
