@@ -22,6 +22,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --preview            Use the preview image (Latest Beta CLI)"
+    echo "  --image <name>       Override the Docker image to use"
     echo "  --no-ide             Disable VS Code integration (bypass companion extension)"
     echo "  --no-docker          Disable Docker-out-of-Docker integration (Sandbox Mode)"
     echo "  --config <path>      Path to configuration directory (default: ~/.gemini)"
@@ -195,6 +196,7 @@ DETACHED_MODE=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     --preview)     VARIANT="preview"; shift ;;
+    --image)       OVERRIDE_IMAGE="$2"; shift; shift ;;
     --no-ide)      ENABLE_VSCODE_INTEGRATION=false;   shift ;;
     --no-docker)   ENABLE_DOCKER=false;               shift ;;
     --config)      HOST_CONF_DIR="$2"; shift; shift ;;
@@ -302,7 +304,9 @@ GEMINI_SESSION_ID="gem-${PROJECT_NAME}-${SESSION_TYPE}-${GEN_UUID}"
 CONTAINER_NAME_ARG=("--name" "${GEMINI_SESSION_ID}")
 
 # 2.2 Resolve Image Name (Local vs Remote)
-if [ "$VARIANT" == "preview" ]; then
+if [ -n "$OVERRIDE_IMAGE" ]; then
+    IMAGE_NAME="$OVERRIDE_IMAGE"
+elif [ "$VARIANT" == "preview" ]; then
     LOCAL_TAG="gemini-cli-toolbox/cli-preview:latest"
     REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-preview"
 else

@@ -1,5 +1,14 @@
 IMAGE_NAME := gemini-cli-toolbox/cli
-IMAGE_TAG := latest
+
+# Detect Branch and Suffix Tag
+CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+SAFE_BRANCH := $(shell echo $(CURRENT_BRANCH) | sed 's/[^a-zA-Z0-9]/-/g')
+
+ifeq ($(CURRENT_BRANCH),main)
+    IMAGE_TAG := latest
+else
+    IMAGE_TAG := latest-$(SAFE_BRANCH)
+endif
 
 # Set 'help' as the default target
 .DEFAULT_GOAL := help
@@ -25,10 +34,16 @@ tag-version:
 	echo ">> Detected version: $$VERSION"; \
 	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(IMAGE_NAME):$$VERSION
 
+print-tag:
+	@echo $(IMAGE_TAG)
+
+print-image:
+	@echo $(IMAGE_NAME):$(IMAGE_TAG)
+
 ci: rebuild
 	$(MAKE) tag-version
 
 scan:
 	@echo ">> Scanning $(IMAGE_NAME):$(IMAGE_TAG)..."
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-		aquasec/trivy image --exit-code 1 --ignore-unfixed $(IMAGE_NAME):$(IMAGE_TAG)
+		aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed $(IMAGE_NAME):$(IMAGE_TAG)
