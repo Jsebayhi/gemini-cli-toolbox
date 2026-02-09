@@ -1,5 +1,5 @@
 # Base Image for Gemini CLI Toolbox
-# Contains: Python (Latest Stable), Node.js 20, OS Security Updates, Gosu, Git
+# Contains: Python (Latest Stable), Node.js 20, OS Security Updates, Gosu, Git, GH CLI, GLAB CLI
 
 # --- Stage 1: Source Node.js ---
 # We harvest the Node.js binaries from the official image to ensure they are correct
@@ -44,7 +44,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt-get update && apt-get install -y tailscale gh \
+    && apt-get update && apt-get install -y tailscale gh glab \
     && curl -fsSL -o /usr/local/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 \
     && chmod +x /usr/local/bin/ttyd \
     && rm -rf /var/lib/apt/lists/* \
