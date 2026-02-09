@@ -22,6 +22,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --preview            Use the preview image (Latest Beta CLI)"
+    echo "  --image <name>       Override the Docker image to use"
     echo "  --no-ide             Disable VS Code integration (bypass companion extension)"
     echo "  --no-docker          Disable Docker-out-of-Docker integration (Sandbox Mode)"
     echo "  --config <path>      Path to configuration directory (default: ~/.gemini)"
@@ -185,6 +186,51 @@ if [ ${#FILE_ARGS[@]} -gt 0 ]; then
     set -- "${FILE_ARGS[@]}" "$@"
 fi
 
+# 1. Pre-scan for Variant & Override Image
+# We need these BEFORE final image resolution to handle branch-specific tags correctly.
+VARIANT="latest"
+OVERRIDE_IMAGE=""
+iter_variant_args=("$@")
+for ((i=0; i<${#iter_variant_args[@]}; i++)); do
+    case "${iter_variant_args[i]}" in
+        --preview) VARIANT="preview" ;;
+        --image)   OVERRIDE_IMAGE="${iter_variant_args[i+1]}" ;;
+    esac
+done
+
+# 2. Resolve Image Name (Local vs Remote)
+# Detect Current Branch for dynamic tagging
+BRANCH_SUFFIX=""
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ "$CURRENT_BRANCH" != "main" ] && [ -n "$CURRENT_BRANCH" ]; then
+        SAFE_BRANCH="${CURRENT_BRANCH//[!a-zA-Z0-9]/-}"
+        BRANCH_SUFFIX="-$SAFE_BRANCH"
+    fi
+fi
+
+if [ -n "$OVERRIDE_IMAGE" ]; then
+    IMAGE_NAME="$OVERRIDE_IMAGE"
+elif [ "$VARIANT" == "preview" ]; then
+    LOCAL_TAG="gemini-cli-toolbox/cli-preview:latest${BRANCH_SUFFIX}"
+    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-preview"
+else
+    LOCAL_TAG="gemini-cli-toolbox/cli:latest${BRANCH_SUFFIX}"
+    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-stable"
+fi
+
+# DEBUG
+echo "DEBUG: BRANCH_SUFFIX='$BRANCH_SUFFIX'"
+echo "DEBUG: LOCAL_TAG='$LOCAL_TAG'"
+
+# Check if local image exists
+if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
+    IMAGE_NAME="$LOCAL_TAG"
+else
+    # Fallback to remote image
+    IMAGE_NAME="$REMOTE_TAG"
+fi
+
 # 1. Parse Arguments
 ARGS=()
 REMOTE_MODE=false
@@ -195,6 +241,7 @@ DETACHED_MODE=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     --preview)     VARIANT="preview"; shift ;;
+    --image)       OVERRIDE_IMAGE="$2"; shift; shift ;;
     --no-ide)      ENABLE_VSCODE_INTEGRATION=false;   shift ;;
     --no-docker)   ENABLE_DOCKER=false;               shift ;;
     --config)      HOST_CONF_DIR="$2"; shift; shift ;;
@@ -300,23 +347,6 @@ GEN_UUID="${GEN_UUID:-$(date +%s)}"
 
 GEMINI_SESSION_ID="gem-${PROJECT_NAME}-${SESSION_TYPE}-${GEN_UUID}"
 CONTAINER_NAME_ARG=("--name" "${GEMINI_SESSION_ID}")
-
-# 2.2 Resolve Image Name (Local vs Remote)
-if [ "$VARIANT" == "preview" ]; then
-    LOCAL_TAG="gemini-cli-toolbox/cli-preview:latest"
-    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-preview"
-else
-    LOCAL_TAG="gemini-cli-toolbox/cli:latest"
-    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-stable"
-fi
-
-# Check if local image exists
-if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
-    IMAGE_NAME="$LOCAL_TAG"
-else
-    # Fallback to remote image
-    IMAGE_NAME="$REMOTE_TAG"
-fi
 
 # 2.2.1 Setup Worktree (if requested)
 ORIGINAL_PROJECT_DIR="$PROJECT_DIR"

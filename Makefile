@@ -142,6 +142,18 @@ ci-hub:
 .PHONY: ci
 ci: ci-cli ci-preview ci-hub
 
+.PHONY: print-image-cli
+print-image-cli:
+	@$(MAKE) -C images/gemini-cli -s print-image
+
+.PHONY: print-image-preview
+print-image-preview:
+	@$(MAKE) -C images/gemini-cli-preview -s print-image
+
+.PHONY: print-image-hub
+print-image-hub:
+	@$(MAKE) -C images/gemini-hub -s print-image
+
 # Security Scan (Delegate to components)
 .PHONY: scan
 scan:
@@ -151,6 +163,8 @@ scan:
 	$(MAKE) -C images/gemini-cli scan
 	@echo ">> Scanning gemini-cli-preview..."
 	$(MAKE) -C images/gemini-cli-preview scan
+	@echo ">> Scanning gemini-hub..."
+	$(MAKE) -C images/gemini-hub scan
 
 .PHONY: clean-cache
 clean-cache:

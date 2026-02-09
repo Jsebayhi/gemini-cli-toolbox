@@ -18,6 +18,37 @@ if [ ! -d "$CONFIG_ROOT" ] && [ -d "${HOME}/.gemini-profiles" ]; then
     CONFIG_ROOT="${HOME}/.gemini-profiles"
 fi
 
+# 1. Pre-scan for Override Image
+OVERRIDE_IMAGE=""
+iter_hub_args=("$@")
+for ((i=0; i<${#iter_hub_args[@]}; i++)); do
+    case "${iter_hub_args[i]}" in
+        --image) OVERRIDE_IMAGE="${iter_hub_args[i+1]}" ;;
+    esac
+done
+
+# 2. Resolve Image Name (Local vs Remote)
+# Detect Current Branch for dynamic tagging
+BRANCH_SUFFIX=""
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ "$CURRENT_BRANCH" != "main" ] && [ -n "$CURRENT_BRANCH" ]; then
+        SAFE_BRANCH="${CURRENT_BRANCH//[!a-zA-Z0-9]/-}"
+        BRANCH_SUFFIX="-$SAFE_BRANCH"
+    fi
+fi
+
+LOCAL_TAG="gemini-cli-toolbox/hub:latest${BRANCH_SUFFIX}"
+
+if [ -n "$OVERRIDE_IMAGE" ]; then
+    IMAGE_NAME="$OVERRIDE_IMAGE"
+elif docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
+    IMAGE_NAME="$LOCAL_TAG"
+else
+    # Fallback to remote image (Docker will auto-pull if missing)
+    IMAGE_NAME="$REMOTE_TAG"
+fi
+
 # Help Function
 show_help() {
     echo "Usage: gemini-hub [OPTIONS] [COMMAND]"
@@ -26,6 +57,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -d, --detach          Start the Hub in the background"
+    echo "  --image <name>        Override the Docker image to use"
     echo "  --key <key>           Tailscale Auth Key (Required if GEMINI_REMOTE_KEY is not set)"
     echo "  --auto-shutdown       Enable 60s inactivity timeout (Default: Disabled)"
     echo "  --no-worktree-prune   Disable background worktree cleanup service"
@@ -50,6 +82,7 @@ PRUNE_ENABLED=true
 while [[ $# -gt 0 ]]; do
   case $1 in
     -d|--detach) MODE="-d"; shift ;;
+    --image)     OVERRIDE_IMAGE="$2"; shift; shift ;;
     --key)       AUTH_KEY="$2"; shift; shift ;;
     --auto-shutdown) AUTO_SHUTDOWN=true; shift ;;
     --no-worktree-prune) PRUNE_ENABLED=false; shift ;;
@@ -204,14 +237,6 @@ if [ -f "$TOOLBOX_SCRIPT" ]; then
     EXTRA_MOUNTS+=("-v" "${TOOLBOX_SCRIPT}:/usr/local/bin/gemini-toolbox")
 else
     echo "Warning: gemini-toolbox script not found at $TOOLBOX_SCRIPT. Hub will use embedded version."
-fi
-
-# Resolve Image (Local vs Remote)
-if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
-    IMAGE_NAME="$LOCAL_TAG"
-else
-    # Fallback to remote image (Docker will auto-pull if missing)
-    IMAGE_NAME="$REMOTE_TAG"
 fi
 
 # Detect Host Docker GID (for DooD)

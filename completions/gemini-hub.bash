@@ -5,7 +5,7 @@ _gemini_hub_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     commands="stop"
-    opts="--detach -d --key --auto-shutdown --no-worktree-prune --workspace --config-root --help -h"
+    opts="--detach -d --image --key --auto-shutdown --no-worktree-prune --workspace --config-root --help -h"
 
     case "${prev}" in
         --workspace|--config-root)

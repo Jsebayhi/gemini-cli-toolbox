@@ -79,7 +79,16 @@ Discovery tools (like `gemini-hub`) rely on this structure.
 *   **Selection:** Use `gemini-toolbox --config <path>` to select a profile.
 *   **Customization:** A profile can define persistent runtime arguments (volumes, flags) by placing a file named `extra-args` in its root. See [ADR-0021](adr/0021-configuration-profiles-and-extra-args.md).
 
-## 7. Known Peculiarities & Gotchas
+## 9. CI/CD & Image Tagging
+*   **Dynamic Tagging:** Images are tagged based on the active git branch.
+    *   `main` branch → `latest` tag.
+    *   Feature branches → `latest-{branch_name}` tag (sanitized).
+    *   **Why:** Allows parallel development without `latest` tag collisions on local machines or CI runners.
+*   **Security Scanning:** The `make scan` target in each component handles Trivy scans.
+    *   **CI Usage:** The CI pipeline invokes `make scan` (instead of calling Trivy directly) to ensure it scans the *exact* image tag built by the previous step, respecting dynamic tagging rules.
+    *   **Rule:** Do not hardcode image tags in `.github/workflows/ci.yml` for scanning steps. Delegate to `make scan`.
+
+## 10. Known Peculiarities & Gotchas
 
 *   **Docker-out-of-Docker:** The agent controls the **Host** daemon. Paths mounted must be absolute and exist on the host. `localhost` inside the container refers to the container, not the host (unless `--net=host` is used).
 *   **Terminal Colors:** We explicitly pass `COLORTERM` and `TERM` env vars to ensure TrueColor support in remote sessions.
