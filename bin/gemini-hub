@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# 0. Resolve script location and Repository Root
+# This ensures we detect the branch of the toolbox itself, even when run from another project.
+REAL_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$REAL_SOURCE" ]; do
+    DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+    REAL_SOURCE="$(readlink "$REAL_SOURCE")"
+    [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Configuration
 DOCKER_HUB_USER="${DOCKER_HUB_USER:-jsebayhi}"
 LOCAL_TAG="gemini-cli-toolbox/hub:latest"
@@ -28,10 +39,10 @@ for ((i=0; i<${#iter_hub_args[@]}; i++)); do
 done
 
 # 2. Resolve Image Name (Local vs Remote)
-# Detect Current Branch for dynamic tagging
+# Detect Current Branch for dynamic tagging (based on Toolbox repository)
 BRANCH_SUFFIX=""
-if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)
     if [ "$CURRENT_BRANCH" != "main" ] && [ -n "$CURRENT_BRANCH" ]; then
         SAFE_BRANCH="${CURRENT_BRANCH//[!a-zA-Z0-9]/-}"
         BRANCH_SUFFIX="-$SAFE_BRANCH"
@@ -223,14 +234,7 @@ fi
 EXTRA_MOUNTS+=("-v" "gemini-hub-state:/var/lib/tailscale")
 
 # 4. Mount Toolbox Script (Ensure Hub uses latest version)
-# Resolve real path of this script to find sibling toolbox script
-REAL_SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$REAL_SOURCE" ]; do
-    DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-    REAL_SOURCE="$(readlink "$REAL_SOURCE")"
-    [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
-done
-SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+# Use the already resolved SCRIPT_DIR to find sibling toolbox script
 TOOLBOX_SCRIPT="${SCRIPT_DIR}/gemini-toolbox"
 
 if [ -f "$TOOLBOX_SCRIPT" ]; then

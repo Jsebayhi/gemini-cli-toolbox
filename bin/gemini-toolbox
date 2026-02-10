@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# 0. Resolve script location and Repository Root
+# This ensures we detect the branch of the toolbox itself, even when run from another project.
+REAL_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$REAL_SOURCE" ]; do
+    DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+    REAL_SOURCE="$(readlink "$REAL_SOURCE")"
+    [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Configuration
 HOST_CONF_DIR="${HOME}/.gemini"
 PROJECT_DIR="$(pwd)"
@@ -199,10 +210,10 @@ for ((i=0; i<${#iter_variant_args[@]}; i++)); do
 done
 
 # 2. Resolve Image Name (Local vs Remote)
-# Detect Current Branch for dynamic tagging
+# Detect Current Branch for dynamic tagging (based on Toolbox repository)
 BRANCH_SUFFIX=""
-if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)
     if [ "$CURRENT_BRANCH" != "main" ] && [ -n "$CURRENT_BRANCH" ]; then
         SAFE_BRANCH="${CURRENT_BRANCH//[!a-zA-Z0-9]/-}"
         BRANCH_SUFFIX="-$SAFE_BRANCH"
@@ -218,10 +229,6 @@ else
     LOCAL_TAG="gemini-cli-toolbox/cli:latest${BRANCH_SUFFIX}"
     REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-stable"
 fi
-
-# DEBUG
-echo "DEBUG: BRANCH_SUFFIX='$BRANCH_SUFFIX'"
-echo "DEBUG: LOCAL_TAG='$LOCAL_TAG'"
 
 # Check if local image exists
 if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
@@ -368,15 +375,7 @@ fi
 
 # 2.4 Handle Hub Stop
 if [ "$STOP_HUB" = true ]; then
-    # Resolve real path in case this script is a symlink
-    REAL_SOURCE="${BASH_SOURCE[0]}"
-    while [ -h "$REAL_SOURCE" ]; do
-        DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-        REAL_SOURCE="$(readlink "$REAL_SOURCE")"
-        [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
-    done
-    SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-    
+    # Use the already resolved SCRIPT_DIR
     HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
     if [ -x "$HUB_SCRIPT" ]; then
          exec "$HUB_SCRIPT" stop
@@ -436,16 +435,8 @@ if [ "$REMOTE_MODE" = true ]; then
     # Check if container is running by looking for non-empty ID output
     # Use anchor ^...$ to match exact name
     if [ -z "$(docker ps -q -f name="^/${HUB_NAME}$")" ]; then
-        # Resolve real path in case this script is a symlink
-        REAL_SOURCE="${BASH_SOURCE[0]}"
-        while [ -h "$REAL_SOURCE" ]; do
-            DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-            REAL_SOURCE="$(readlink "$REAL_SOURCE")"
-            [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
-        done
-        SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-        
-        HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
+    # Use the already resolved SCRIPT_DIR
+    HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
         if [ -x "$HUB_SCRIPT" ]; then
              echo ">> Auto-starting Gemini Hub..."
              echo "   (Stop with: gemini-toolbox stop-hub)"
