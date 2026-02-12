@@ -16,7 +16,7 @@ Check for new vulnerabilities:
 ```bash
 make scan
 ```
-*   **Policy:** If a new vulnerability appears, verify if it's fixable or requires an upstream patch.
+*   **Policy:** If a new vulnerability appears, verify if it's caused by your changes. If so, fix it unless it is just a question of waiting for an upstream patch.
 
 ## 3. Manual Verification
 *   Execute the relevant **User Journey** from `docs/internal/MAINTENANCE_JOURNEYS.md`.

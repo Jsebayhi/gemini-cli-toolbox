@@ -44,5 +44,6 @@ Pushing and PR conventions.
 | **Scan** | `make scan` |
 
 ## 📚 References
+*   [Core Mandates](references/mandates.md)
 *   [Architecture](references/architecture.md)
 *   [Conventions](references/conventions.md)

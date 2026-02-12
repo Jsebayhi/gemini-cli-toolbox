@@ -12,7 +12,7 @@
 
 ## 2. Synthesis
 *   Select the best solution.
-*   **Draft ADR:** Post a summary of the decision and trade-offs to the GitHub Issue.
+*   **Draft ADR:** Post a summary of the decision (Context, Options, Decision) **as a comment** to the GitHub Issue.
     *   See `references/conventions.md` for the ADR template.
 
 ## 3. Approval

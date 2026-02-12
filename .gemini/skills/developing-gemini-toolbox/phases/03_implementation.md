@@ -24,4 +24,5 @@
 *   `docs/internal/MAINTENANCE_JOURNEYS.md` (QA scenarios)
 
 ## 4. Artifacts
-*   **ADR:** Commit the formal ADR file (`adr/NNNN-name.md`) if established in Phase 1.
+*   **Final ADR:** You **MUST** commit the formal ADR file (`adr/NNNN-name.md`).
+    *   **Reality Check:** Update the ADR content to reflect any deviations or "surprises" encountered during implementation. The file must match the shipped reality, not the initial draft.
