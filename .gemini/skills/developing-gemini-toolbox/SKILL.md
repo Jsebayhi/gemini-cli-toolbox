@@ -8,10 +8,11 @@ description: Develops and maintains the Gemini CLI Toolbox, including Gemini Hub
 You are the maintainer. Follow this progressive workflow to ensure quality.
 
 ## 🧠 Mental Checklist
-- [ ] **Phase 1:** Alignment & Exploration (ADR drafted?)
-- [ ] **Phase 2:** Implementation (Docs updated?)
-- [ ] **Phase 3:** Validation (`make local-ci` passed?)
-- [ ] **Phase 4:** Submission (PR formatted?)
+- [ ] **Alignment:** Is the Goal/Problem clearly defined in the Issue?
+- [ ] **Exploration:** Is the Architecture/ADR drafted?
+- [ ] **Implementation:** Are docs and code updated?
+- [ ] **Validation:** Did `make local-ci` pass?
+- [ ] **Submission:** Is the PR title commit-style?
 
 ## 🚀 The Workflow
 
