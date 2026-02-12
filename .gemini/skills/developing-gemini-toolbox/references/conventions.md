@@ -6,63 +6,18 @@ This project strictly enforces the pattern that documentation (`README.md`, `GEM
 *   **GEMINI.md:** Each component folder has its own `GEMINI.md` capturing specific "gotchas" and workflows.
 
 ## Naming Conventions
+👉 **Source of Truth:** See `GEMINI.md` (Root) Section 5: Naming Strategy.
 
-### Session Identification
-All components rely on a strict naming scheme to identify sessions.
-
-**Format:** `gem-{PROJECT}-{TYPE}-{ID}`
-
-*   **Prefix:** `gem-` (Hardcoded)
-*   **Project:** Sanitized folder name (lowercase, alphanumeric + hyphens).
-*   **Type:** `geminicli` or `bash` (No hyphens allowed!).
-*   **ID:** Unique suffix (UUID segment).
-
-**Example:** `gem-my-app-geminicli-a1b2`
-
-**Why?** The Hub parses this string to group sessions by project and determine their type. Breaking this schema breaks the Hub.
+## Code Standards
+👉 **Source of Truth:**
+*   **Hub (Python):** See `images/gemini-hub/docs/ENGINEERING_STANDARDS.md`.
+*   **CLI (Bash):** Follow `shellcheck` guidance.
 
 ## Architecture Decision Records (ADR)
 *   **Location:** `adr/`
-*   **Format:** `NNNN-title-of-decision.md`
-*   **Recent Examples:**
-    *   `0023-localhost-access-hybrid-mode.md`
-*   **Process:**
-    1.  Propose a significant architectural change.
-    2.  Write an ADR explaining the context, decision, and consequences.
-    3.  Implement the change.
+*   **Process:** Propose -> Draft -> Implement.
 
 ### ADR Template
 ```markdown
 # NNNN. Title of Decision
-
-## Context
-What is the problem? Why is this decision needed?
-
-## Options Considered
-1. Option A (Pros/Cons)
-2. Option B (Pros/Cons)
-3. Option C (Pros/Cons)
-
-## Decision
-We chose Option X because...
-
-## Consequences
-- Positive: ...
-- Negative: ...
-```
-
-## Code Style
-
-### Python (`gemini-hub`)
-*   **Linter:** `ruff`
-*   **Typing:** Strict type hints required for all function signatures.
-*   **Structure:**
-    *   `services/`: Business logic (Tailscale, Docker, FileSystem).
-    *   `routes.py`: Flask route definitions (thin wrappers).
-
-### Bash
-*   **Linter:** `shellcheck`
-*   **Style:**
-    *   Use `[[ ]]` over `[ ]`.
-    *   Always quote variables: `"$VAR"`.
-    *   Use long flags for clarity: `--volume` instead of `-v` (where possible/readable).
+...
