@@ -17,4 +17,6 @@
 *   **Communicate:** Post a link to the draft ADR on the GitHub Issue for review.
 
 ## 3. Approval
-Explicitly ask the user: *"Does this direction feel solid?"*. Wait for confirmation before **implementing code**.
+Follow the [Session Mode Protocol](../references/mandates.md# session-mode-protocols):
+*   **Interactive:** Explicitly ask: *"Does this direction feel solid?"*. Wait for confirmation.
+*   **Autonomous:** Document the decision in the ADR. Proceed to implementation immediately.

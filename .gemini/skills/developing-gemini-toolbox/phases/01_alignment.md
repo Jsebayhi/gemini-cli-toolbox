@@ -16,5 +16,7 @@ Explore the "Idea Space" of the *problem* itself.
 
 ## 3. Contract (The Output)
 1.  **Synthesize:** Summarize the Problem Statement and Success Criteria.
-2.  **Document:** Post this synthesis **as a comment** on the GitHub Issue (or create the issue if missing).
-    *   *Constraint:* Do not proceed to Architecture until the goal is clear.
+2.  **Document:** Post this synthesis **as a comment** on the GitHub Issue.
+3.  **Handoff:** Follow the [Session Mode Protocol](../references/mandates.md# session-mode-protocols).
+    *   **Interactive:** Wait for explicit approval.
+    *   **Autonomous:** Proceed to Architecture immediately after documenting.
