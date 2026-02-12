@@ -43,6 +43,7 @@ show_help() {
     echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be name or task."
     echo "  --name <str>         Explicit name for the worktree folder and branch."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
+    echo "  --no-tmux            Disable automatic tmux multiplexing (legacy raw TTY mode)"
     echo "  --detached           Start the container in background and exit (useful for Hub)"
     echo "  --help               Show this help message"
     echo ""
@@ -241,6 +242,7 @@ fi
 # 1. Parse Arguments
 ARGS=()
 REMOTE_MODE=false
+NO_TMUX_FLAG=false
 TAILSCALE_KEY="${GEMINI_REMOTE_KEY:-}"
 ENABLE_DOCKER=true
 DETACHED_MODE=false
@@ -251,6 +253,7 @@ while [[ $# -gt 0 ]]; do
     --image)       OVERRIDE_IMAGE="$2"; shift; shift ;;
     --no-ide)      ENABLE_VSCODE_INTEGRATION=false;   shift ;;
     --no-docker)   ENABLE_DOCKER=false;               shift ;;
+    --no-tmux)     EXTRA_DOCKER_ARGS+=("--env" "GEMINI_TOOLBOX_TMUX=false"); NO_TMUX_FLAG=true; shift ;;
     --config)      HOST_CONF_DIR="$2"; shift; shift ;;
     --profile)     HOST_CONF_DIR="$2"; ENABLE_PROFILE_MODE=true; shift; shift ;;
     --project)     PROJECT_DIR="$2";   shift; shift ;;
@@ -290,6 +293,13 @@ while [[ $# -gt 0 ]]; do
     *)             ARGS+=("$1");       shift ;;
   esac
 done
+
+# Validation: --remote requires tmux for the web terminal (ttyd)
+if [ "$REMOTE_MODE" = true ] && [ "$NO_TMUX_FLAG" = true ]; then
+    echo "Error: --remote and --no-tmux are incompatible." >&2
+    echo "       Remote mode relies on tmux to serve the web terminal." >&2
+    exit 1
+fi
 
 # 2. Setup Directories
 # HOST_CONF_DIR might be passed as relative or absolute.
@@ -395,7 +405,15 @@ if [ -n "$CONNECT_ID" ]; then
          echo ">> Opening Bash shell..."
          exec docker exec -it "$CONNECT_ID" gosu "$CURRENT_UID" bash
     else
-         exec docker exec -it "$CONNECT_ID" gosu "$CURRENT_UID" tmux attach -t gemini
+         # Try to attach to the 'gemini' tmux session (Default for all sessions)
+         if docker exec "$CONNECT_ID" gosu "$CURRENT_UID" tmux has-session -t gemini 2>/dev/null; then
+             exec docker exec -it "$CONNECT_ID" gosu "$CURRENT_UID" tmux attach -t gemini
+         else
+             # Fail if multiplexing is not available (e.g., started with --no-tmux)
+             echo "Error: This session was started without multiplexing (e.g., via --no-tmux)." >&2
+             echo "       Reconnecting to the active interactive process is not supported for this container." >&2
+             exit 1
+         fi
     fi
 fi
 

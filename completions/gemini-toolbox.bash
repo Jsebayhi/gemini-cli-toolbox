@@ -5,7 +5,7 @@ _gemini_toolbox_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     commands="update stop-hub connect"
-    opts="--preview --image --no-ide --no-docker --config --profile --project --remote --docker-args --volume --worktree --bash --detached --help -v"
+    opts="--preview --image --no-ide --no-docker --config --profile --project --remote --docker-args --volume --worktree --bash --no-tmux --detached --help -v"
 
     case "${prev}" in
         --config|--profile|--project)

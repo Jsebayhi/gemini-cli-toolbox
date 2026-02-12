@@ -73,6 +73,12 @@ Discovery tools (like `gemini-hub`) rely on this structure.
     *   Type: Index -2 (`TYPE`)
     *   Project: Join `1` to `-2` (`PROJECT`)
 
+### Environment Variables
+*   **Prefix Requirement:** All environment variables impacting tool behavior must be namespaced.
+    *   `GEMINI_TOOLBOX_*`: For the CLI wrapper and general toolbox behavior.
+    *   `GEMINI_HUB_*`: For the Hub service.
+*   **Why:** Prevents collisions with user environment variables and clarifies scope.
+
 ## 6. Configuration Profiles
 *   **Concept:** Users can maintain multiple configuration directories (profiles) for different contexts (e.g., Work, Personal).
 *   **Location:** Default is `~/.gemini`. Additional profiles are typically in `~/.gemini-profiles/`.

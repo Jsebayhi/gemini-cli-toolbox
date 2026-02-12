@@ -137,3 +137,25 @@ gemini-toolbox --worktree --name my-feature "Write exhaustive unit tests for app
 gemini-toolbox --worktree --name my-feature
 ```
 Because the toolbox detects that the worktree `my-feature` already exists, it simply joins the existing isolated environment without creating new branches. This allows for powerful human-agent or agent-agent collaboration in a single, clean workspace.
+
+---
+
+## 12. Resilient Sessions (Reconnection)
+**The Scenario:** You are in the middle of a session when your terminal app crashes, or you accidentally close the window.
+
+**The Solution:** Reconnect seamlessly.
+By default, all sessions are wrapped in a multiplexer (`tmux`). This means the process stays alive even if the window closes.
+
+1.  List active sessions (e.g., via `docker ps` or the Hub).
+2.  Reconnect using the ID:
+    ```bash
+    gemini-toolbox connect gem-my-project-geminicli-1234abcd
+    ```
+
+You will be placed exactly where you left off.
+
+**Opt-out:** If you specifically need a raw process (e.g., for automated wrapping) and want to disable this protection:
+```bash
+gemini-toolbox --no-tmux
+```
+*Note: Sessions started with `--no-tmux` cannot be reconnected to if the terminal crashes.*

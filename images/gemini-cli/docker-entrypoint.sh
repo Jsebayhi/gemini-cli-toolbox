@@ -50,6 +50,30 @@ if [ -n "${HOST_DOCKER_GID:-}" ] && [ -S "/var/run/docker.sock" ]; then
     usermod -aG "$HOST_DOCKER_GID" "$TARGET_USER" >&3 2>&4
 fi
 
+# --- Tmux Configuration ---
+# We use Tmux by default so sessions are always re-attachable (e.g. after terminal crash)
+# Users can opt-out by setting GEMINI_TOOLBOX_TMUX=false (or using --no-tmux flag)
+USE_TMUX="${GEMINI_TOOLBOX_TMUX:-true}"
+
+if [ "$USE_TMUX" = "true" ]; then
+    if [ ! -f "$HOME/.tmux.conf" ]; then
+        if [ "$DEBUG" = "true" ]; then
+            echo ">> Generating default .tmux.conf..." >&3
+        fi
+        {
+            echo "set -g mouse on"
+            echo "set -g history-limit 50000"
+        } > "$HOME/.tmux.conf"
+        chown "$UID:$GID" "$HOME/.tmux.conf"
+    fi
+
+    # 1. Create a DETACHED tmux session named 'gemini' running the user's command
+    if [ "$DEBUG" = "true" ]; then
+        echo ">> Starting Shared Session (Tmux) for: $*" >&3
+    fi
+    gosu "$TARGET_USER" tmux new-session -d -s gemini "$@"
+fi
+
 # --- Remote Access (Tailscale) ---
 if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
     echo ">> Initializing Remote Access Mode (Tailscale)..."
@@ -84,42 +108,24 @@ if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
     tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="${TS_HOSTNAME}"
     echo ">> Remote Access Active."
     
-    # --- Tmux Configuration ---
-    # Enable mouse support to allow scrolling in ttyd/browser
-    if [ ! -f "$HOME/.tmux.conf" ]; then
-        if [ "$DEBUG" = "true" ]; then
-            echo ">> Generating default .tmux.conf..." >&3
-        fi
-        {
-            echo "set -g mouse on"
-            echo "set -g history-limit 50000"
-        } > "$HOME/.tmux.conf"
-        chown "$UID:$GID" "$HOME/.tmux.conf"
-    fi
-
-    # --- Session Mirroring (Tmux) ---
-    echo ">> Starting Shared Session (Tmux)..."
-    
-    # 1. Create a DETACHED tmux session named 'gemini' running the user's command
-    # We must run this as the user so they own the session socket
-    gosu "$TARGET_USER" tmux new-session -d -s gemini "$@"
-    
     # 2. Start Web Terminal (ttyd) in BACKGROUND
     # It attaches to the 'gemini' session
     # -p 3000: Port
     # -W: Writable
     echo ">> Starting ttyd on port 3000..."
     ttyd -p 3000 -W gosu "$TARGET_USER" tmux attach -t gemini &
-    
     echo ">> Web Terminal active at http://<IP>:3000"
-    echo ">> Attaching local session..."
-    
-    # 3. Attach the Foreground (Desktop) to the same session
+fi
+
+# --- Execution ---
+if [ "$USE_TMUX" = "true" ]; then
+    echo ">> Attaching to session (Tmux)..."
+    # Attach the Foreground (Desktop) to the same session
     # We DO NOT use 'exec' here so we can catch the exit and clean up
     if [ -t 0 ]; then
         gosu "$TARGET_USER" tmux attach -t gemini
     else
-        echo ">> Detached mode detected. keeping container alive..."
+        echo ">> Detached mode detected. Keeping container alive..."
         # Wait for the tmux session to end
         while gosu "$TARGET_USER" tmux has-session -t gemini 2>/dev/null; do
             sleep 1
@@ -127,14 +133,16 @@ if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
     fi
     
     # Cleanup on exit
-    echo ">> Session ended. Stopping remote services..."
-    pkill tailscaled || true
-    pkill ttyd || true
+    if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
+        echo ">> Session ended. Stopping remote services..."
+        pkill tailscaled || true
+        pkill ttyd || true
+    fi
     exit 0
 fi
 
 # Export HOME so the child process uses the correct directory
 export HOME
 
-# Execute (Standard Mode)
+# Execute (No-Tmux Mode)
 exec gosu "$TARGET_USER" "$@"
