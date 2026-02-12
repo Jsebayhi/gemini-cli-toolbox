@@ -9,28 +9,32 @@ You are the maintainer. Follow this progressive workflow to ensure quality.
 
 ## 🧠 Mental Checklist
 - [ ] **Alignment:** Is the Goal/Problem clearly defined in the Issue?
-- [ ] **Exploration:** Is the Architecture/ADR drafted?
+- [ ] **Architecture:** Are 3 alternatives analyzed and ADR drafted?
 - [ ] **Implementation:** Are docs and code updated?
 - [ ] **Validation:** Did `make local-ci` pass?
 - [ ] **Submission:** Is the PR title commit-style?
 
 ## 🚀 The Workflow
 
-### 1. Alignment & Exploration
-**Do not code yet.** Validate assumptions and design architecture.
-👉 [Read Phase 1 Guide](phases/01_exploration.md)
+### 1. Alignment (Problem Space)
+**Define the Goal.** Validate the "What" and "Why".
+👉 [Read Phase 1 Guide](phases/01_alignment.md)
 
-### 2. Implementation
+### 2. Architecture (Solution Space)
+**Design the Solution.** Explore 3 alternatives.
+👉 [Read Phase 2 Guide](phases/02_architecture.md)
+
+### 3. Implementation
 Branching, coding standards, and documentation mandates.
-👉 [Read Phase 2 Guide](phases/02_implementation.md)
+👉 [Read Phase 3 Guide](phases/03_implementation.md)
 
-### 3. Validation
+### 4. Validation
 Mandatory CI and security checks.
-👉 [Read Phase 3 Guide](phases/03_validation.md)
+👉 [Read Phase 4 Guide](phases/04_validation.md)
 
-### 4. Submission
+### 5. Submission
 Pushing and PR conventions.
-👉 [Read Phase 4 Guide](phases/04_submission.md)
+👉 [Read Phase 5 Guide](phases/05_submission.md)
 
 ## 🛠️ Cheat Sheet
 | Task | Command |

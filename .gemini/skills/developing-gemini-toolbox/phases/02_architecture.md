@@ -1,0 +1,19 @@
+# Phase 2: Architecture (Solution Space)
+
+**Goal:** Design the optimal solution.
+**Output:** A drafted ADR in the GitHub Issue.
+
+## 1. Solution Exploration
+**Rule:** Diverge before converging.
+
+*   **Brainstorming:** Propose **3 distinct architectural alternatives** (e.g., "Naive/Simple", "Robust/Scalable", "Novel/Hack").
+*   **Red-Teaming:** Challenge your own assumptions. Ask: "What if this assumption fails?"
+*   **Trade-off Analysis:** List Pros/Cons for each option.
+
+## 2. Synthesis
+*   Select the best solution.
+*   **Draft ADR:** Post a summary of the decision and trade-offs to the GitHub Issue.
+    *   See `references/conventions.md` for the ADR template.
+
+## 3. Approval
+Explicitly ask the user: *"Does this direction feel solid?"*. Wait for confirmation before implementing.
