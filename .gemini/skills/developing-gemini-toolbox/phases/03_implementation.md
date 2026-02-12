@@ -3,12 +3,7 @@
 **Goal:** Execute the plan with strict adherence to project standards.
 
 ## 1. Preparation
-*   **Branching:**
-    ```bash
-    git checkout -b feature/<name>
-    # or
-    git checkout -b fix/<issue-id>
-    ```
+*   **Check Branch:** Ensure you are on the feature branch created in Phase 2.
 *   **Context:** Load the relevant `GEMINI.md` for the component you are touching.
 
 ## 2. Coding Standards
@@ -24,5 +19,4 @@
 *   `docs/internal/MAINTENANCE_JOURNEYS.md` (QA scenarios)
 
 ## 4. Artifacts
-*   **Final ADR:** You **MUST** commit the formal ADR file (`adr/NNNN-name.md`).
-    *   **Reality Check:** Update the ADR content to reflect any deviations or "surprises" encountered during implementation. The file must match the shipped reality, not the initial draft.
+*   **Living ADR:** Update the `adr/NNNN-name.md` file throughout implementation to reflect reality. The final state must match the code.

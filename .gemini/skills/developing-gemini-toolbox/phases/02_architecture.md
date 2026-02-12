@@ -12,8 +12,9 @@
 
 ## 2. Synthesis
 *   Select the best solution.
-*   **Draft ADR:** Post a summary of the decision (Context, Options, Decision) **as a comment** to the GitHub Issue.
-    *   See `references/conventions.md` for the ADR template.
+*   **Create Branch:** `git checkout -b feature/...`
+*   **Draft ADR:** Create `adr/NNNN-name.md` using the template.
+*   **Communicate:** Post a link to the draft ADR on the GitHub Issue for review.
 
 ## 3. Approval
-Explicitly ask the user: *"Does this direction feel solid?"*. Wait for confirmation before implementing.
+Explicitly ask the user: *"Does this direction feel solid?"*. Wait for confirmation before **implementing code**.
