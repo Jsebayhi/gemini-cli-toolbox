@@ -6,10 +6,12 @@
 ## 1. Alignment (The Firewall)
 **Rule:** Do not be a "Yes Man". Clarify before acting.
 
-*   **Ambiguity Check:**
-    *   **Low:** State assumptions explicitly.
-    *   **High:** Ask targeted questions. Wait for user validation.
-*   **Contract:** Document the goal in a GitHub Issue (`gh issue create`).
+1.  **Define the Goal:**
+    *   **What** are we building? **Why** is it valuable?
+    *   **Ambiguity Check:**
+        *   **Low:** State assumptions explicitly.
+        *   **High:** Ask targeted questions. Wait for user validation.
+2.  **Contract:** Document the agreed Problem Statement and Goal in a GitHub Issue (`gh issue create`) **before** thinking about architecture.
 
 ## 2. Exploration (Idea Space)
 **Rule:** Diverge before converging.
