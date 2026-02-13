@@ -56,3 +56,16 @@ def test_config_no_duplicates_isolation():
     assert "/projects" in roots
     assert roots.count("/cache/worktrees") == 1
     assert len(roots) == 2
+
+def test_config_validation_warning(capsys):
+    from unittest.mock import patch
+    from app.config import Config
+    
+    # We need to mock the environment and potentially reload or just call validate
+    # Since TAILSCALE_AUTH_KEY is a class attribute, we can patch it.
+    with patch.object(Config, 'TAILSCALE_AUTH_KEY', ''):
+        with patch('os.environ.get', return_value=None):
+            Config.validate()
+            captured = capsys.readouterr()
+            # print(f"Captured: {captured.out}")
+            assert "Warning: TAILSCALE_AUTH_KEY is not set." in captured.out

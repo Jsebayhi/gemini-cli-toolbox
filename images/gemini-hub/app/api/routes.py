@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from app.services.filesystem import FileSystemService
 from app.services.launcher import LauncherService
-from app.services.tailscale import TailscaleService
+from app.services.discovery import DiscoveryService as TailscaleService
 from app.services.session import SessionService
 
 api = Blueprint('api', __name__)
@@ -12,8 +12,9 @@ def resolve_local_url():
     if not hostname:
         return jsonify({"url": None})
     
-    ports = TailscaleService.get_local_ports()
-    return jsonify({"url": ports.get(hostname)})
+    containers = TailscaleService.get_local_containers()
+    url = next((c["local_url"] for c in containers if c["name"] == hostname), None)
+    return jsonify({"url": url})
 
 @api.route('/roots')
 def get_roots():
@@ -54,6 +55,7 @@ def launch():
     image_variant = data.get('image_variant', 'standard')
     docker_enabled = data.get('docker_enabled', True)
     ide_enabled = data.get('ide_enabled', True)
+    remote_enabled = data.get('remote_enabled', False)
     worktree_mode = data.get('worktree_mode', False)
     worktree_name = data.get('worktree_name')
     custom_image = data.get('custom_image')
@@ -63,7 +65,7 @@ def launch():
         return jsonify({"error": "Project path required"}), 400
         
     try:
-        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled, worktree_mode, worktree_name, ide_enabled, custom_image, docker_args)
+        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled, worktree_mode, worktree_name, ide_enabled, custom_image, docker_args, remote_enabled)
         if result["returncode"] == 0:
             result["status"] = "success"
             return jsonify(result)

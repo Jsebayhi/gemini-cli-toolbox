@@ -200,18 +200,15 @@ def test_launch_failure_subprocess(client):
 
 def test_resolve_local_url_success(client):
     """Test resolving a local URL for a valid hostname."""
-    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
-        mock_ports.return_value = {"gem-test": "http://localhost:1234"}
-        
+    mock_containers = [{"name": "gem-test", "local_url": "http://localhost:1234"}]
+    with patch("app.services.discovery.DiscoveryService.get_local_containers", return_value=mock_containers):
         response = client.get('/api/resolve-local-url?hostname=gem-test')
         assert response.status_code == 200
         assert response.json["url"] == "http://localhost:1234"
 
 def test_resolve_local_url_not_found(client):
     """Test resolving a hostname that has no local mapping."""
-    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
-        mock_ports.return_value = {}
-        
+    with patch("app.services.discovery.DiscoveryService.get_local_containers", return_value=[]):
         response = client.get('/api/resolve-local-url?hostname=gem-test')
         assert response.status_code == 200
         assert response.json["url"] is None
@@ -268,8 +265,118 @@ def test_stop_session_invalid_id(client):
 
 def test_stop_session_missing_param(client):
 
+
+
     """Test stop without session_id."""
+
+
 
     response = client.post('/api/sessions/stop', json={})
 
+
+
     assert response.status_code == 400
+
+
+
+
+
+
+
+def test_browse_permission_error(client):
+
+
+
+    with patch("app.services.filesystem.FileSystemService.browse", side_effect=PermissionError("Denied")):
+
+
+
+        res = client.get('/api/browse?path=/restricted')
+
+
+
+        assert res.status_code == 403
+
+
+
+
+
+
+
+def test_launch_permission_error(client):
+
+
+
+    with patch("app.services.launcher.LauncherService.launch", side_effect=PermissionError("Forbidden")):
+
+
+
+        res = client.post('/api/launch', json={"project_path": "/restricted"})
+
+
+
+        assert res.status_code == 403
+
+
+
+
+
+
+
+def test_launch_generic_exception(client):
+
+
+
+    with patch("app.services.launcher.LauncherService.launch", side_effect=Exception("Internal error")):
+
+
+
+        res = client.post('/api/launch', json={"project_path": "/some/path"})
+
+
+
+        assert res.status_code == 500
+
+
+
+
+
+
+
+def test_stop_session_permission_error(client):
+
+
+
+    with patch("app.services.session.SessionService.stop", side_effect=PermissionError("Cannot stop")):
+
+
+
+        res = client.post('/api/sessions/stop', json={"session_id": "gem-target"})
+
+
+
+        assert res.status_code == 403
+
+
+
+
+
+
+
+def test_stop_session_generic_exception(client):
+
+
+
+    with patch("app.services.session.SessionService.stop", side_effect=Exception("Failed")):
+
+
+
+        res = client.post('/api/sessions/stop', json={"session_id": "gem-target"})
+
+
+
+        assert res.status_code == 500
+
+
+
+

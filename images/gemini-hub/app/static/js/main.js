@@ -279,6 +279,19 @@ async function goToConfig() {
     
     // Init Worktree State
     toggleWorktreeInput();
+
+    // Init Remote Access Toggle based on Hub Mode
+    const remoteCheck = document.getElementById('remote-check');
+    const remoteHelper = document.getElementById('remote-helper-text');
+    if (window.HUB_MODE === 'vpn') {
+        remoteCheck.checked = true;
+        remoteHelper.innerText = "◈ Pre-selected (VPN Hub)";
+        remoteHelper.style.color = "var(--accent)";
+    } else {
+        remoteCheck.checked = false;
+        remoteHelper.innerText = "◈ Pre-selected (Local Hub)";
+        remoteHelper.style.color = "#ff9800";
+    }
     
     showStep('step-config');
 }
@@ -392,6 +405,7 @@ async function doLaunch() {
     const customImage = (imageVariant === 'custom') ? document.getElementById('custom-image-input').value : null;
     const dockerEnabled = document.getElementById('docker-check').checked;
     const ideEnabled = document.getElementById('ide-check').checked;
+    const remoteEnabled = document.getElementById('remote-check').checked;
     const worktreeMode = document.getElementById('worktree-check').checked;
     const worktreeName = document.getElementById('worktree-name').value;
     const dockerArgs = document.getElementById('docker-args-input').value;
@@ -418,6 +432,7 @@ async function doLaunch() {
                 image_variant: imageVariant,
                 docker_enabled: dockerEnabled,
                 ide_enabled: ideEnabled,
+                remote_enabled: remoteEnabled,
                 worktree_mode: worktreeMode,
                 worktree_name: worktreeName,
                 custom_image: customImage,

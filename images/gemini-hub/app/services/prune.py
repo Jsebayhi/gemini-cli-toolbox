@@ -35,6 +35,35 @@ class PruneService:
             time.sleep(3600)  # Sleep for 1 hour
 
     @staticmethod
+    def _get_age_seconds(path: str) -> float:
+        """Returns the age of a path in seconds."""
+        try:
+            mtime = os.path.getmtime(path)
+            return time.time() - mtime
+        except Exception:
+            return 0
+
+    @staticmethod
+    def _get_worktree_info(path: str) -> tuple[int, str]:
+        """Returns (expiry_seconds, type_label) for a worktree."""
+        try:
+            result = subprocess.run(
+                ["git", "-C", path, "symbolic-ref", "-q", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            
+            if result.returncode == 0:
+                return Config.WORKTREE_EXPIRY_BRANCH * 86400, "branch"
+            elif result.returncode == 1:
+                return Config.WORKTREE_EXPIRY_HEADLESS * 86400, "headless"
+            else:
+                return Config.WORKTREE_EXPIRY_ORPHAN * 86400, "ambiguous/orphan"
+        except Exception:
+            return Config.WORKTREE_EXPIRY_ORPHAN * 86400, "error/fallback"
+
+    @staticmethod
     def prune():
         """Identify and remove stale worktree directories."""
         root = Config.WORKTREE_ROOT
@@ -42,12 +71,6 @@ class PruneService:
             logger.debug(f"Worktree root {root} does not exist. Skipping prune.")
             return
 
-        expiry_headless_sec = Config.WORKTREE_EXPIRY_HEADLESS * 86400
-        expiry_branch_sec = Config.WORKTREE_EXPIRY_BRANCH * 86400
-        expiry_orphan_sec = Config.WORKTREE_EXPIRY_ORPHAN * 86400
-        
-        now = time.time()
-        
         pruned_count = 0
         
         # Structure: root/{project}/{worktree}
@@ -61,37 +84,12 @@ class PruneService:
                 if not os.path.isdir(worktree_path):
                     continue
                 
-                # Determine state using Git
-                # Branch: returns 0, Headless: returns 1, Orphan/Error: returns other
-                try:
-                    result = subprocess.run(
-                        ["git", "-C", worktree_path, "symbolic-ref", "-q", "HEAD"],
-                        capture_output=True,
-                        text=True
-                    )
-                    
-                    if result.returncode == 0:
-                        expiry_seconds = expiry_branch_sec
-                        type_label = "branch"
-                    elif result.returncode == 1:
-                        expiry_seconds = expiry_headless_sec
-                        type_label = "headless"
-                    else:
-                        # Safety Default: dedicated orphan expiry
-                        expiry_seconds = expiry_orphan_sec
-                        type_label = "ambiguous/orphan"
-                except Exception:
-                    expiry_seconds = expiry_orphan_sec
-                    type_label = "error/fallback"
-                
-                # Check directory mtime
-                mtime = os.path.getmtime(worktree_path)
-                age = now - mtime
+                expiry_seconds, type_label = PruneService._get_worktree_info(worktree_path)
+                age = PruneService._get_age_seconds(worktree_path)
                 
                 if age > expiry_seconds:
                     logger.info(f"Pruning stale {type_label} worktree: {worktree_path} (Age: {int(age/86400)} days)")
                     try:
-                        # Recursive removal of the directory
                         shutil.rmtree(worktree_path)
                         pruned_count += 1
                     except Exception as e:

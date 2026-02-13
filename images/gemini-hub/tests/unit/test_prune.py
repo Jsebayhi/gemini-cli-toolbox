@@ -1,5 +1,6 @@
 import os
 import time
+from unittest.mock import MagicMock
 from app.services.prune import PruneService
 from app.config import Config
 
@@ -91,5 +92,28 @@ def test_prune_disabled(mocker):
     
     # Verify
     mock_thread.assert_not_called()
+
+def test_prune_enabled(mocker):
+    Config.HUB_WORKTREE_PRUNE_ENABLED = True
+    mock_thread = mocker.patch("threading.Thread")
+    PruneService.start()
+    mock_thread.assert_called_once()
+
+def test_get_age_seconds_missing(tmp_path):
+    # Test with non-existent path
+    assert PruneService._get_age_seconds(tmp_path / "nonexistent") == 0
+
+def test_get_worktree_info_failures(tmp_path, mocker):
+    (tmp_path / ".git").touch()
+    
+    # 1. git symbolic-ref failure
+    mocker.patch("subprocess.run", return_value=MagicMock(returncode=2))
+    expiry, label = PruneService._get_worktree_info(tmp_path)
+    assert label == "ambiguous/orphan"
+    
+    # 2. generic exception
+    mocker.patch("subprocess.run", side_effect=Exception("Boom"))
+    expiry, label = PruneService._get_worktree_info(tmp_path)
+    assert label == "error/fallback"
 
 

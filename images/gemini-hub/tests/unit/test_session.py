@@ -24,3 +24,16 @@ def test_stop_error(mock_run):
     
     assert result["status"] == "error"
     assert "error message" in result["error"]
+
+def test_stop_timeout():
+    import subprocess
+    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd=["docker"], timeout=30)):
+        result = SessionService.stop("gem-session-id")
+        assert result["status"] == "error"
+        assert "timed out" in result["error"].lower()
+
+def test_stop_exception():
+    with patch("subprocess.run", side_effect=RuntimeError("Unexpected")):
+        result = SessionService.stop("gem-session-id")
+        assert result["status"] == "error"
+        assert "Unexpected" in result["error"]

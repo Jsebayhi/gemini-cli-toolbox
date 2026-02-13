@@ -12,6 +12,7 @@ class Config:
     # Host Environment
     HOST_CONFIG_ROOT = os.environ.get("HOST_CONFIG_ROOT", "")
     HOST_HOME = os.environ.get("HOST_HOME", "")
+    HUB_MODE = os.environ.get("HUB_MODE", "vpn").lower()
     
     # Features
     HUB_AUTO_SHUTDOWN = os.environ.get("HUB_AUTO_SHUTDOWN", "").lower() in ("1", "true")
