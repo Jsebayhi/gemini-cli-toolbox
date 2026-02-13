@@ -217,7 +217,59 @@ def test_resolve_local_url_not_found(client):
         assert response.json["url"] is None
 
 def test_resolve_local_url_missing_param(client):
+
     """Test resolving without hostname parameter."""
+
     response = client.get('/api/resolve-local-url')
+
     assert response.status_code == 200
+
     assert response.json["url"] is None
+
+
+
+# --- Session Lifecycle Tests ---
+
+
+
+def test_stop_session_success(client):
+
+    """Test successful session stop."""
+
+    with patch("subprocess.run") as mock_run:
+
+        mock_run.return_value.returncode = 0
+
+        mock_run.return_value.stdout = "gem-test"
+
+        
+
+        response = client.post('/api/sessions/stop', json={"session_id": "gem-test"})
+
+        
+
+        assert response.status_code == 200
+
+        assert response.json["status"] == "success"
+
+        mock_run.assert_called_with(["docker", "stop", "gem-test"], capture_output=True, text=True, timeout=30)
+
+
+
+def test_stop_session_invalid_id(client):
+
+    """Test stop rejection for invalid ID."""
+
+    response = client.post('/api/sessions/stop', json={"session_id": "not-gem-id"})
+
+    assert response.status_code == 403
+
+
+
+def test_stop_session_missing_param(client):
+
+    """Test stop without session_id."""
+
+    response = client.post('/api/sessions/stop', json={})
+
+    assert response.status_code == 400

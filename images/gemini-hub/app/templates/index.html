@@ -27,7 +27,7 @@
 
         {% if machines %}
             {% for m in machines %}
-            <div class="card {% if not m.online %}hidden{% endif %}" data-project="{{ m.project }}" data-type="{{ m.type }}" data-online="{{ 'true' if m.online else 'false' }}">
+            <div class="card {% if not m.online %}hidden{% endif %}" data-id="{{ m.name }}" data-project="{{ m.project }}" data-type="{{ m.type }}" data-online="{{ 'true' if m.online else 'false' }}">
                 <a href="http://{{ m.ip }}:3000" class="card-main-link" target="_blank">
                     <div class="info">
                         <span class="name">{{ m.project }}</span>
@@ -42,6 +42,9 @@
                     {% if m.local_url %}
                     <!-- Hidden by default. JS will show if user is on localhost. -->
                     <a href="{{ m.local_url }}" target="_blank" class="local-badge hidden" data-local-url="{{ m.local_url }}" title="Open Localhost">LOCAL</a>
+                    {% endif %}
+                    {% if m.online %}
+                    <button class="stop-btn" onclick="stopSession('{{ m.name }}')" title="Stop Session">Stop</button>
                     {% endif %}
                     <div class="status {% if not m.online %}offline{% endif %}"></div>
                 </div>

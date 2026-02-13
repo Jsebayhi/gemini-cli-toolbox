@@ -159,3 +159,18 @@ You will be placed exactly where you left off.
 gemini-toolbox --no-tmux
 ```
 *Note: Sessions started with `--no-tmux` cannot be reconnected to if the terminal crashes.*
+
+---
+
+## 13. Lifecycle Management (Stop)
+**The Scenario:** You've finished your work or realized a background bot is going in the wrong direction, and you want to clean up resources without diving into Docker commands.
+
+**The Solution:** Use the `stop` command.
+```bash
+# Stop a specific session by ID
+gemini-toolbox stop gem-my-project-geminicli-abc12345
+
+# Stop a session by project name (works if only one session for that project is active)
+gemini-toolbox stop my-project
+```
+If multiple sessions are running for the same project, the toolbox will safely refuse to stop them and list the active IDs for you to choose from. You can also stop any session with a single click from the **Gemini Hub** dashboard.

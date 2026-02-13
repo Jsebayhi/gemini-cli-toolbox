@@ -93,6 +93,7 @@ Want to go deeper? Follow these guides to master the Toolbox:
 | Goal | Command |
 | :--- | :--- |
 | **Simple Chat** | `gemini-toolbox` |
+| **Stop Session** | `gemini-toolbox stop [id\|project]` |
 | **One-shot Task** | `gemini-toolbox "Fix the linting errors in src/"` |
 | **Isolated Exploration** | `gemini-toolbox --worktree` |
 | **Named Worktree** | `gemini-toolbox --worktree --name feat/auth` |

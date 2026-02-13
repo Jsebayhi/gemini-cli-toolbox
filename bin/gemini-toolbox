@@ -50,6 +50,7 @@ show_help() {
     echo "Commands:"
     echo "  update               Force update the Docker image from the registry"
     echo "  stop-hub             Stop the background Gemini Hub service"
+    echo "  stop [id|project]    Stop session (defaults to current project)"
     echo "  connect <id>         Attach to a running background session"
     echo ""
     echo "Examples:"
@@ -288,6 +289,16 @@ while [[ $# -gt 0 ]]; do
     --help)        show_help; exit 0 ;;
     update)        FORCE_UPDATE=true; shift ;;
     stop-hub)      STOP_HUB=true; shift ;;
+    stop)
+        STOP_COMMAND_EXECUTED=true
+        # Only capture $2 if it doesn't look like another flag
+        if [[ -n "$2" && "$2" != --* ]]; then
+            STOP_SESSION="$2"
+            shift; shift
+        else
+            shift
+        fi
+        ;;
     connect)       CONNECT_ID="$2"; shift; shift ;;
     --)            shift; ARGS+=("$@"); break ;;
     *)             ARGS+=("$1");       shift ;;
@@ -393,6 +404,40 @@ if [ "$STOP_HUB" = true ]; then
          echo "Error: gemini-hub script not found."
          exit 1
     fi
+fi
+
+# 2.4.1 Handle Session Stop
+if [ "$STOP_COMMAND_EXECUTED" = true ]; then
+    # Default to current project if no session ID/name was provided
+    STOP_SESSION="${STOP_SESSION:-$PROJECT_NAME}"
+
+    # 1. Try exact match first
+    if docker ps --format '{{.Names}}' | grep -q "^${STOP_SESSION}$"; then
+        MATCHES="${STOP_SESSION}"
+    else
+        # 2. Try matching by project name (gem-{name}-*)
+        MATCHES=$(docker ps --format '{{.Names}}' --filter "name=gem-${STOP_SESSION}-" | grep -E "^gem-${STOP_SESSION}-" || true)
+    fi
+
+    if [ -z "$MATCHES" ]; then
+        echo "Error: No active sessions found matching '$STOP_SESSION'."
+        exit 1
+    fi
+
+    # 3. Count matches
+    MATCH_COUNT=$(echo "$MATCHES" | wc -l)
+    if [ "$MATCH_COUNT" -gt 1 ]; then
+        echo "Error: Multiple sessions found for project '$STOP_SESSION':"
+        # shellcheck disable=SC2001
+        echo "$MATCHES" | sed 's/^/   - /'
+        echo ""
+        echo "Please specify a full session ID to stop a specific one."
+        exit 1
+    fi
+
+    echo ">> Stopping session: $MATCHES"
+    docker stop "$MATCHES"
+    exit $?
 fi
 
 # 2.5 Handle Connect

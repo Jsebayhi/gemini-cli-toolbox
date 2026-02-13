@@ -4,7 +4,7 @@ _gemini_toolbox_completions() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    commands="update stop-hub connect"
+    commands="update stop-hub stop connect"
     opts="--preview --image --no-ide --no-docker --config --profile --project --remote --docker-args --volume --worktree --bash --no-tmux --detached --help -v"
 
     case "${prev}" in
@@ -18,7 +18,7 @@ _gemini_toolbox_completions() {
             COMPREPLY=( $(compgen -f -- "${cur}") )
             return 0
             ;;
-        connect)
+        connect|stop)
             # Complete running gemini container names if docker is available
             if command -v docker >/dev/null 2>&1; then
                 local running_containers=$(docker ps --format "{{.Names}}" --filter "name=gem-" 2>/dev/null)

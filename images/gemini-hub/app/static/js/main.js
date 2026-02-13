@@ -89,6 +89,45 @@ function filterList() {
     });
 }
 
+async function stopSession(sessionId) {
+    if (!confirm(`Are you sure you want to stop session ${sessionId}?`)) {
+        return;
+    }
+
+    const btn = document.querySelector(`.card[data-id="${sessionId}"] .stop-btn`);
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "...";
+
+    try {
+        const res = await fetch('/api/sessions/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+        });
+        const result = await res.json();
+
+        if (result.status === 'success') {
+            // Remove the card from UI
+            const card = document.querySelector(`.card[data-id="${sessionId}"]`);
+            card.style.opacity = "0.5";
+            card.style.pointerEvents = "none";
+            btn.innerHTML = "Stopped";
+            
+            // Reload after a short delay to refresh the list from Tailscale
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            alert("Error: " + (result.error || "Failed to stop session"));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (e) {
+        alert("Network Error: " + e.toString());
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 // --- Wizard Logic ---
 
 function openWizard() {

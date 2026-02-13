@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from app.services.filesystem import FileSystemService
 from app.services.launcher import LauncherService
 from app.services.tailscale import TailscaleService
+from app.services.session import SessionService
 
 api = Blueprint('api', __name__)
 
@@ -70,6 +71,25 @@ def launch():
             result["status"] = "error"
             # Map stderr to error field for frontend compatibility
             result["error"] = result["stderr"] or result["stdout"]
+            return jsonify(result), 500
+    except PermissionError as e:
+        return jsonify({"status": "error", "error": str(e)}), 403
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+@api.route('/sessions/stop', methods=['POST'])
+def stop_session():
+    data = request.json or {}
+    session_id = data.get('session_id')
+    
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+        
+    try:
+        result = SessionService.stop(session_id)
+        if result["status"] == "success":
+            return jsonify(result)
+        else:
             return jsonify(result), 500
     except PermissionError as e:
         return jsonify({"status": "error", "error": str(e)}), 403
