@@ -26,6 +26,10 @@ class Config:
     # We will assume it is mounted at /host-cache for now, or just use the absolute host path if we can.
     # Actually, the Hub needs to know WHERE the worktrees are on the container's FS.
     WORKTREE_ROOT = os.environ.get("GEMINI_WORKTREE_ROOT", "/home/gemini/.cache/gemini-toolbox/worktrees")
+
+    # Initialization logic: Ensure worktree root is always in scannable roots
+    if WORKTREE_ROOT and WORKTREE_ROOT not in HUB_ROOTS:
+        HUB_ROOTS.append(WORKTREE_ROOT)
     
     @classmethod
     def validate(cls):
