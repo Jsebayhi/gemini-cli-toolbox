@@ -14,8 +14,19 @@ _gemini_hub_completions() {
             return 0
             ;;
         --config-root)
-            # Suggest standard locations
-            local paths="${HOME}/.gemini/configs ${HOME}/.gemini-profiles"
+            # Suggest from standard config and profile locations
+            local xdg_conf_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+            local search_dirs=(
+                "${xdg_conf_home}/gemini-toolbox/profiles"
+                "${xdg_conf_home}/gemini-toolbox/configs"
+                "${HOME}/.gemini-profiles"
+            )
+            local paths=""
+            for dir in "${search_dirs[@]}"; do
+                if [ -d "$dir" ]; then
+                    paths="${paths} ${dir}"
+                fi
+            done
             COMPREPLY=( $(compgen -W "${paths}" -- "${cur}") )
             # Also allow any directory
             COMPREPLY+=( $(compgen -d -- "${cur}") )

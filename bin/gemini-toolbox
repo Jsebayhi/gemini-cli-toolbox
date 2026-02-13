@@ -316,25 +316,6 @@ fi
 # 2. Setup Directories
 # HOST_CONF_DIR might be passed as relative or absolute.
 # We resolve it to absolute to ensure Docker mounts work correctly.
-
-# Profile Resolution Logic:
-# If user passed --profile and the path does not exist locally,
-# we check standard locations.
-if [ "$ENABLE_PROFILE_MODE" = true ] && [ ! -d "$HOST_CONF_DIR" ]; then
-    XDG_CONF_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-    SEARCH_LOCS=(
-        "${XDG_CONF_HOME}/gemini-toolbox/profiles/${HOST_CONF_DIR}"
-        "${HOME}/.gemini-profiles/${HOST_CONF_DIR}"
-    )
-    for loc in "${SEARCH_LOCS[@]}"; do
-        if [ -d "$loc" ]; then
-            # echo ">> Profile found in standard location: $loc"
-            HOST_CONF_DIR="$loc"
-            break
-        fi
-    done
-fi
-
 HOST_CONF_DIR=$(realpath -m "$HOST_CONF_DIR")
 
 # Profile Root Logic (Post-Parse)

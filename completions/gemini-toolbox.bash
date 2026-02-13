@@ -8,13 +8,18 @@ _gemini_toolbox_completions() {
     opts="--preview --image --no-ide --no-docker --config --profile --project --remote --docker-args --volume --worktree --name --bash --no-tmux --detached --help -v"
 
     case "${prev}" in
-        --config|--project)
+        --config)
+            # Directory completion only (no guessing)
+            COMPREPLY=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --project)
             # Directory completion
             COMPREPLY=( $(compgen -d -- "${cur}") )
             return 0
             ;;
         --profile)
-            # Suggest from standard locations
+            # Suggest from standard profile locations
             local xdg_conf_home="${XDG_CONFIG_HOME:-$HOME/.config}"
             local search_dirs=(
                 "${xdg_conf_home}/gemini-toolbox/profiles"
@@ -27,7 +32,7 @@ _gemini_toolbox_completions() {
                 fi
             done
             COMPREPLY=( $(compgen -W "${profiles}" -- "${cur}") )
-            # Always allow directory completion as fallback/override
+            # Always allow local directory completion
             COMPREPLY+=( $(compgen -d -- "${cur}") )
             return 0
             ;;

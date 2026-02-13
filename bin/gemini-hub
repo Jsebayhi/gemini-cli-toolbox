@@ -22,23 +22,7 @@ PORT="8888"
 # Auth Key
 AUTH_KEY="${GEMINI_REMOTE_KEY:-}"
 WORKSPACE_ROOTS=()
-CONFIG_ROOT="${HOME}/.gemini/configs"
-
-# Auto-detect config root fallback (ordered by preference)
-XDG_CONF_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-SEARCH_PATHS=(
-    "${XDG_CONF_HOME}/gemini-toolbox/profiles"
-    "${XDG_CONF_HOME}/gemini-toolbox/configs"
-    "${HOME}/.gemini/configs"
-    "${HOME}/.gemini-profiles"
-)
-
-for path in "${SEARCH_PATHS[@]}"; do
-    if [ -d "$path" ]; then
-        CONFIG_ROOT="$path"
-        break
-    fi
-done
+CONFIG_ROOT=""
 
 # 1. Pre-scan for Override Image
 OVERRIDE_IMAGE=""
@@ -145,10 +129,14 @@ if [ -n "$(docker ps -q -f name="^/${CONTAINER_NAME}$")" ]; then
     echo ">> Hub is already running."
     
     # 1. Introspect existing configuration
-    EXISTING_ROOTS_STR=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER_NAME" | grep "^HUB_ROOTS=" | cut -d= -f2-)
+    EXISTING_ENV=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER_NAME")
+    
+    EXISTING_ROOTS_STR=$(echo "$EXISTING_ENV" | grep "^HUB_ROOTS=" | cut -d= -f2-)
     IFS=':' read -ra EXISTING_ROOTS <<< "$EXISTING_ROOTS_STR"
     
-    # 2. Check for missing roots
+    EXISTING_CONFIG_ROOT=$(echo "$EXISTING_ENV" | grep "^HOST_CONFIG_ROOT=" | cut -d= -f2-)
+
+    # 2. Check for missing roots or config root mismatch
     MISSING_ROOTS=()
     for new_root in "${WORKSPACE_ROOTS[@]}"; do
         ABS_NEW=$(realpath -m "$new_root")
@@ -163,19 +151,33 @@ if [ -n "$(docker ps -q -f name="^/${CONTAINER_NAME}$")" ]; then
             MISSING_ROOTS+=("$ABS_NEW")
         fi
     done
+
+    RESTART_REASON=""
+    if [ ${#MISSING_ROOTS[@]} -gt 0 ]; then
+        RESTART_REASON="Workspaces are NOT covered."
+    fi
+
+    if [ -n "$CONFIG_ROOT" ]; then
+        ABS_CONFIG_ROOT=$(realpath -m "$CONFIG_ROOT")
+        if [ "$ABS_CONFIG_ROOT" != "$EXISTING_CONFIG_ROOT" ]; then
+            RESTART_REASON="${RESTART_REASON:+$RESTART_REASON }Config root mismatch."
+        fi
+    fi
     
     # 3. Decision
-    if [ ${#MISSING_ROOTS[@]} -eq 0 ]; then
-        echo ">> Active Hub already covers all requested workspaces."
+    if [ -z "$RESTART_REASON" ]; then
+        echo ">> Active Hub already covers all requested workspaces and config."
         echo ">> Hub URL: http://localhost:$PORT"
         exit 0
     else
-        echo ">> Requested workspaces are NOT covered by the active Hub:"
-        for r in "${MISSING_ROOTS[@]}"; do echo "   - $r"; done
+        echo ">> Hub needs restart: $RESTART_REASON"
+        if [ ${#MISSING_ROOTS[@]} -gt 0 ]; then
+            for r in "${MISSING_ROOTS[@]}"; do echo "   - $r"; done
+        fi
         
         if [ -t 0 ]; then
             echo ""
-            read -p ">> Restart Hub to include them? (Merge/Replace/Cancel) [M/r/c]: " -r RESPONSE
+            read -p ">> Restart Hub? (Merge/Replace/Cancel) [M/r/c]: " -r RESPONSE
             RESPONSE=${RESPONSE:-M}
             if [[ "$RESPONSE" =~ ^[Mm]$ ]]; then
                 # MERGE: Add existing roots to the request list (deduplication happens in mount loop)
@@ -216,9 +218,12 @@ done
 ROOT_PATHS_LIST=${ROOT_PATHS_LIST%:}
 
 # 2. Mount Config Root
-ABS_CONFIG_ROOT=$(realpath -m "$CONFIG_ROOT")
-mkdir -p "$ABS_CONFIG_ROOT"
-EXTRA_MOUNTS+=("-v" "${ABS_CONFIG_ROOT}:${ABS_CONFIG_ROOT}")
+if [ -n "$CONFIG_ROOT" ]; then
+    ABS_CONFIG_ROOT=$(realpath -m "$CONFIG_ROOT")
+    mkdir -p "$ABS_CONFIG_ROOT"
+    EXTRA_MOUNTS+=("-v" "${ABS_CONFIG_ROOT}:${ABS_CONFIG_ROOT}")
+    ENV_VARS+=("--env" "HOST_CONFIG_ROOT=${ABS_CONFIG_ROOT}")
+fi
 
 # 2.1 Mount Worktree Cache (for Cleanup)
 WORKTREE_CACHE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees}"
