@@ -7,7 +7,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <h1>Gemini Workspace Hub</h1>
+    <div class="header-banner">
+        <h1>Gemini Workspace Hub</h1>
+        <div class="hub-mode-badge {{ hub_mode }}" title="Current Hub operating mode">
+            MODE: {{ hub_mode | upper }}
+        </div>
+    </div>
     
     <div class="container">
         <button class="refresh-btn action-btn" onclick="openWizard()">+ New Session</button>
@@ -66,6 +71,10 @@
             <h2>Launch Session</h2>
             <button class="close-btn" onclick="closeWizard()">×</button>
         </div>
+
+        <script>
+            window.HUB_MODE = "{{ hub_mode }}";
+        </script>
 
         <!-- Step 1: Select Root -->
         <div id="step-roots" class="wizard-step active">
@@ -127,6 +136,14 @@
                             <label class="filter-checkbox" style="font-size:0.8rem; padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 4px; display: flex; align-items: center; cursor: pointer;">
                                 <input type="checkbox" id="ide-check" checked> VS Code Integration
                             </label>
+                            <div style="margin-top: 5px;">
+                                <label class="filter-checkbox" style="font-size:0.8rem; padding: 6px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);">
+                                    <input type="checkbox" id="remote-check"> Remote Access (VPN)
+                                </label>
+                                <div id="remote-helper-text" style="font-size: 0.65rem; color: var(--accent); margin-top: 3px; padding-left: 5px;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -9,18 +9,19 @@ tailscaled --tun=userspace-networking --statedir=/var/lib/tailscale &
 sleep 3
 
 # 2. Authenticate
-if [ -z "$TAILSCALE_AUTH_KEY" ]; then
-    echo "Error: TAILSCALE_AUTH_KEY is missing."
-    exit 1
+if [ -n "$TAILSCALE_AUTH_KEY" ]; then
+    echo ">> Authenticating with Tailscale..."
+    # Fixed hostname for consistent DNS (http://gemini-hub:8888)
+    # --force-reauth: Aggressively reclaim the 'gemini-hub' name if state was lost
+    HOSTNAME="gemini-hub"
+    tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
+    echo ">> Gemini Hub Online: http://$HOSTNAME:8888 (VPN)"
+else
+    echo ">> No TAILSCALE_AUTH_KEY provided. Skipping VPN authentication."
+    echo ">> Gemini Hub running in LOCAL mode."
 fi
 
-echo ">> Authenticating with Tailscale..."
-# Fixed hostname for consistent DNS (http://gemini-hub:8888)
-# --force-reauth: Aggressively reclaim the 'gemini-hub' name if state was lost
-HOSTNAME="gemini-hub"
-tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
-
-echo ">> Gemini Hub Online: http://$HOSTNAME:8888"
+echo ">> Gemini Hub accessible at http://localhost:8888"
 
 # 3. Start Flask App
 exec python run.py

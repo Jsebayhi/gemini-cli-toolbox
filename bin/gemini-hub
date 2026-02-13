@@ -68,8 +68,9 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -d, --detach          Start the Hub in the background"
+    echo "  --local               Run in localhost mode (No VPN, even if key is present)"
     echo "  --image <name>        Override the Docker image to use"
-    echo "  --key <key>           Tailscale Auth Key (Required if GEMINI_REMOTE_KEY is not set)"
+    echo "  --key <key>           Tailscale Auth Key (Optional in --local mode)"
     echo "  --auto-shutdown       Enable 60s inactivity timeout (Default: Disabled)"
     echo "  --no-worktree-prune   Disable background worktree cleanup service"
     echo "  --workspace <path>    Add a host directory to the list of scannable project roots"
@@ -90,9 +91,11 @@ show_help() {
 MODE="-it"
 AUTO_SHUTDOWN=false
 PRUNE_ENABLED=true
+LOCAL_MODE=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     -d|--detach) MODE="-d"; shift ;;
+    --local)     LOCAL_MODE=true; shift ;;
     --image)     OVERRIDE_IMAGE="$2"; shift; shift ;;
     --key)       AUTH_KEY="$2"; shift; shift ;;
     --auto-shutdown) AUTO_SHUTDOWN=true; shift ;;
@@ -109,16 +112,20 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$AUTH_KEY" ]; then
-    echo "Error: TAILSCALE_KEY is required for the Hub."
-    echo "Run 'gemini-hub --help' for usage instructions."
-    exit 1
+if [ "$LOCAL_MODE" = false ] && [ -z "$AUTH_KEY" ]; then
+    echo ">> Warning: No Tailscale key provided. Falling back to --local mode."
+    LOCAL_MODE=true
+fi
+
+HUB_MODE="vpn"
+if [ "$LOCAL_MODE" = true ]; then
+    HUB_MODE="local"
 fi
 
 # Prepare Docker Args for Mounts
 EXTRA_MOUNTS=()
 ROOT_PATHS_LIST=""
-ENV_VARS=()
+ENV_VARS=("--env" "HUB_MODE=${HUB_MODE}")
 
 if [ "$AUTO_SHUTDOWN" = true ]; then
     ENV_VARS+=("--env" "HUB_AUTO_SHUTDOWN=1")

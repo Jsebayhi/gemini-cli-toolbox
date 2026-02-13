@@ -8,8 +8,8 @@ def test_home_route(client):
     ]
 
     # Patch the service class directly
-    with patch("app.services.tailscale.TailscaleService.get_status", return_value={}) as mock_status, \
-         patch("app.services.tailscale.TailscaleService.parse_peers", return_value=mock_machines) as mock_parse:
+    with patch("app.services.discovery.DiscoveryService.get_status", return_value={}) as mock_status, \
+         patch("app.services.discovery.DiscoveryService.parse_peers", return_value=mock_machines) as mock_parse:
     
         response = client.get('/')
         
@@ -22,6 +22,7 @@ def test_home_route(client):
         
         # Verify template rendering
         assert "Gemini Workspace Hub" in content
+        assert "MODE: VPN" in content
         # The template displays the project name, not the raw hostname
         assert "proj1" in content
         assert "bash" in content

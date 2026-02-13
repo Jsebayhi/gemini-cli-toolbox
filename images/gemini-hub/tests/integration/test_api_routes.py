@@ -200,18 +200,15 @@ def test_launch_failure_subprocess(client):
 
 def test_resolve_local_url_success(client):
     """Test resolving a local URL for a valid hostname."""
-    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
-        mock_ports.return_value = {"gem-test": "http://localhost:1234"}
-        
+    mock_containers = [{"name": "gem-test", "local_url": "http://localhost:1234"}]
+    with patch("app.services.discovery.DiscoveryService.get_local_containers", return_value=mock_containers):
         response = client.get('/api/resolve-local-url?hostname=gem-test')
         assert response.status_code == 200
         assert response.json["url"] == "http://localhost:1234"
 
 def test_resolve_local_url_not_found(client):
     """Test resolving a hostname that has no local mapping."""
-    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
-        mock_ports.return_value = {}
-        
+    with patch("app.services.discovery.DiscoveryService.get_local_containers", return_value=[]):
         response = client.get('/api/resolve-local-url?hostname=gem-test')
         assert response.status_code == 200
         assert response.json["url"] is None

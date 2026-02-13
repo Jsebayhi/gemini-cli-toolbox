@@ -41,6 +41,7 @@ show_help() {
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"
+    echo "  --local              Launch session in localhost mode (Suppresses VPN warnings/prompts)"
     echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be name or task."
     echo "  --name <str>         Explicit name for the worktree folder and branch."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
@@ -244,6 +245,7 @@ fi
 # 1. Parse Arguments
 ARGS=()
 REMOTE_MODE=false
+LOCAL_ONLY_MODE=false
 NO_TMUX_FLAG=false
 TAILSCALE_KEY="${GEMINI_REMOTE_KEY:-}"
 ENABLE_DOCKER=true
@@ -260,6 +262,7 @@ while [[ $# -gt 0 ]]; do
     --profile)     HOST_CONF_DIR="$2"; ENABLE_PROFILE_MODE=true; shift; shift ;;
     --project)     PROJECT_DIR="$2";   shift; shift ;;
     --bash)        USE_BASH=true;      shift ;;
+    --local)       LOCAL_ONLY_MODE=true; shift ;;
     --detached)    DETACHED_MODE=true; shift ;;
     --remote)      
         REMOTE_MODE=true
@@ -505,7 +508,12 @@ if [ "$REMOTE_MODE" = true ]; then
              echo ">> Auto-starting Gemini Hub..."
              echo "   (Stop with: gemini-toolbox stop-hub)"
              
-             HUB_ARGS=("-d" "--key" "$TAILSCALE_KEY" "--workspace" "$PROJECT_DIR")
+             HUB_ARGS=("-d" "--workspace" "$PROJECT_DIR")
+             if [ -n "$TAILSCALE_KEY" ] && [ "$LOCAL_ONLY_MODE" = false ]; then
+                 HUB_ARGS+=("--key" "$TAILSCALE_KEY")
+             else
+                 HUB_ARGS+=("--local")
+             fi
              
              # If running in Profile Mode, ask user if they want to expose the parent directory to the Hub
              if [ "$ENABLE_PROFILE_MODE" = true ] && [ -n "$PROFILE_ROOT" ]; then
