@@ -55,6 +55,10 @@ The Hub uses `--net=host` to ensure reliable peer discovery and MagicDNS resolut
 ### Auto-Shutdown
 The Hub will automatically terminate after **60 seconds** of inactivity (when no hostnames starting with `gem-` are detected in the Tailnet). This is intentional to save resources and VPN license seats.
 
+### Automatic Worktree Discovery
+*   **Concept:** To ensure ephemeral worktrees are scannable without manual configuration, the Hub automatically includes `GEMINI_WORKTREE_ROOT` in its `HUB_ROOTS` list.
+*   **Benefit:** Users can browse and launch sessions from the Hub's exploration cache by default.
+
 ### Worktree Pruning
 The Hub runs a background `PruneService` to manage the ephemeral worktree cache.
 *   **Toggle:** `HUB_WORKTREE_PRUNE_ENABLED` (Default: `true`).
