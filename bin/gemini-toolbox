@@ -37,6 +37,7 @@ show_help() {
     echo "  --no-ide             Disable VS Code integration (bypass companion extension)"
     echo "  --no-docker          Disable Docker-out-of-Docker integration (Sandbox Mode)"
     echo "  --config <path>      Path to configuration directory (default: ~/.gemini)"
+    echo "  --profile <path>     Use a configuration profile (isolated .gemini + extra-args)"
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"

@@ -14,7 +14,7 @@ _gemini_toolbox_completions() {
             return 0
             ;;
         --profile)
-            # Suggest from ~/.gemini-profiles if it exists, otherwise standard directory completion
+            # Suggest from ~/.gemini-profiles if it exists
             local profile_dir="${HOME}/.gemini-profiles"
             if [ -d "$profile_dir" ]; then
                 local profiles
@@ -23,6 +23,15 @@ _gemini_toolbox_completions() {
             fi
             # Always allow directory completion as fallback/override
             COMPREPLY+=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --image)
+            # Suggest local gemini-cli-toolbox images
+            if command -v docker >/dev/null 2>&1; then
+                local images
+                images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "gemini-cli-toolbox" | grep -v "hub")
+                COMPREPLY=( $(compgen -W "${images}" -- "${cur}") )
+            fi
             return 0
             ;;
         --volume|-v)
