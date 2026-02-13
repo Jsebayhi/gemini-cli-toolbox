@@ -218,6 +218,7 @@ function goBackToRoots() { fetchRoots(); }
 function goToBrowse() { showStep('step-browse'); }
 
 async function goToConfig() {
+    document.getElementById('config-project-path').innerText = currentPath;
     const res = await fetch('/api/configs');
     const data = await res.json();
     const select = document.getElementById('config-select');
