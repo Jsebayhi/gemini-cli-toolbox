@@ -26,10 +26,11 @@ The Hub container now installs the full `tailscale` package (Daemon + CLI).
 *   **Authentication:** It requires a `TAILSCALE_AUTH_KEY` (passed via argument or env var).
 *   **Result:** The Hub joins the mesh as a distinct device (e.g., `gemini-hub-a1b2`).
 
-### 2. Host Networking
-We switched the container networking mode from `bridge` to `host`.
-*   **Why:** Tailscale's userspace networking needs direct access to the host's network interfaces to establish peer-to-peer connections reliably and resolve MagicDNS names.
-*   **Trade-off:** We lose port isolation (port 8888 is bound directly to the host), but this is acceptable for a local utility tool.
+### 2. Bridge Networking (Improved Isolation)
+We switched the container networking mode from `host` back to `bridge`.
+*   **Why:** While host networking was initially used for peer discovery, bridge mode provides better isolation. By granting `NET_ADMIN` and using Kernel TUN mode, the Hub remains robust to host sleep/wake cycles while avoiding potential conflicts with the host's own network interfaces.
+*   **Port Mapping:** Port 8888 is mapped to `127.0.0.1:8888` on the host. This ensures the dashboard is accessible locally while preventing accidental exposure to the wider LAN.
+*   **Discovery:** Peer discovery and MagicDNS continue to work via the internal Tailscale stack.
 
 ### 3. Auto-Shutdown
 To prevent the Hub from running indefinitely and consuming a VPN license seat/resources, we implemented an **Auto-Shutdown Monitor**.
