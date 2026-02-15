@@ -43,3 +43,17 @@ teardown() {
     run grep "\-\-net=host" "$MOCK_DOCKER_LOG"
     assert_success
 }
+
+@test "gemini-hub uses bridge networking and maps port 8888" {
+    run "$HUB" --key tskey-auth-mock
+    assert_success
+    
+    [ -f "$TEST_TEMP_DIR/docker_calls.log" ]
+    # Check for --network=bridge
+    run grep "\-\-network=bridge" "$TEST_TEMP_DIR/docker_calls.log"
+    assert_success
+    
+    # Check for port mapping
+    run grep "\-p 127.0.0.1:8888:8888" "$TEST_TEMP_DIR/docker_calls.log"
+    assert_success
+}
