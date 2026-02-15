@@ -255,3 +255,48 @@ def test_wizard_recent_paths_persistence(page: Page, live_server_url):
         # 4. Verify it skipped browsing and went directly to Config
         expect(page.locator("#config-project-path")).to_have_text("/mock/recent/path")
         expect(page.get_by_text("Profile Configuration")).to_be_visible()
+
+def test_connectivity_hybrid_mode(page: Page, live_server_url):
+    """Verify that LOCAL/VPN badges appear correctly based on reachability."""
+    
+    mock_machines = [
+        {
+            "name": "gem-hybrid", 
+            "project": "hybrid-app", 
+            "type": "geminicli", 
+            "ip": "100.1.1.1", 
+            "online": True,
+            "local_url": "http://localhost:32768"
+        },
+    ]
+    
+    with patch("app.services.tailscale.TailscaleService.get_status", return_value={}), \
+         patch("app.services.tailscale.TailscaleService.parse_peers", return_value=mock_machines):
+        
+        # 1. Setup route interception to simulate reachability
+        # We need to allow the main app but mock the probe URLs
+        
+        def handle_route(route):
+            if "localhost:32768" in route.request.url:
+                route.fulfill(status=200, body="")
+            elif "100.1.1.1:3000" in route.request.url:
+                route.fulfill(status=200, body="")
+            else:
+                route.continue_()
+
+        page.route("**/*", handle_route)
+        
+        # Navigate
+        page.goto(live_server_url)
+        
+        # Wait for connectivity check logic to run (async in main.js)
+        page.wait_for_timeout(500)
+        
+        # 2. Verify LOCAL link is the main one if reachable
+        main_link = page.locator(".card-main-link", has_text="hybrid-app")
+        expect(main_link).to_have_attribute("href", "http://localhost:32768")
+        
+        # 3. Verify VPN badge appeared as secondary
+        vpn_badge = page.locator(".local-badge", has_text="VPN")
+        expect(vpn_badge).to_be_visible()
+        expect(vpn_badge).to_have_attribute("href", "http://100.1.1.1:3000/")
