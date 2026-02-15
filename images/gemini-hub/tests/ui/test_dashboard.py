@@ -1,4 +1,3 @@
-import pytest
 from playwright.sync_api import Page, expect
 
 def test_dashboard_loads(page: Page, live_server_url):

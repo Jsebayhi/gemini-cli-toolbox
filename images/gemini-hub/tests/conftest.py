@@ -1,4 +1,6 @@
 import pytest
+import threading
+from werkzeug.serving import make_server
 from app import create_app
 from app.config import Config
 
@@ -40,9 +42,6 @@ def client(app):
 def runner(app):
     """A test runner for the app's CLI commands."""
     return app.test_cli_runner()
-
-import threading
-from werkzeug.serving import make_server
 
 @pytest.fixture
 def live_server_url(app):
