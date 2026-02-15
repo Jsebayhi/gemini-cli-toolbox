@@ -300,3 +300,47 @@ def test_connectivity_hybrid_mode(page: Page, live_server_url):
         vpn_badge = page.locator(".local-badge", has_text="VPN")
         expect(vpn_badge).to_be_visible()
         expect(vpn_badge).to_have_attribute("href", "http://100.1.1.1:3000/")
+
+def test_wizard_bash_mode_hides_inputs(page: Page, live_server_url):
+    """Verify that selecting Bash mode hides Task and Interactive inputs."""
+    
+    with patch("app.services.filesystem.FileSystemService.get_roots", return_value=["/root"]), \
+         patch("app.services.filesystem.FileSystemService.browse", return_value={"directories": [], "files": []}), \
+         patch("app.services.filesystem.FileSystemService.get_configs", return_value=[]):
+             
+        page.goto(live_server_url)
+        page.get_by_role("button", name="+ New Session").click()
+        page.locator("#roots-list").get_by_text("/root").click()
+        page.get_by_role("button", name="Use This Folder").click()
+        
+        # Initially (CLI mode) - Task is visible
+        expect(page.get_by_placeholder("e.g. write a hello world in python...")).to_be_visible()
+        
+        # Select Bash
+        page.locator("#session-type-select").select_option("bash")
+        
+        # Task should be hidden
+        expect(page.get_by_placeholder("e.g. write a hello world in python...")).not_to_be_visible()
+
+def test_wizard_advanced_options_toggle(page: Page, live_server_url):
+    """Verify that the Advanced Options accordion works."""
+    
+    with patch("app.services.filesystem.FileSystemService.get_roots", return_value=["/root"]), \
+         patch("app.services.filesystem.FileSystemService.browse", return_value={"directories": [], "files": []}), \
+         patch("app.services.filesystem.FileSystemService.get_configs", return_value=[]):
+             
+        page.goto(live_server_url)
+        page.get_by_role("button", name="+ New Session").click()
+        page.locator("#roots-list").get_by_text("/root").click()
+        page.get_by_role("button", name="Use This Folder").click()
+        
+        # Initially hidden
+        expect(page.get_by_placeholder("e.g. -v /host/path:/container/path")).not_to_be_visible()
+        
+        # Toggle Open
+        page.get_by_text("Advanced Options").click()
+        expect(page.get_by_placeholder("e.g. -v /host/path:/container/path")).to_be_visible()
+        
+        # Toggle Closed
+        page.get_by_text("Advanced Options").click()
+        expect(page.get_by_placeholder("e.g. -v /host/path:/container/path")).not_to_be_visible()
