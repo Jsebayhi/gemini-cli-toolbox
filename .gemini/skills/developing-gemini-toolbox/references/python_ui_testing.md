@@ -2,25 +2,26 @@
 
 Specific standards for testing web UIs using the Playwright-Python toolchain.
 
-## 1. Tooling
+## 1. Tooling & Resilience
 - **Framework:** `playwright-python` with the `pytest-playwright` plugin.
-- **Async Handling:** Prefer the synchronous API (`playwright.sync_api`) for test simplicity unless high concurrency is required within a single test.
+- **Async Handling:** Prefer the synchronous API (`playwright.sync_api`) for test simplicity.
+- **Retries:** Use `pytest-rerunfailures` (e.g., `--reruns 1`) in CI to mitigate non-deterministic browser flakiness.
 
-## 2. Process Isolation for Mocks
-- **The Process Limit:** Python mocks are memory-local.
+## 2. Page Object Model (POM) & Composition
+- **Composition over God Objects:** Split the POM into logical components. For example, a `HubPage` should contain a nested `LaunchWizard` instance.
+- **Interface:** Tests interact via these components: `hub.wizard.launch()`. This keeps the main Page Object clean and maintainable.
+
+## 3. Process Isolation for Mocks
 - **The Requirement:** The live HTTP server MUST run in the same process memory as the test runner.
-- **Implementation:** Use a manual `threading` server in `conftest.py` using `werkzeug.serving.make_server`. DO NOT use external process runners like `pytest-flask` if you rely on `unittest.mock`.
+- **Implementation:** Use a manual `threading` server in `conftest.py` using `werkzeug.serving.make_server`. 
 
-## 3. Selector Standards
-- **Scoped Locators:** Use `page.locator("#container").get_by_text(...)` to ensure locators are resilient to changes outside the target component.
-- **Auto-waiting Assertions:** Use `expect(locator).to_have_text(...)` instead of manual boolean checks to leverage Playwright's automatic polling.
+## 4. Selector Standards & Semantic Assertions
+- **Scoped Locators:** Use `page.locator("#container").get_by_text(...)`.
+- **Semantic Helpers:** Add domain-specific assertion methods to the POM (e.g., `hub.expect_inactive_session("proj1")`) instead of checking specific CSS properties like `opacity` directly in the test.
 
-## 4. Failure Observability
-- **Trace Integration:** Implement a `_auto_tracing` fixture in `conftest.py`.
-- **Logic:**
-    - Call `context.tracing.start` before UI tests.
-    - Save to `test-results/trace-{test_name}.zip` ONLY if `request.node.rep_call.failed` is true.
-    - This allows devs to view the full execution lifecycle in the Playwright Trace Viewer.
+## 5. Failure Observability
+- **Trace Integration:** Implement an `_auto_tracing` fixture in `conftest.py`.
+- **Logic:** Save to `test-results/trace-{test_name}.zip` ONLY if the test fails. This provides snapshots, console logs, and network activity for debugging.
 
-## 5. Clean State
-- **Browser Contexts:** The `page` fixture is fresh, but explicitly clear `localStorage` via `page.evaluate` if testing persistence features like "Recent Paths."
+## 6. Clean State
+- **Browser Contexts:** Clear `localStorage` via `page.evaluate` if testing persistence features. Ensure every test starts from a clean client-side state.
