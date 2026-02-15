@@ -50,7 +50,10 @@ make build
 
 ### Architecture Decision Records (ADRs)
 *   **Rule:** ADRs are **immutable historical logs**. Do not modify the "Decision" or "Context" of an existing ADR to reflect a new direction.
-*   **Process:** If a previous decision is changed, create a **NEW** ADR and mark the old one as **"Superseded by [ADR-XXXX]"** in its status field.
+*   **Process:** If a previous decision is changed:
+    1.  Create a **NEW** ADR documenting the new direction.
+    2.  Update the **Status** of the old ADR to "Superseded by [ADR-XXXX]".
+    3.  **Preserve History:** Do NOT remove previous "Supersedes" lines from an old ADR. Maintain the full chain (e.g., "Supersedes ADR-0001" followed by "Superseded by ADR-0038") to allow tracing the architectural evolution.
 *   **Why:** This preserves the architectural evolution of the project and prevents "erasing" the reasoning behind past choices.
 
 ### Testing Strategy
