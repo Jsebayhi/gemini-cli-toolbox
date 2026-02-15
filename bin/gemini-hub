@@ -257,7 +257,8 @@ echo ">> Access at http://gemini-hub:8888 (Mobile VPN)"
 # Run Container
 docker run --rm "$MODE" \
     --name "$CONTAINER_NAME" \
-    --net=host \
+    --network=bridge \
+    -p 127.0.0.1:$PORT:8888 \
     --cap-add=NET_ADMIN \
     --device /dev/net/tun \
     --volume "/var/run/docker.sock:/var/run/docker.sock" \
