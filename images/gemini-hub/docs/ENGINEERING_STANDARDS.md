@@ -132,6 +132,9 @@ While we follow the Testing Trophy, we still enforce high coverage standards to 
     *   **E2E Process Isolation:** When using Playwright with `unittest.mock`, the live server MUST run in the same process memory space as the test runner.
         *   **Why:** Python mocks are process-local. If the server runs in a sub-process, it will hit the real system instead of your mocks.
         *   **Implementation:** Use a manual `threading` server in `conftest.py` rather than `pytest-flask`'s default behavior.
+    *   **Thread Safety:** Tests must be run in parallel (using `pytest-xdist`). NEVER mutate global state (like the `Config` class) directly. Use the `monkeypatch` fixture to ensure isolation between workers.
+    *   **Log Hygiene:** Tests should not produce noisy `ERROR` or `WARNING` logs if the failure is expected. Use a `suppress_logs` fixture to keep CI output clean and actionable.
+    *   **State Isolation:** E2E tests must ensure a clean slate. Clear `localStorage`, `cookies`, and browser state between tests to prevent leakage.
     *   **When to Mock:** Only mock **slow, dangerous, or non-deterministic** external boundaries.
         *   **Allowed Mocks:** `subprocess.run` (don't actually run Docker), `requests.get` (don't hit real URLs), `time.sleep`.
         *   **Forbidden Mocks:** `FileSystemService`, `os.path` (use `tmp_path`), internal helper classes.

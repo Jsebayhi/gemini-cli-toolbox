@@ -1,37 +1,22 @@
 import pytest
 import threading
+import logging
 from werkzeug.serving import make_server
 from app import create_app
 from app.config import Config
 
 @pytest.fixture
-def app():
+def app(monkeypatch):
     """Create and configure a new app instance for each test."""
-    # Patch the Config class attributes directly so services see them
-    # We must patch where Config is DEFINED, not imported, but services import Config class.
-    # Changing attributes on the class affects all users.
-    
-    # Save original values
-    original_roots = Config.HUB_ROOTS
-    original_config_root = Config.HOST_CONFIG_ROOT
-    original_auth_key = Config.TAILSCALE_AUTH_KEY
-    original_auto_shutdown = Config.HUB_AUTO_SHUTDOWN
-    
-    # Set mock values
-    Config.HUB_ROOTS = ["/mock/root"]
-    Config.HOST_CONFIG_ROOT = "/mock/config"
-    Config.TAILSCALE_AUTH_KEY = "mock-key"
-    Config.HUB_AUTO_SHUTDOWN = False
+    # Use monkeypatch to safely modify Config attributes for the duration of the test.
+    # This is thread-safe and process-safe.
+    monkeypatch.setattr(Config, "HUB_ROOTS", ["/mock/root"])
+    monkeypatch.setattr(Config, "HOST_CONFIG_ROOT", "/mock/config")
+    monkeypatch.setattr(Config, "TAILSCALE_AUTH_KEY", "mock-key")
+    monkeypatch.setattr(Config, "HUB_AUTO_SHUTDOWN", False)
 
     app = create_app(Config)
-    
-    yield app
-    
-    # Restore original values
-    Config.HUB_ROOTS = original_roots
-    Config.HOST_CONFIG_ROOT = original_config_root
-    Config.TAILSCALE_AUTH_KEY = original_auth_key
-    Config.HUB_AUTO_SHUTDOWN = original_auto_shutdown
+    return app
 
 @pytest.fixture
 def client(app):
@@ -59,3 +44,12 @@ def live_server_url(app):
     
     server.shutdown()
     thread.join()
+
+@pytest.fixture
+def suppress_logs():
+    """Fixture to suppress common expected log errors during tests."""
+    logger = logging.getLogger("app.services.tailscale")
+    original_level = logger.level
+    logger.setLevel(logging.CRITICAL)
+    yield
+    logger.setLevel(original_level)
