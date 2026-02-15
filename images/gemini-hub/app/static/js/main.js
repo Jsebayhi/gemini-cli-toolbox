@@ -200,13 +200,15 @@ async function fetchRoots() {
     rootHeader.style.cssText = "font-size: 0.75rem; color: var(--text-dim); margin: 15px 0 5px 5px; text-transform: uppercase;";
     list.appendChild(rootHeader);
 
-    data.roots.forEach(root => {
-        const div = document.createElement('div');
-        div.className = 'list-item';
-        div.innerHTML = `<span>${root}</span> <span>›</span>`;
-        div.onclick = () => startBrowsing(root);
-        list.appendChild(div);
-    });
+    if (data.roots) {
+        data.roots.forEach(root => {
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `<span>${root}</span> <span>›</span>`;
+            div.onclick = () => startBrowsing(root);
+            list.appendChild(div);
+        });
+    }
     showStep('step-roots');
 }
 
@@ -244,13 +246,15 @@ async function loadPath(path) {
         list.appendChild(up);
     }
 
-    data.directories.forEach(dir => {
-        const div = document.createElement('div');
-        div.className = 'list-item';
-        div.innerHTML = `<span>📁 ${dir}</span> <span>›</span>`;
-        div.onclick = () => loadPath(path + (path.endsWith('/') ? '' : '/') + dir);
-        list.appendChild(div);
-    });
+    if (data.directories) {
+        data.directories.forEach(dir => {
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `<span>📁 ${dir}</span> <span>›</span>`;
+            div.onclick = () => loadPath(path + (path.endsWith('/') ? '' : '/') + dir);
+            list.appendChild(div);
+        });
+    }
 }
 
 function goBackToRoots() { fetchRoots(); }

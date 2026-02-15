@@ -1,0 +1,12 @@
+[run]
+parallel = True
+branch = True
+source = app
+
+[report]
+show_missing = True
+precision = 2
+fail_under = 90
+
+[html]
+directory = htmlcov

@@ -32,6 +32,16 @@ make build
 make rebuild
 ```
 
+### Testing
+We use `pytest` for unit and integration tests, and **Playwright** for UI tests.
+```bash
+# Run unit and integration tests
+make test
+
+# Run UI tests (requires building the test image with browsers)
+make test-ui
+```
+
 ### Manual Run
 ```bash
 # Requires an auth key

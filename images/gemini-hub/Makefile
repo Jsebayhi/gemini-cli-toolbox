@@ -38,9 +38,14 @@ print-image:
 	@echo $(IMAGE_NAME):$(IMAGE_TAG)
 
 test:
-	@echo ">> Running Gemini Hub Tests..."
+	@echo ">> Running Gemini Hub Unit & Integration Tests..."
 	docker build -t $(IMAGE_NAME)-test -f tests/Dockerfile .
-	docker run --rm $(IMAGE_NAME)-test
+	docker run --rm $(IMAGE_NAME)-test python3 -m pytest -n auto -vv --cov=app --cov-fail-under=90 tests/unit tests/integration
+
+test-ui:
+	@echo ">> Running Gemini Hub UI Tests..."
+	docker build -t $(IMAGE_NAME)-test -f tests/Dockerfile .
+	docker run --rm $(IMAGE_NAME)-test python3 -m pytest -n auto --reruns 1 -vv tests/ui
 
 scan:
 	@echo ">> Scanning $(IMAGE_NAME):$(IMAGE_TAG)..."

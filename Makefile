@@ -116,9 +116,13 @@ lint-python:
 test:
 	$(MAKE) -C images/gemini-hub test
 
+.PHONY: test-ui
+test-ui:
+	$(MAKE) -C images/gemini-hub test-ui
+
 # --- Mandatory Pre-PR Check ---
 .PHONY: local-ci
-local-ci: lint test
+local-ci: lint test test-ui
 	@echo ">> All mandatory checks passed. Ready for PR."
 
 # --- CI Targets (Full Rebuild + Tag) ---

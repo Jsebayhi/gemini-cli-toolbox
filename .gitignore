@@ -20,4 +20,6 @@ AGENT_NOTES.md
 # python
 __pycache__/
 .coverage
+.pytest_cache/
+test-results/
 README_DOCKER.md

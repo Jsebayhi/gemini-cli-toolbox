@@ -257,3 +257,19 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Kill the terminal.
     *   **Verify:** The container dies (standard Docker behavior).
 
+---
+
+## 🧪 Journey 18: Automated UI Testing
+**Goal:** Verify the Hub's UI integrity using automated tests.
+
+1.  **Preparation:**
+    *   Navigate to `images/gemini-hub`.
+2.  **Run UI Tests:**
+    *   Execute `make test-ui`.
+    *   **Verify:** The test builds a dedicated test image containing Playwright and Chromium.
+    *   **Verify:** Chromium launches headlessly inside the container and navigates to the Hub's dashboard.
+    *   **Verify:** Tests pass, confirming that the "Gemini Workspace Hub" header is present and the "No active sessions found" empty state renders correctly.
+3.  **Regression Check:**
+    *   Execute `make test`.
+    *   **Verify:** Standard unit and integration tests pass with >=90% coverage.
+
