@@ -23,3 +23,4 @@ __pycache__/
 .pytest_cache/
 test-results/
 README_DOCKER.md
+tests/bash/libs/

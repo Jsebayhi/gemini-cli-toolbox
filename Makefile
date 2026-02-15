@@ -113,8 +113,30 @@ lint-python:
 	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
 
 .PHONY: test
-test:
+test: test-bash
 	$(MAKE) -C images/gemini-hub test
+
+.PHONY: test-bash
+test-bash: deps-bash
+	@echo ">> Building Bash Test Runner..."
+	docker build -t gemini-bash-tester tests/bash
+	@echo ">> Running Bash Automated Tests (Bats)..."
+	docker run --rm -v "$(shell pwd):/code" -w /code gemini-bash-tester tests/bash
+
+.PHONY: deps-bash
+deps-bash:
+	@if [ ! -d "tests/bash/libs/bats-support" ]; then \
+		echo ">> Downloading bats-support v0.3.0..."; \
+		mkdir -p tests/bash/libs; \
+		curl -sL https://github.com/bats-core/bats-support/archive/refs/tags/v0.3.0.tar.gz | tar -xz -C tests/bash/libs; \
+		mv tests/bash/libs/bats-support-0.3.0 tests/bash/libs/bats-support; \
+	fi
+	@if [ ! -d "tests/bash/libs/bats-assert" ]; then \
+		echo ">> Downloading bats-assert v2.1.0..."; \
+		mkdir -p tests/bash/libs; \
+		curl -sL https://github.com/bats-core/bats-assert/archive/refs/tags/v2.1.0.tar.gz | tar -xz -C tests/bash/libs; \
+		mv tests/bash/libs/bats-assert-2.1.0 tests/bash/libs/bats-assert; \
+	fi
 
 .PHONY: test-ui
 test-ui:
