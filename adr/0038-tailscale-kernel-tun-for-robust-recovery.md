@@ -6,6 +6,8 @@ Proposed
 ## Context
 Remote sessions (Gemini CLI and Hub) become inaccessible via Tailscale after the host machine wakes up from sleep. 
 
+This decision supersedes the "Host Networking" decision in [ADR-0012](./0012-standalone-architecture.md).
+
 Currently, both components start `tailscaled` using `--tun=userspace-networking`. This mode was chosen for maximum compatibility (working without `/dev/net/tun`), but it is less robust to network environment changes because it relies on a userspace TCP/IP stack (netstack) that might not correctly detect or recover from the host's physical network interface going down and up.
 
 Since the `gemini-toolbox` and `gemini-hub` scripts already pass `--cap-add=NET_ADMIN` and `--device /dev/net/tun` to the containers, we have the necessary privileges to use the standard Linux Kernel TUN device.
