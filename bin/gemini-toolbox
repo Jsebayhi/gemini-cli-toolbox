@@ -1,33 +1,15 @@
 #!/bin/bash
 
-# 0. Resolve script location and Repository Root
-# This ensures we detect the branch of the toolbox itself, even when run from another project.
-REAL_SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$REAL_SOURCE" ]; do
-    DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-    REAL_SOURCE="$(readlink "$REAL_SOURCE")"
-    [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
-done
-SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+# Gemini Toolbox Wrapper Script
+# A zero-config, ultra-secure home for your Gemini AI agent.
 
-# Configuration
-HOST_CONF_DIR="${HOME}/.gemini"
-PROJECT_DIR="$(pwd)"
-DOCKER_HUB_USER="${DOCKER_HUB_USER:-jsebayhi}" # Allow override via env var
-VARIANT="latest"
-USE_BASH=false
+# 0. Global Defaults & Functions (Source-safe)
+# These are safe to load when sourcing the script for testing.
 
-# Auto-detect VS Code environment
-if [[ "$TERM_PROGRAM" == "vscode" ]]; then
-    ENABLE_VSCODE_INTEGRATION=true
-else
-    ENABLE_VSCODE_INTEGRATION=false
-fi
+# Default Docker Hub account for official images. 
+# Overridable via DOCKER_HUB_USER environment variable.
+DOCKER_HUB_USER="${DOCKER_HUB_USER:-jsebayhi}"
 
-EXTRA_DOCKER_ARGS=()
-
-# Help Function
 show_help() {
     echo "Usage: gemini-toolbox [OPTIONS] [-- APP_ARGS]"
     echo ""
@@ -58,601 +40,483 @@ show_help() {
     echo "  gemini-toolbox chat"
     echo "  gemini-toolbox --remote tskey-auth-xxxx chat"
     echo "  gemini-toolbox --worktree \"Refactor auth\""
-    echo "  gemini-toolbox --worktree -- \"Summarize this file\""
-    echo "  gemini-toolbox --config ~/.gemini-work -- --help"
 }
 
 # Worktree Setup Function
+# Arguments:
+#   $1: Project Name
+#   $2: Target Name (Branch/Folder)
+#   $3: Current Project Dir
+# Returns:
+#   New Project Directory path
 setup_worktree() {
-    local WORKTREE_BASE="${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${PROJECT_NAME}"
-    # Use environment variable if provided, otherwise default
-    WORKTREE_BASE="${GEMINI_WORKTREE_ROOT:-$WORKTREE_BASE}"
-    
-    local BRANCH_NAME=""
-    local FOLDER_NAME=""
+    local project_name="$1"
+    local target_name="$2"
+    # shellcheck disable=SC2034 # current_project_dir is passed for API symmetry
+    local current_project_dir="$3"
 
-    # Ensure git is available
+    local worktree_base="${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${project_name}"
+    worktree_base="${GEMINI_WORKTREE_ROOT:-$worktree_base}"
+    
+    local branch_name=""
+    local folder_name=""
+
     if ! command -v git &> /dev/null; then
         echo "Error: 'git' is required for --worktree but not found." >&2
         exit 1
     fi
 
-    # Ensure we are in a git repository
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         echo "Error: --worktree can only be used within a Git repository." >&2
         exit 1
     fi
 
-    # Ensure the repository has at least one commit (HEAD exists)
     if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
         echo "Error: Cannot create a worktree from an empty repository." >&2
-        echo "       Please create an initial commit (e.g., 'git commit --allow-empty -m \"Initial commit\"') and try again." >&2
         exit 1
     fi
 
-    # Ensure we are NOT already in a worktree (.git is a file)
     if [ -f "$(git rev-parse --show-toplevel)/.git" ]; then
         echo "Error: --worktree is not supported from within another worktree." >&2
-        echo "       Please run this command from the main repository." >&2
         exit 1
     fi
 
-    # 1. Resolve Identity
-    if [[ -n "$TARGET_NAME" ]]; then
-        # Case A: Explicit Naming
-        BRANCH_NAME="$TARGET_NAME"
-        # Replace slashes with dashes for the filesystem folder
-        FOLDER_NAME="${BRANCH_NAME//\//-}"
-        # Sanitize to ensure it's filesystem safe
-        FOLDER_NAME=$(echo "$FOLDER_NAME" | tr -cd '[:alnum:]-._')
-        echo ">> Worktree: Using explicit name '$BRANCH_NAME'"
+    # Resolve Identity
+    if [[ -n "$target_name" ]]; then
+        branch_name="$target_name"
+        folder_name="${branch_name//\//-}"
+        folder_name=$(echo "$folder_name" | tr -cd '[:alnum:]-._')
+        echo ">> Worktree: Using explicit name '$branch_name'" >&2
     else
-        # Case B: Anonymous Exploration (Detached HEAD)
-        local UUID
-        UUID=$(head -c 8 /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)
-        FOLDER_NAME="exploration-${UUID}"
-        echo ">> Worktree: Anonymous Exploration (Detached HEAD)"
+        local uuid
+        uuid=$(head -c 8 /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)
+        folder_name="exploration-${uuid}"
+        echo ">> Worktree: Anonymous Exploration (Detached HEAD)" >&2
     fi
 
-    local WORKTREE_PATH="${WORKTREE_BASE}/${FOLDER_NAME}"
+    local worktree_path="${worktree_base}/${folder_name}"
 
-    # 2. Create Worktree
-    if [ -d "$WORKTREE_PATH" ]; then
-        echo ">> Worktree already exists at: $WORKTREE_PATH"
+    # Create Worktree
+    if [ -d "$worktree_path" ]; then
+        echo ">> Worktree already exists at: $worktree_path" >&2
     else
-        echo ">> Creating worktree at: $WORKTREE_PATH"
-        mkdir -p "$(dirname "$WORKTREE_PATH")"
+        echo ">> Creating worktree at: $worktree_path" >&2
+        mkdir -p "$(dirname "$worktree_path")"
         
-        if [[ -n "$BRANCH_NAME" ]]; then
-            # Check if branch exists
-            if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
-                git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
+        if [[ -n "$branch_name" ]]; then
+            if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+                git worktree add "$worktree_path" "$branch_name"
             else
-                git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
+                git worktree add -b "$branch_name" "$worktree_path"
             fi
         else
-            # Detached HEAD
-            git worktree add --detach "$WORKTREE_PATH" HEAD
+            git worktree add --detach "$worktree_path" HEAD
         fi
     fi
     
-    # 3. Update Global PROJECT_DIR to point to worktree
-    PROJECT_DIR="$WORKTREE_PATH"
+    echo "$worktree_path"
 }
 
-# 0. Pre-scan for Config & Load Extra Args
-# We scan CLI args for --config to locate the profile directory.
-# Then we load 'extra-args' (if present) and prepend them to the argument list.
-# This allows profiles to define toolbox flags (like --no-ide) in addition to docker args.
-# 0. Pre-scan for Config/Profile & Load Extra Args
-# We scan CLI args for --config or --profile to locate the directory.
-# --profile: Use directory as root, mount .gemini subdir (ENABLE_PROFILE_MODE=true)
-# --config: Use directory directly (ENABLE_PROFILE_MODE=false)
-TEMP_CONF="$HOST_CONF_DIR"
-ENABLE_PROFILE_MODE=false
-HAS_CONFIG=false
-HAS_PROFILE=false
+# Main Execution Logic
+main() {
+    set -euo pipefail
 
-iter_args=("$@")
-for ((i=0; i<${#iter_args[@]}; i++)); do
-    case "${iter_args[i]}" in
-        --config)
-            TEMP_CONF="${iter_args[i+1]}"
-            ENABLE_PROFILE_MODE=false
-            HAS_CONFIG=true
-            ;;
-        --profile)
-            TEMP_CONF="${iter_args[i+1]}"
-            ENABLE_PROFILE_MODE=true
-            HAS_PROFILE=true
-            ;;
-    esac
-done
+    # 0.1 Resolve Script Location
+    local real_source="${BASH_SOURCE[0]}"
+    while [ -h "$real_source" ]; do
+        local dir
+        dir="$( cd -P "$( dirname "$real_source" )" >/dev/null 2>&1 && pwd )"
+        real_source="$(readlink "$real_source")"
+        [[ $real_source != /* ]] && real_source="$dir/$real_source"
+    done
+    local script_dir
+    script_dir="$( cd -P "$( dirname "$real_source" )" >/dev/null 2>&1 && pwd )"
+    local repo_root
+    repo_root="$(dirname "$script_dir")"
 
-# Guard against ambiguous usage
-if [ "$HAS_CONFIG" = true ] && [ "$HAS_PROFILE" = true ]; then
-    echo "Error: Cannot use both --config and --profile simultaneously." >&2
-    echo "Choose one: --config for simple directory mount, or --profile for nested workspace." >&2
-    exit 1
-fi
-
-# Resolve absolute path for check
-TEMP_CONF=$(realpath -m "$TEMP_CONF")
-FILE_ARGS=()
-
-if [ "$ENABLE_PROFILE_MODE" = true ] && [ -f "${TEMP_CONF}/extra-args" ]; then
-    echo ">> Loading profile args from ${TEMP_CONF}/extra-args"
-    while IFS= read -r line || [ -n "$line" ]; do
-        # Trim leading whitespace
-        line="${line#"${line%%[![:space:]]*}"}"
-        # Ignore empty lines and comments
-        if [[ -n "$line" && ! "$line" =~ ^# ]]; then
-             # Use eval to properly parse quotes arguments (like shell would)
-             eval "PARTS=($line)"
-             FILE_ARGS+=("${PARTS[@]}")
-        fi
-    done < "${TEMP_CONF}/extra-args"
-fi
-
-# Combine: File Args first, then CLI args (so CLI overrides File)
-if [ ${#FILE_ARGS[@]} -gt 0 ]; then
-    # We must reset the positional parameters to the combined list
-    set -- "${FILE_ARGS[@]}" "$@"
-fi
-
-# 1. Pre-scan for Variant & Override Image
-# We need these BEFORE final image resolution to handle branch-specific tags correctly.
-VARIANT="latest"
-OVERRIDE_IMAGE=""
-iter_variant_args=("$@")
-for ((i=0; i<${#iter_variant_args[@]}; i++)); do
-    case "${iter_variant_args[i]}" in
-        --preview) VARIANT="preview" ;;
-        --image)   OVERRIDE_IMAGE="${iter_variant_args[i+1]}" ;;
-    esac
-done
-
-# 2. Resolve Image Name (Local vs Remote)
-# Detect Current Branch for dynamic tagging (based on Toolbox repository)
-BRANCH_SUFFIX=""
-if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)
-    if [ "$CURRENT_BRANCH" != "main" ] && [ -n "$CURRENT_BRANCH" ]; then
-        SAFE_BRANCH="${CURRENT_BRANCH//[!a-zA-Z0-9]/-}"
-        BRANCH_SUFFIX="-$SAFE_BRANCH"
+    # 0.2 Initialize Configuration
+    export HOST_CONF_DIR="${HOME}/.gemini"
+    local project_dir
+    project_dir="$(pwd)"
+    
+    local variant="latest"
+    local use_bash=false
+    
+    local enable_vscode_integration=false
+    if [[ "${TERM_PROGRAM:-}" == "vscode" ]]; then
+        enable_vscode_integration=true
     fi
-fi
 
-if [ -n "$OVERRIDE_IMAGE" ]; then
-    IMAGE_NAME="$OVERRIDE_IMAGE"
-elif [ "$VARIANT" == "preview" ]; then
-    LOCAL_TAG="gemini-cli-toolbox/cli-preview:latest${BRANCH_SUFFIX}"
-    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-preview"
-else
-    LOCAL_TAG="gemini-cli-toolbox/cli:latest${BRANCH_SUFFIX}"
-    REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-stable"
-fi
+    local extra_docker_args=()
+    
+    # 0.3 Pre-scan for Config/Profile & Load Extra Args
+    local temp_conf="$HOST_CONF_DIR"
+    local enable_profile_mode=false
+    local has_config=false
+    local has_profile=false
 
-# Check if local image exists
-if docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
-    IMAGE_NAME="$LOCAL_TAG"
-else
-    # Fallback to remote image
-    IMAGE_NAME="$REMOTE_TAG"
-fi
+    local iter_args=("$@")
+    for ((i=0; i<${#iter_args[@]}; i++)); do
+        case "${iter_args[i]}" in
+            --config)
+                temp_conf="${iter_args[i+1]}"
+                enable_profile_mode=false
+                has_config=true
+                ;;
+            --profile)
+                temp_conf="${iter_args[i+1]}"
+                enable_profile_mode=true
+                has_profile=true
+                ;;
+        esac
+    done
 
-# 1. Parse Arguments
-ARGS=()
-REMOTE_MODE=false
-NO_TMUX_FLAG=false
-TAILSCALE_KEY="${GEMINI_REMOTE_KEY:-}"
-ENABLE_DOCKER=true
-DETACHED_MODE=false
-
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --preview)     VARIANT="preview"; shift ;;
-    --image)       OVERRIDE_IMAGE="$2"; shift; shift ;;
-    --no-ide)      ENABLE_VSCODE_INTEGRATION=false;   shift ;;
-    --no-docker)   ENABLE_DOCKER=false;               shift ;;
-    --no-tmux)     EXTRA_DOCKER_ARGS+=("--env" "GEMINI_TOOLBOX_TMUX=false"); NO_TMUX_FLAG=true; shift ;;
-    --config)      HOST_CONF_DIR="$2"; shift; shift ;;
-    --profile)     HOST_CONF_DIR="$2"; ENABLE_PROFILE_MODE=true; shift; shift ;;
-    --project)     PROJECT_DIR="$2";   shift; shift ;;
-    --bash)        USE_BASH=true;      shift ;;
-    --detached)    DETACHED_MODE=true; shift ;;
-    --remote)      
-        REMOTE_MODE=true
-        # Optional argument: Check if next arg exists AND starts with 'tskey-'
-        if [[ -n "$2" && "$2" == tskey-* ]]; then
-            TAILSCALE_KEY="$2"
-            shift
-        fi
-        shift 
-        ;;
-    --worktree)
-        ENABLE_WORKTREE=true
-        shift
-        ;;
-    --name)
-        TARGET_NAME="$2"
-        shift; shift
-        ;;
-    --docker-args) 
-        read -ra SPLIT_ARGS <<< "$2"
-        EXTRA_DOCKER_ARGS+=("${SPLIT_ARGS[@]}")
-        shift; shift 
-        ;;
-    -v|--volume)
-        EXTRA_DOCKER_ARGS+=("--volume" "$2")
-        shift; shift
-        ;;
-    --help)        show_help; exit 0 ;;
-    update)        FORCE_UPDATE=true; shift ;;
-    stop-hub)      STOP_HUB=true; shift ;;
-    stop)
-        STOP_COMMAND_EXECUTED=true
-        # Only capture $2 if it doesn't look like another flag
-        if [[ -n "$2" && "$2" != --* ]]; then
-            STOP_SESSION="$2"
-            shift; shift
-        else
-            shift
-        fi
-        ;;
-    connect)       CONNECT_ID="$2"; shift; shift ;;
-    --)            shift; ARGS+=("$@"); break ;;
-    *)             ARGS+=("$1");       shift ;;
-  esac
-done
-
-# Validation: --remote requires tmux for the web terminal (ttyd)
-if [ "$REMOTE_MODE" = true ] && [ "$NO_TMUX_FLAG" = true ]; then
-    echo "Error: --remote and --no-tmux are incompatible." >&2
-    echo "       Remote mode relies on tmux to serve the web terminal." >&2
-    exit 1
-fi
-
-# 2. Setup Directories
-# HOST_CONF_DIR might be passed as relative or absolute.
-# We resolve it to absolute to ensure Docker mounts work correctly.
-HOST_CONF_DIR=$(realpath -m "$HOST_CONF_DIR")
-
-# Profile Root Logic (Post-Parse)
-# If ENABLE_PROFILE_MODE is true (user passed --config), we treat the path as a "Profile Root".
-# The actual Gemini Configuration (history, keys) lives in a '.gemini' subdirectory.
-# This keeps the Profile Root clean for extra-args and user files.
-PROFILE_ROOT=""
-if [ "$ENABLE_PROFILE_MODE" = true ]; then
-    PROFILE_ROOT="$HOST_CONF_DIR"
-    HOST_CONF_DIR="${HOST_CONF_DIR}/.gemini"
-fi
-mkdir -p "$HOST_CONF_DIR"
-
-# 2.1 Pre-create Host Cache Directories (As User)
-# We do this to prevent Docker from creating them as 'root' if they don't exist
-REQUIRED_DIRS=(
-    "${HOME}/.m2"
-    "${HOME}/.gradle"
-    "${HOME}/.sbt"
-    "${HOME}/.ivy2"
-    "${HOME}/.cache/coursier"
-    "${HOME}/go/pkg/mod"
-    "${HOME}/.cache/go-build"
-)
-
-for dir in "${REQUIRED_DIRS[@]}"; do
-    if [ ! -d "$dir" ]; then
-        # echo "Initializing missing cache directory: $dir"
-        mkdir -p "$dir"
-    fi
-done
-
-PROJECT_DIR=$(realpath -m "$PROJECT_DIR")
-if [ ! -d "$PROJECT_DIR" ]; then
-    echo "Error: Project directory '$PROJECT_DIR' does not exist." >&2
-    exit 1
-fi
-
-# Extract project name for prettier mount point.
-# We sanitize it to ensure it is a valid DNS label (only alphanumeric and hyphens).
-PROJECT_NAME=$(basename "$PROJECT_DIR" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
-
-# Determine Session Type for Remote Access / Analytics
-SESSION_TYPE="geminicli"
-if [ "$USE_BASH" = true ]; then
-    SESSION_TYPE="bash"
-fi
-
-# Generate readable unique container name
-# Format: {PROJECT}-{TYPE}-{UUID}
-# We pass this ID to the container so it can use it for the Tailscale Hostname
-# ensuring 1:1 mapping between Container Name and VPN Name.
-if [ -f /proc/sys/kernel/random/uuid ]; then
-    GEN_UUID=$(head -c 36 /proc/sys/kernel/random/uuid | cut -c1-8)
-fi
-# Ensure UUID is set even if /proc is missing (unlikely on Linux)
-GEN_UUID="${GEN_UUID:-$(date +%s)}"
-
-GEMINI_SESSION_ID="gem-${PROJECT_NAME}-${SESSION_TYPE}-${GEN_UUID}"
-CONTAINER_NAME_ARG=("--name" "${GEMINI_SESSION_ID}")
-
-# 2.2.1 Setup Worktree (if requested)
-ORIGINAL_PROJECT_DIR="$PROJECT_DIR"
-if [ "$ENABLE_WORKTREE" = true ]; then
-    setup_worktree
-fi
-
-# 2.3 Handle Explicit Update
-if [ "$FORCE_UPDATE" = true ]; then
-    if [[ "$IMAGE_NAME" == "$LOCAL_TAG" ]]; then
-        echo ">> Error: You are using a local image '$LOCAL_TAG'. Cannot update from registry."
-        echo ">> Run 'make rebuild' to update locally."
+    if [ "$has_config" = true ] && [ "$has_profile" = true ]; then
+        echo "Error: Cannot use both --config and --profile simultaneously." >&2
         exit 1
     fi
-    echo ">> Updating '$IMAGE_NAME'..."
-    docker pull "$IMAGE_NAME"
-    exit $?
-fi
 
-# 2.4 Handle Hub Stop
-if [ "$STOP_HUB" = true ]; then
-    # Use the already resolved SCRIPT_DIR
-    HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
-    if [ -x "$HUB_SCRIPT" ]; then
-         exec "$HUB_SCRIPT" stop
-    else
-         echo "Error: gemini-hub script not found."
+    if ! command -v realpath &> /dev/null; then
+         echo "Error: 'realpath' is required. Please install coreutils." >&2
          exit 1
     fi
-fi
-
-# 2.4.1 Handle Session Stop
-if [ "$STOP_COMMAND_EXECUTED" = true ]; then
-    # Default to current project if no session ID/name was provided
-    STOP_SESSION="${STOP_SESSION:-$PROJECT_NAME}"
-
-    # 1. Try exact match first
-    if docker ps --format '{{.Names}}' | grep -q "^${STOP_SESSION}$"; then
-        MATCHES="${STOP_SESSION}"
-    else
-        # 2. Try matching by project name (gem-{name}-*)
-        MATCHES=$(docker ps --format '{{.Names}}' --filter "name=gem-${STOP_SESSION}-" | grep -E "^gem-${STOP_SESSION}-" || true)
-    fi
-
-    if [ -z "$MATCHES" ]; then
-        echo "Error: No active sessions found matching '$STOP_SESSION'."
-        exit 1
-    fi
-
-    # 3. Count matches
-    MATCH_COUNT=$(echo "$MATCHES" | wc -l)
-    if [ "$MATCH_COUNT" -gt 1 ]; then
-        echo "Error: Multiple sessions found for project '$STOP_SESSION':"
-        # shellcheck disable=SC2001
-        echo "$MATCHES" | sed 's/^/   - /'
-        echo ""
-        echo "Please specify a full session ID to stop a specific one."
-        exit 1
-    fi
-
-    echo ">> Stopping session: $MATCHES"
-    docker stop "$MATCHES"
-    exit $?
-fi
-
-# 2.5 Handle Connect
-if [ -n "$CONNECT_ID" ]; then
-    echo ">> Connecting to session '$CONNECT_ID'..."
-    # Use current user's UID
-    CURRENT_UID=$(id -u)
+    temp_conf=$(realpath -m "$temp_conf")
     
-    if [[ "$CONNECT_ID" == *"-bash-"* ]]; then
-         echo ">> Opening Bash shell..."
-         exec docker exec -it "$CONNECT_ID" gosu "$CURRENT_UID" bash
+    local file_args=()
+    if [ "$enable_profile_mode" = true ] && [ -f "${temp_conf}/extra-args" ]; then
+        echo ">> Loading profile args from ${temp_conf}/extra-args"
+        while IFS= read -r line || [ -n "$line" ]; do
+            line="${line#"${line%%[![:space:]]*}"}"
+            if [[ -n "$line" && ! "$line" =~ ^# ]]; then
+                 local parts=()
+                 # Use eval to properly parse quotes arguments (like shell would)
+                 eval "parts=($line)"
+                 file_args+=("${parts[@]}")
+            fi
+        done < "${temp_conf}/extra-args"
+    fi
+
+    if [ ${#file_args[@]} -gt 0 ]; then
+        set -- "${file_args[@]}" "$@"
+    fi
+
+    # 1. Pre-scan for Variant & Override Image
+    local override_image=""
+    local iter_variant_args=("$@")
+    for ((i=0; i<${#iter_variant_args[@]}; i++)); do
+        case "${iter_variant_args[i]}" in
+            --preview) variant="preview" ;;
+            --image)   override_image="${iter_variant_args[i+1]}" ;;
+        esac
+    done
+
+    # 2. Resolve Image Name
+    local branch_suffix=""
+    if command -v git >/dev/null 2>&1 && git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        local current_branch
+        current_branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [ "$current_branch" != "main" ] && [ -n "$current_branch" ]; then
+            local safe_branch="${current_branch//[!a-zA-Z0-9]/-}"
+            branch_suffix="-$safe_branch"
+        fi
+    fi
+
+    local local_tag=""
+    local remote_tag=""
+    local image_name=""
+    if [ -n "$override_image" ]; then
+        image_name="$override_image"
+    elif [ "$variant" == "preview" ]; then
+        local_tag="gemini-cli-toolbox/cli-preview:latest${branch_suffix}"
+        remote_tag="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-preview"
     else
-         # Try to attach to the 'gemini' tmux session (Default for all sessions)
-         if docker exec "$CONNECT_ID" gosu "$CURRENT_UID" tmux has-session -t gemini 2>/dev/null; then
-             exec docker exec -it "$CONNECT_ID" gosu "$CURRENT_UID" tmux attach -t gemini
-         else
-             # Fail if multiplexing is not available (e.g., started with --no-tmux)
-             echo "Error: This session was started without multiplexing (e.g., via --no-tmux)." >&2
-             echo "       Reconnecting to the active interactive process is not supported for this container." >&2
-             exit 1
-         fi
+        local_tag="gemini-cli-toolbox/cli:latest${branch_suffix}"
+        remote_tag="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-stable"
     fi
-fi
 
-# 2.6 Stale Image Warning
-# Only if using remote image, it is a 'latest' tag, AND it is > 7 days old
-if [[ "$IMAGE_NAME" == *"$REMOTE_TAG"* ]] && [[ "$IMAGE_NAME" == *"latest"* ]] && docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
-    CREATED=$(docker inspect --format='{{.Created}}' "$IMAGE_NAME")
-    CREATED_SEC=$(date -d "$CREATED" +%s 2>/dev/null || echo "0")
-    NOW_SEC=$(date +%s)
-    AGE=$(( (NOW_SEC - CREATED_SEC) / 86400 ))
-    
-    # 7 days
-    if [ "$AGE" -ge 7 ]; then
-         echo ">> Tip: Your Gemini image is $AGE days old. Run 'gemini-toolbox update' to refresh."
+    if [ -z "$image_name" ]; then
+        if docker image inspect "$local_tag" >/dev/null 2>&1; then
+            image_name="$local_tag"
+        else
+            image_name="$remote_tag"
+        fi
     fi
-fi
+    local args=()
+    local remote_mode=false
+    local no_tmux_flag=false
+    local tailscale_key="${GEMINI_REMOTE_KEY:-}"
+    local enable_docker=true
+    local detached_mode=false
+    local force_update=false
+    local stop_hub=false
+    local stop_command_executed=false
+    local stop_session_target=""
+    local connect_id=""
+    local enable_worktree=false
+    local target_worktree_name=""
 
-# 2.7 Detect Host Docker GID (for DooD)
-if [ "$ENABLE_DOCKER" = true ] && [ -z "$HOST_DOCKER_GID" ]; then
-    if command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
-        HOST_DOCKER_GID=$(getent group docker | cut -d: -f3)
-    fi
-fi
+    while [[ $# -gt 0 ]]; do
+      case $1 in
+        --preview)     variant="preview"; shift ;;
+        --image)       override_image="$2"; shift; shift ;;
+        --no-ide)      enable_vscode_integration=false;   shift ;;
+        --no-docker)   enable_docker=false;               shift ;;
+        --no-tmux)     extra_docker_args+=("--env" "GEMINI_TOOLBOX_TMUX=false"); no_tmux_flag=true; shift ;;
+        --config)      HOST_CONF_DIR="$2"; shift; shift ;;
+        --profile)     HOST_CONF_DIR="$2"; enable_profile_mode=true; shift; shift ;;
+        --project)     project_dir="$2";   shift; shift ;;
+        --bash)        use_bash=true;      shift ;;
+        --detached)    detached_mode=true; shift ;;
+        --remote)      
+            remote_mode=true
+            if [[ -n "${2:-}" && "$2" == tskey-* ]]; then
+                tailscale_key="$2"
+                shift
+            fi
+            shift 
+            ;;
+        --worktree)    enable_worktree=true; shift ;;
+        --name)        target_worktree_name="$2"; shift; shift ;;
+        --docker-args) 
+            IFS=' ' read -r -a split_args <<< "$2"
+            extra_docker_args+=("${split_args[@]}")
+            shift; shift 
+            ;;
+        -v|--volume)   extra_docker_args+=("--volume" "$2"); shift; shift ;;
+        --help)        show_help; exit 0 ;;
+        update)        force_update=true; shift ;;
+        stop-hub)      stop_hub=true; shift ;;
+        stop)
+            stop_command_executed=true
+            if [[ -n "${2:-}" && "$2" != --* ]]; then
+                stop_session_target="$2"
+                shift; shift
+            else
+                shift
+            fi
+            ;;
+        connect)       connect_id="$2"; shift; shift ;;
+        --)            shift; args+=("$@"); break ;;
+        *)             args+=("$1");       shift ;;
+      esac
+    done
 
-# 3. Build Docker Command
-NETWORK_MODE="--net=host"
-if [ "$REMOTE_MODE" = true ]; then
-    if [ -z "$TAILSCALE_KEY" ]; then
-        echo "Error: --remote specified but no Tailscale Key found."
-        echo "Provide key via argument (--remote tskey-...) or environment (GEMINI_REMOTE_KEY)."
+    if [ "$remote_mode" = true ] && [ "$no_tmux_flag" = true ]; then
+        echo "Error: --remote and --no-tmux are incompatible." >&2
         exit 1
     fi
-    echo ">> Remote Mode detected. Isolating network stack..."
 
-    # Auto-start Gemini Hub (for mobile discovery)
-    HUB_NAME="gemini-hub-service"
-    # Check if container is running by looking for non-empty ID output
-    # Use anchor ^...$ to match exact name
-    if [ -z "$(docker ps -q -f name="^/${HUB_NAME}$")" ]; then
-    # Use the already resolved SCRIPT_DIR
-    HUB_SCRIPT="${SCRIPT_DIR}/gemini-hub"
-        if [ -x "$HUB_SCRIPT" ]; then
-             echo ">> Auto-starting Gemini Hub..."
-             echo "   (Stop with: gemini-toolbox stop-hub)"
-             
-             HUB_ARGS=("-d" "--key" "$TAILSCALE_KEY" "--workspace" "$PROJECT_DIR")
-             
-             # If running in Profile Mode, ask user if they want to expose the parent directory to the Hub
-             if [ "$ENABLE_PROFILE_MODE" = true ] && [ -n "$PROFILE_ROOT" ]; then
-                 HUB_CONFIG_ROOT=$(dirname "$PROFILE_ROOT")
-                 
-                 # Only ask if interactive. If NOT interactive, we don't share the parent.
-                 if [ -t 0 ]; then
-                     echo ""
-                     echo ">> Profile Mode detected: ${PROFILE_ROOT}"
-                     echo ">> The Hub can scan the parent directory (${HUB_CONFIG_ROOT}) to let you switch profiles easily."
-                     read -p ">> Allow Hub to scan parent directory? [y/N] " -n 1 -r
-                     echo ""
-                     if [[ $REPLY =~ ^[Yy]$ ]]; then
-                         HUB_ARGS+=("--config-root" "$HUB_CONFIG_ROOT")
+    HOST_CONF_DIR=$(realpath -m "$HOST_CONF_DIR")
+    local profile_root=""
+    if [ "$enable_profile_mode" = true ]; then
+        profile_root="$HOST_CONF_DIR"
+        HOST_CONF_DIR="${HOST_CONF_DIR}/.gemini"
+    fi
+    mkdir -p "$HOST_CONF_DIR"
+
+    local required_dirs=(
+        "${HOME}/.m2" "${HOME}/.gradle" "${HOME}/.sbt" "${HOME}/.ivy2"
+        "${HOME}/.cache/coursier" "${HOME}/go/pkg/mod" "${HOME}/.cache/go-build"
+    )
+    for dir in "${required_dirs[@]}"; do
+        if [ ! -d "$dir" ]; then mkdir -p "$dir"; fi
+    done
+
+    project_dir=$(realpath -m "$project_dir")
+    if [ ! -d "$project_dir" ]; then
+        echo "Error: Project directory '$project_dir' does not exist." >&2
+        exit 1
+    fi
+
+    local project_name
+    project_name=$(basename "$project_dir" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+
+    local session_type="geminicli"
+    if [ "$use_bash" = true ]; then session_type="bash"; fi
+
+    local gen_uuid=""
+    if [ -f /proc/sys/kernel/random/uuid ]; then
+        gen_uuid=$(head -c 36 /proc/sys/kernel/random/uuid | cut -c1-8)
+    fi
+    gen_uuid="${gen_uuid:-$(date +%s)}"
+
+    local gemini_session_id="gem-${project_name}-${session_type}-${gen_uuid}"
+    local container_name_arg=("--name" "${gemini_session_id}")
+
+    local original_project_dir="$project_dir"
+    if [ "$enable_worktree" = true ]; then
+        project_dir=$(setup_worktree "$project_name" "$target_worktree_name" "$project_dir")
+    fi
+
+    if [ "$force_update" = true ]; then
+        if [[ "$image_name" == "$local_tag" ]]; then
+            echo ">> Error: You are using a local image '$local_tag'. Cannot update from registry." >&2
+            exit 1
+        fi
+        echo ">> Updating '$image_name'..."
+        docker pull "$image_name"
+        exit $?
+    fi
+
+    if [ "$stop_hub" = true ]; then
+        local hub_script="${script_dir}/gemini-hub"
+        if [ -x "$hub_script" ]; then exec "$hub_script" stop; else exit 1; fi
+    fi
+
+    if [ "$stop_command_executed" = true ]; then
+        stop_session_target="${stop_session_target:-$project_name}"
+        local matches=""
+        if docker ps --format '{{.Names}}' | grep -q "^${stop_session_target}$"; then
+            matches="${stop_session_target}"
+        else
+            matches=$(docker ps --format '{{.Names}}' --filter "name=gem-${stop_session_target}-" | grep -E "^gem-${stop_session_target}-" || true)
+        fi
+        if [ -z "$matches" ]; then echo "Error: No active sessions found matching '$stop_session_target'." >&2; exit 1; fi
+        local match_count
+        match_count=$(echo "$matches" | wc -l)
+        if [ "$match_count" -gt 1 ]; then
+            echo "Error: Multiple sessions found for project '$stop_session_target':" >&2
+            # shellcheck disable=SC2001
+            echo "$matches" | sed 's/^/   - /' >&2
+            echo "" >&2
+            echo "Please specify a full session ID to stop a specific one." >&2
+            exit 1
+        fi
+        echo ">> Stopping session: $matches"
+        docker stop "$matches"
+        exit $?
+    fi
+
+    if [ -n "$connect_id" ]; then
+        echo ">> Connecting to session '$connect_id'..."
+        local current_uid
+        current_uid=$(id -u)
+        if [[ "$connect_id" == *"-bash-"* ]]; then
+             exec docker exec -it "$connect_id" gosu "$current_uid" bash
+        else
+             if docker exec "$connect_id" gosu "$current_uid" tmux has-session -t gemini 2>/dev/null; then
+                 exec docker exec -it "$connect_id" gosu "$current_uid" tmux attach -t gemini
+             else
+                 echo "Error: Reconnecting to this session is not supported." >&2
+                 exit 1
+             fi
+        fi
+    fi
+
+    if [[ "$image_name" == *"$remote_tag"* ]] && [[ "$image_name" == *"latest"* ]] && docker image inspect "$image_name" >/dev/null 2>&1; then
+        local created
+        created=$(docker inspect --format='{{.Created}}' "$image_name")
+        local created_sec
+        created_sec=$(date -d "$created" +%s 2>/dev/null || echo "0")
+        local age=$(( ($(date +%s) - created_sec) / 86400 ))
+        if [ "$age" -ge 7 ]; then
+             echo ">> Tip: Your Gemini image is $age days old. Run 'gemini-toolbox update' to refresh."
+        fi
+    fi
+
+    local host_docker_gid=""
+    if [ "$enable_docker" = true ]; then
+        if command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
+            host_docker_gid=$(getent group docker | cut -d: -f3)
+        fi
+    fi
+
+    local network_mode="--net=host"
+    if [ "$remote_mode" = true ]; then
+        if [ -z "$tailscale_key" ]; then exit 1; fi
+        local hub_name="gemini-hub-service"
+        if [ -z "$(docker ps -q -f name="^/${hub_name}$")" ]; then
+            local hub_script="${script_dir}/gemini-hub"
+            if [ -x "$hub_script" ]; then
+                 local hub_args=("-d" "--key" "$tailscale_key" "--workspace" "$project_dir")
+                 if [ "$enable_profile_mode" = true ] && [ -n "$profile_root" ]; then
+                     local hub_config_root
+                     hub_config_root=$(dirname "$profile_root")
+                     if [ -t 0 ]; then
+                         read -p ">> Allow Hub to scan parent directory? [y/N] " -n 1 -r REPLY
+                         if [[ ${REPLY:-N} =~ ^[Yy]$ ]]; then hub_args+=("--config-root" "$hub_config_root"); fi
                      fi
                  fi
-             fi
-             
-             if "$HUB_SCRIPT" "${HUB_ARGS[@]}" > /tmp/gemini-hub.log 2>&1; then
-                 echo ">> Hub started."
-             else
-                 echo ">> Warning: Failed to start Hub. Check /tmp/gemini-hub.log"
-             fi
-        else
-             echo ">> Warning: gemini-hub script not found at $HUB_SCRIPT"
+                 "$hub_script" "${hub_args[@]}" > /tmp/gemini-hub.log 2>&1 || true
+            fi
         fi
+        network_mode="--network=bridge"
+        enable_vscode_integration=false
+        extra_docker_args+=(
+            --env TAILSCALE_AUTH_KEY="$tailscale_key"
+            --cap-add=NET_ADMIN --device /dev/net/tun -p 127.0.0.1:0:3000
+        )
+    fi
+
+    local docker_args=(
+      "${container_name_arg[@]}" "$network_mode" --volume "${project_dir}:${project_dir}"
+    )
+
+    local main_repo_root=""
+    if [ "$project_dir" != "$original_project_dir" ]; then
+        main_repo_root="$original_project_dir"
+    elif command -v git >/dev/null 2>&1 && git -C "$project_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        local toplevel
+        toplevel=$(git -C "$project_dir" rev-parse --show-toplevel 2>/dev/null)
+        if [ -f "${toplevel}/.git" ]; then
+            local common_dir
+            common_dir=$(git -C "$project_dir" rev-parse --git-common-dir 2>/dev/null)
+            if [ -n "$common_dir" ]; then main_repo_root=$(dirname "$common_dir"); fi
+        fi
+    fi
+
+    if [ -n "$main_repo_root" ]; then
+        docker_args+=(--volume "${main_repo_root}:${main_repo_root}:ro" --volume "${main_repo_root}/.git:${main_repo_root}/.git")
+    fi
+
+    docker_args+=(
+        --volume "${HOST_CONF_DIR}:/home/gemini/.gemini"
+        --volume "${HOME}/.m2:/home/gemini/.m2" --volume "${HOME}/.gradle:/home/gemini/.gradle"
+        --volume "${HOME}/.sbt:/home/gemini/.sbt" --volume "${HOME}/.ivy2:/home/gemini/.ivy2"
+        --volume "${HOME}/.cache/coursier:/home/gemini/.cache/coursier"
+        --volume "${HOME}/go/pkg/mod:/home/gemini/go/pkg/mod"
+        --volume "${HOME}/.cache/go-build:/home/gemini/.cache/go-build"
+        --env DEFAULT_UID="${HOST_UID:-$(id -u)}" --env DEFAULT_GID="${HOST_GID:-$(id -g)}"
+        --env GEMINI_SESSION_ID="${gemini_session_id}" --env GEMINI_PROJECT_NAME="${project_name}"
+        --env GEMINI_SESSION_TYPE="${session_type}" --env TERM="${TERM:-xterm-256color}"
+        --env COLORTERM --env LANG --env LC_ALL
+        --env HTTP_PROXY --env HTTPS_PROXY --env NO_PROXY
+        --env http_proxy --env https_proxy --env no_proxy
+        --workdir "${project_dir}" "${extra_docker_args[@]}"
+    )
+
+    if [ "$enable_docker" = true ]; then
+        docker_args+=(--volume "/var/run/docker.sock:/var/run/docker.sock" --env HOST_DOCKER_GID="${host_docker_gid}")
+    fi
+
+    if [ "$enable_vscode_integration" = true ]; then
+        docker_args+=(
+          --env TERM_PROGRAM --env TERM_PROGRAM_VERSION
+          --env GEMINI_CLI_IDE_SERVER_PORT --env GEMINI_CLI_IDE_AUTH_TOKEN
+          --env GEMINI_CLI_IDE_WORKSPACE_PATH
+          --env GEMINI_CLI_IDE_SERVER_HOST=127.0.0.1
+        )
+    fi
+
+    local exec_args=()
+    if [ "$use_bash" = true ]; then
+        echo ">> Mode: BASH"
+        exec_args=("--entrypoint" "/usr/local/bin/docker-entrypoint.sh" "$image_name" "bash" "${args[@]}")
     else
-         echo ">> Gemini Hub is active at http://localhost:8888"
+        exec_args=("$image_name" "${args[@]}")
     fi
 
-    NETWORK_MODE="--network=bridge"
-    ENABLE_VSCODE_INTEGRATION=false
-    EXTRA_DOCKER_ARGS+=(
-        --env TAILSCALE_AUTH_KEY="$TAILSCALE_KEY"
-        --cap-add=NET_ADMIN
-        --device /dev/net/tun
-        # Hybrid Mode: Expose port 3000 to localhost (host)
-        # This allows the user to browse http://localhost:<random_port> on the host machine
-        # and hit the app running on port 3000 inside the container (on the VPN).
-        -p 127.0.0.1:0:3000
-    )
-fi
-
-DOCKER_ARGS=(
-  "${CONTAINER_NAME_ARG[@]}"
-  "$NETWORK_MODE"
-  # Path Mirroring for IDE Security Check:
-  # We mount the project at the EXACT SAME path as the host (not /home/gemini/workspace).
-  # The Gemini CLI checks that PWD inside match the Workspace Path in VS Code.
-  --volume "${PROJECT_DIR}:${PROJECT_DIR}"
-  )
-
-  # --- Parent Repo Mounting Strategy ---
-  # We need the parent repo for Git history/objects if we are in a worktree.
-  # 1. Check if we just created a worktree via --worktree (PROJECT_DIR != ORIGINAL_PROJECT_DIR)
-  # 2. Check if we are ALREADY in a worktree (even if --worktree wasn't passed)
-  MAIN_REPO_ROOT=""
-  if [ "$PROJECT_DIR" != "$ORIGINAL_PROJECT_DIR" ]; then
-      MAIN_REPO_ROOT="$ORIGINAL_PROJECT_DIR"
-  elif command -v git >/dev/null 2>&1 && git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      # Check if .git is a file (indicates a worktree)
-      TOPLEVEL=$(git -C "$PROJECT_DIR" rev-parse --show-toplevel 2>/dev/null)
-      if [ -f "${TOPLEVEL}/.git" ]; then
-          COMMON_DIR=$(git -C "$PROJECT_DIR" rev-parse --git-common-dir 2>/dev/null)
-          if [ -n "$COMMON_DIR" ]; then
-              MAIN_REPO_ROOT=$(dirname "$COMMON_DIR")
-          fi
-      fi
-  fi
-
-  if [ -n "$MAIN_REPO_ROOT" ]; then
-      # We mount Parent :ro for security, but .git :rw for Git functionality.
-      DOCKER_ARGS+=(
-          --volume "${MAIN_REPO_ROOT}:${MAIN_REPO_ROOT}:ro"
-          --volume "${MAIN_REPO_ROOT}/.git:${MAIN_REPO_ROOT}/.git"
-      )
-  fi
-
-  DOCKER_ARGS+=(
-    --volume "${HOST_CONF_DIR}:/home/gemini/.gemini"
-    # Shared Host Caches (Performance & Convenience)
-    --volume "${HOME}/.m2:/home/gemini/.m2"
-    --volume "${HOME}/.gradle:/home/gemini/.gradle"
-    --volume "${HOME}/.sbt:/home/gemini/.sbt"
-    --volume "${HOME}/.ivy2:/home/gemini/.ivy2"
-    --volume "${HOME}/.cache/coursier:/home/gemini/.cache/coursier"
-    --volume "${HOME}/go/pkg/mod:/home/gemini/go/pkg/mod"
-    --volume "${HOME}/.cache/go-build:/home/gemini/.cache/go-build"
-    --env DEFAULT_UID="${HOST_UID:-$(id -u)}"
-    --env DEFAULT_GID="${HOST_GID:-$(id -g)}"
-    --env GEMINI_SESSION_ID="${GEMINI_SESSION_ID}"
-    --env GEMINI_PROJECT_NAME="${PROJECT_NAME}"
-    --env GEMINI_SESSION_TYPE="${SESSION_TYPE}"
-    --env TERM="${TERM:-xterm-256color}"
-    --env COLORTERM
-    --env LANG
-    --env LC_ALL
-    --env HTTP_PROXY --env HTTPS_PROXY --env NO_PROXY
-    --env http_proxy --env https_proxy --env no_proxy
-    --workdir "${PROJECT_DIR}"
-    "${EXTRA_DOCKER_ARGS[@]}"
-  )
-
-# Conditionally Add Docker Support
-if [ "$ENABLE_DOCKER" = true ]; then
-    DOCKER_ARGS+=(
-      # Docker-out-of-Docker Support
-      --volume "/var/run/docker.sock:/var/run/docker.sock"
-      --env HOST_DOCKER_GID="${HOST_DOCKER_GID}"
-    )
-else
-    echo ">> Warning: Docker-out-of-Docker integration is disabled (--no-docker)."
-fi
-
-# Conditionally Add IDE Integration
-if [ "$ENABLE_VSCODE_INTEGRATION" = true ]; then
-    DOCKER_ARGS+=(
-      # VS Code Integration:
-      # 1. TERM_PROGRAM*: Tells Gemini CLI we are inside VS Code (enables the feature).
-      # 2. GEMINI_CLI_IDE_*: Connection details passed from the Host Terminal.
-      #    - HOST=127.0.0.1: Our custom patch forces the CLI to use this instead of host.docker.internal.
-      --env TERM_PROGRAM
-      --env TERM_PROGRAM_VERSION
-      --env GEMINI_CLI_IDE_SERVER_PORT
-      --env GEMINI_CLI_IDE_AUTH_TOKEN
-      --env GEMINI_CLI_IDE_WORKSPACE_PATH
-      --env GEMINI_CLI_IDE_SERVER_HOST=127.0.0.1
-    )
-fi
-
-# 4. Assemble Execution Arguments
-EXEC_ARGS=()
-if [ "$USE_BASH" = true ]; then
-    echo ">> Mode: BASH"
-    EXEC_ARGS=("--entrypoint" "/usr/local/bin/docker-entrypoint.sh" "$IMAGE_NAME" "bash" "${ARGS[@]}")
-else
-    EXEC_ARGS=("$IMAGE_NAME" "${ARGS[@]}")
-fi
-
-# 5. Execute
-if [ "$DETACHED_MODE" = true ]; then
-    echo ">> Starting container in background..."
-    docker run --rm -d "${DOCKER_ARGS[@]}" "${EXEC_ARGS[@]}"
-    echo ">> Container started: ${GEMINI_SESSION_ID}"
-else
-    if [ "$USE_BASH" = true ]; then
-        echo "Starting in BASH mode..."
+    if [ "$detached_mode" = true ]; then
+        echo ">> Starting container in background..."
+        docker run --rm -d "${docker_args[@]}" "${exec_args[@]}"
+        echo ">> Container started: ${gemini_session_id}"
+    else
+        if [ "$use_bash" = true ]; then echo "Starting in BASH mode..."; fi
+        docker run --rm -it "${docker_args[@]}" "${exec_args[@]}"
     fi
-    docker run --rm -it "${DOCKER_ARGS[@]}" "${EXEC_ARGS[@]}"
+}
+
+# Entry point guard
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
 fi

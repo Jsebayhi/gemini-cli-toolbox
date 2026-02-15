@@ -27,6 +27,9 @@ teardown() {
 @test "gemini-hub with key calls docker run" {
     # We need to ensure REPO_ROOT is correctly detected or at least doesn't crash realpath
     run "$HUB" --key tskey-auth-mock
+    echo "HUB OUTPUT: $output"
+    echo "HUB STATUS: $status"
+    assert_success
     
     # Check if docker was called
     [ -f "$TEST_TEMP_DIR/docker_calls.log" ]

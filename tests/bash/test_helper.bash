@@ -32,7 +32,15 @@ teardown_test_env() {
 mock_docker() {
     cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
 #!/bin/bash
-echo "docker \$*" >> "$TEST_TEMP_DIR/docker_calls.log"
+# Log the command and arguments with clear delimiters to preserve spaces/quotes
+{
+    printf "docker"
+    for arg in "\$@"; do
+        printf " '%s'" "\$arg"
+    done
+    printf "\n"
+} >> "$TEST_TEMP_DIR/docker_calls.log"
+
 case "\$1" in
     inspect)
         exit 1 # Simulate image not found locally by default
