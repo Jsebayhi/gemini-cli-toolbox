@@ -344,3 +344,39 @@ def test_wizard_advanced_options_toggle(page: Page, live_server_url):
         # Toggle Closed
         page.get_by_text("Advanced Options").click()
         expect(page.get_by_placeholder("e.g. -v /host/path:/container/path")).not_to_be_visible()
+
+def test_wizard_browse_error_handling(page: Page, live_server_url):
+    """Verify that browsing errors are handled gracefully."""
+    
+    with patch("app.services.filesystem.FileSystemService.get_roots", return_value=["/root"]), \
+         patch("app.services.filesystem.FileSystemService.browse", side_effect=PermissionError("Access Denied")):
+             
+        page.goto(live_server_url)
+        page.get_by_role("button", name="+ New Session").click()
+        
+        # Handle the browser alert
+        page.on("dialog", lambda dialog: expect(dialog.message).to_contain("Access Denied"))
+        page.on("dialog", lambda dialog: dialog.dismiss())
+        
+        # Click the root to trigger browse
+        page.get_by_text("/root").click()
+
+def test_wizard_launch_error_handling(page: Page, live_server_url):
+    """Verify that launch errors are displayed in the UI."""
+    
+    with patch("app.services.filesystem.FileSystemService.get_roots", return_value=["/root"]), \
+         patch("app.services.filesystem.FileSystemService.browse", return_value={"directories": [], "files": []}), \
+         patch("app.services.filesystem.FileSystemService.get_configs", return_value=[]), \
+         patch("app.services.launcher.LauncherService.launch", return_value={"returncode": 1, "stdout": "", "stderr": "Permission denied by host daemon", "command": "docker run ..."}):
+             
+        page.goto(live_server_url)
+        page.get_by_role("button", name="+ New Session").click()
+        page.locator("#roots-list").get_by_text("/root").click()
+        page.get_by_role("button", name="Use This Folder").click()
+        
+        # Launch
+        page.get_by_role("button", name="Launch Session").click()
+        
+        # Verify Error State
+        expect(page.get_by_text("Launch failed")).to_be_visible()
+        expect(page.get_by_text("Permission denied by host daemon")).to_be_visible()
