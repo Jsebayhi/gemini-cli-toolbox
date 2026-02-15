@@ -48,6 +48,19 @@ make build
 *   **Process:** Create branch -> Implement -> Push -> Open PR -> **STOP**.
 *   **Why:** The user often wants to review the PR diff before merging.
 
+### Architecture Decision Records (ADRs)
+*   **Rule:** ADRs are **immutable historical logs**. Do not modify the "Decision" or "Context" of an existing ADR to reflect a new direction.
+*   **Process:** If a previous decision is changed:
+    1.  Create a **NEW** ADR documenting the new direction.
+    2.  Update the **Status** of the old ADR to "Superseded by [ADR-XXXX]".
+    3.  **Preserve History:** Do NOT remove previous "Supersedes" lines from an old ADR. Maintain the full chain (e.g., "Supersedes ADR-0001" followed by "Superseded by ADR-0038") to allow tracing the architectural evolution.
+*   **Why:** This preserves the architectural evolution of the project and prevents "erasing" the reasoning behind past choices.
+
+### Testing Strategy
+*   **Bash Scripts:** Use `bats-core`. Tests reside in `tests/bash/`. Use `make test-bash` to execute.
+*   **Python (Hub):** Use `pytest`. Tests reside in `images/gemini-hub/tests/`. Use `make test` to execute.
+*   **Mandatory:** Always run `make local-ci` before submitting a PR.
+
 ## 5. Naming Strategy
 
 ### Consistency Mandate

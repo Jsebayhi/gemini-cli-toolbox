@@ -4,7 +4,8 @@ Date: 2026-01-23
 
 ## Status
 
-Accepted (Supersedes [ADR-0001](./0001-mobile-discovery.md))
+Supersedes [ADR-0001](./0001-mobile-discovery.md)
+Superseded by [ADR-0038](./0038-tailscale-kernel-tun-for-robust-recovery.md)
 
 ## Context
 

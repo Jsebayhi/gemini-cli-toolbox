@@ -78,9 +78,9 @@ fi
 if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
     echo ">> Initializing Remote Access Mode (Tailscale)..."
     # Start tailscaled in the background
-    # --tun=userspace-networking: works without /dev/net/tun if necessary
+    # We use the standard Kernel TUN device for robust connectivity recovery
     # --statedir: store state in /tmp to avoid permission issues
-    tailscaled --tun=userspace-networking --statedir=/tmp/tailscale &
+    tailscaled --statedir=/tmp/tailscale &
     
     # Wait for daemon to be ready
     sleep 2
