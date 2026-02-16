@@ -54,6 +54,29 @@ EOF
     assert_success
 }
 
+@test "Hub main: config root fallback" {
+    source_hub
+    local profiles_dir="$TEST_TEMP_DIR/.gemini-profiles"
+    mkdir -p "$profiles_dir"
+    # Ensure default config root does NOT exist
+    rm -rf "$HOME/.gemini/configs"
+    
+    mock_docker
+    run main --key tskey-123
+    assert_success
+    run grep "HOST_CONFIG_ROOT=$profiles_dir" "$MOCK_DOCKER_LOG"
+    assert_success
+}
+
+@test "Hub main: workspace root existence warning" {
+    source_hub
+    mock_docker
+    run main --key tskey-123 --workspace "/tmp/non-existent-$(date +%s)"
+    assert_success
+    assert_output --partial "Warning: Workspace root"
+    assert_output --partial "does not exist. Skipping."
+}
+
 @test "Hub main: expiry days env propagation" {
     source_hub
     export GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS=10
@@ -69,5 +92,15 @@ EOF
     run grep "GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS=20" "$MOCK_DOCKER_LOG"
     assert_success
     run grep "GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS=30" "$MOCK_DOCKER_LOG"
+    assert_success
+}
+
+@test "Hub main: check toolbox script mount" {
+    source_hub
+    mock_docker
+    run main --key tskey-123
+    assert_success
+    # By default in tests, bin/gemini-toolbox exists next to gemini-hub
+    run grep "/usr/local/bin/gemini-toolbox" "$MOCK_DOCKER_LOG"
     assert_success
 }

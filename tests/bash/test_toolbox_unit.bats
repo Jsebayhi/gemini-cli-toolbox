@@ -14,7 +14,7 @@ teardown() {
 source_toolbox() {
     # Mock some basics to avoid errors during sourcing if any
     export HOME="$TEST_TEMP_DIR"
-    source gemini-toolbox
+    source "$PROJECT_ROOT/bin/gemini-toolbox"
 }
 
 @test "show_help function prints usage" {
@@ -86,15 +86,49 @@ EOF
     run grep "gemini-cli-toolbox/cli:latest" "$MOCK_DOCKER_LOG"
 }
 
-@test "main: image detection logic (local missing)" {
+@test "setup_worktree error: empty repository" {
     source_toolbox
-    # Mock docker image inspect to return 1
+    local empty_repo="$TEST_TEMP_DIR/empty-repo"
+    mkdir -p "$empty_repo"
+    cd "$empty_repo"
+    git init -q
+    # No commits yet
+    run setup_worktree "proj" "branch" "."
+    assert_failure
+    assert_output --partial "Error: Cannot create a worktree from an empty repository"
+}
+
+@test "setup_worktree: folder name sanitization" {
+    source_toolbox
+    # Mocking successful git commands to get past guards
+    mock_git 
+    run setup_worktree "myproj" "feature/task #123" "."
+    assert_success
+    # Should sanitize / to - and remove # and space
+    run grep "feature-task123" <<< "$output"
+    assert_success
+}
+
+@test "main: age-based refresh tip" {
+    source_toolbox
+    # Force usage of remote tag by failing local inspect
+    # And mock age to be old
     cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
 #!/bin/bash
-if [[ "\$1" == "image" && "\$2" == "inspect" ]]; then exit 1; fi
+if [[ "\$1" == "inspect" && "\$2" == "--format"* ]]; then
+    echo "2020-01-01T00:00:00Z"
+    exit 0
+fi
+if [[ "\$1" == "image" && "\$2" == "inspect" ]]; then 
+    if [[ "\$3" == "gemini-cli-toolbox/cli:latest"* ]]; then exit 1; fi
+    exit 0 
+fi
 echo "docker \$*" >> "$MOCK_DOCKER_LOG"
 exit 0
 EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+
     run main --bash
-    run grep "jsebayhi/gemini-cli-toolbox:latest-stable" "$MOCK_DOCKER_LOG"
+    assert_success
+    assert_output --partial "Tip: Your Gemini image is"
 }
