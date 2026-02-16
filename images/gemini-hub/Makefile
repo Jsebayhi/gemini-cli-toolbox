@@ -40,7 +40,15 @@ print-image:
 test:
 	@echo ">> Running Gemini Hub Unit & Integration Tests..."
 	docker build -t $(IMAGE_NAME)-test -f tests/Dockerfile .
-	docker run --rm $(IMAGE_NAME)-test python3 -m pytest -n auto -vv --cov=app --cov-fail-under=90 tests/unit tests/integration
+	docker run --rm \
+		-v "$(PWD)/../../coverage/python:/coverage" \
+		$(IMAGE_NAME)-test \
+		python3 -m pytest -n auto -vv \
+		--cov=app \
+		--cov-report=term \
+		--cov-report=json:/coverage/coverage.json \
+		--cov-fail-under=90 \
+		tests/unit tests/integration
 
 test-ui:
 	@echo ">> Running Gemini Hub UI Tests..."
