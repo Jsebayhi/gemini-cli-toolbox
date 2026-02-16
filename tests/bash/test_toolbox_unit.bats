@@ -4,13 +4,9 @@ load 'test_helper'
 
 setup() {
     setup_test_env
-    # We must mock git because the script checks for git on load if sourcing, or we need to ensure sourcing is safe.
-    # The new pattern: sourcing shouldn't run logic.
     mock_docker
-    mock_git
-    
-    # Source the toolbox script to test functions
-    source "$TOOLBOX"
+    # Source the real script
+    source "$PROJECT_ROOT/bin/gemini-toolbox"
 }
 
 teardown() {
@@ -24,16 +20,9 @@ teardown() {
 }
 
 @test "main function runs correctly with --bash" {
-    # We need to mock id for the script to run
-    # Since we are sourcing, we are in the test environment.
-    # We can invoke main directly.
-    
     run main --bash
     assert_success
-    
-    # Check docker calls
-    [ -f "$TEST_TEMP_DIR/docker_calls.log" ]
-    run grep "docker run" "$TEST_TEMP_DIR/docker_calls.log"
+    run grep "docker run" "$MOCK_DOCKER_LOG"
     assert_success
 }
 

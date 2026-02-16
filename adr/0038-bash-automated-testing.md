@@ -1,4 +1,4 @@
-# 0037. Bash Automated Testing
+# 0038. Bash Automated Testing
 
 ## Status
 Proposed

@@ -120,8 +120,26 @@ test: test-bash
 test-bash: deps-bash
 	@echo ">> Building Bash Test Runner..."
 	docker build -t gemini-bash-tester tests/bash
-	@echo ">> Running Bash Automated Tests (Bats)..."
-	docker run --rm -v "$(shell pwd):/code" -w /code gemini-bash-tester tests/bash
+	@echo ">> Running Bash Automated Tests with Coverage (kcov)..."
+	@mkdir -p coverage/bash
+	docker run --rm \
+		--cap-add=SYS_PTRACE \
+		-v "$(shell pwd):/code" \
+		-w /code \
+		--entrypoint kcov \
+		gemini-bash-tester \
+		--include-path=/code/bin \
+		/code/coverage/bash \
+		bats tests/bash
+	@echo ""
+	@echo ">> Bash Coverage Summary:"
+	@REPORT_JSON=$$(find coverage/bash -name "coverage.json" | head -n 1); \
+	if [ -n "$$REPORT_JSON" ] && [ -f "$$REPORT_JSON" ]; then \
+		cat "$$REPORT_JSON" | python3 -c "import sys, json; data=json.load(sys.stdin); print(f\"Percent covered: {data['percent_covered']}%\")"; \
+	else \
+		echo ">> Warning: Coverage report not found."; \
+	fi
+	@echo ">> Detailed report: coverage/bash/index.html"
 
 .PHONY: deps-bash
 deps-bash:

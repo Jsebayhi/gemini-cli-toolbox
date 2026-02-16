@@ -253,7 +253,7 @@ main() {
     local stop_session_target=""
     local connect_id=""
     local enable_worktree=false
-    local target_worktree_name=""
+    local arg_name=""
 
     while [[ $# -gt 0 ]]; do
       case $1 in
@@ -276,7 +276,7 @@ main() {
             shift 
             ;;
         --worktree)    enable_worktree=true; shift ;;
-        --name)        target_worktree_name="$2"; shift; shift ;;
+        --name)        arg_name="$2"; shift; shift ;;
         --docker-args) 
             IFS=' ' read -r -a split_args <<< "$2"
             extra_docker_args+=("${split_args[@]}")
@@ -329,7 +329,11 @@ main() {
     fi
 
     local project_name
-    project_name=$(basename "$project_dir" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+    if [ -n "$arg_name" ]; then
+        project_name="$arg_name"
+    else
+        project_name=$(basename "$project_dir" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+    fi
 
     local session_type="geminicli"
     if [ "$use_bash" = true ]; then session_type="bash"; fi
@@ -345,7 +349,7 @@ main() {
 
     local original_project_dir="$project_dir"
     if [ "$enable_worktree" = true ]; then
-        project_dir=$(setup_worktree "$project_name" "$target_worktree_name" "$project_dir")
+        project_dir=$(setup_worktree "$project_name" "$arg_name" "$project_dir")
     fi
 
     if [ "$force_update" = true ]; then

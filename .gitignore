@@ -24,3 +24,5 @@ __pycache__/
 test-results/
 README_DOCKER.md
 tests/bash/libs/
+tests/bash/*_parity.bats
+coverage/

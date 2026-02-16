@@ -5,7 +5,6 @@ load 'test_helper'
 setup() {
     setup_test_env
     mock_docker
-    mock_git
 }
 
 teardown() {
@@ -13,45 +12,34 @@ teardown() {
 }
 
 @test "gemini-hub --help returns 0" {
-    run "$HUB" --help
+    run gemini-hub --help
     assert_success
-    assert_output --partial "Usage:"
+    assert_output --partial "Usage: gemini-hub"
 }
 
 @test "gemini-hub requires auth key" {
-    run "$HUB"
+    run gemini-hub
     assert_failure
     assert_output --partial "Error: TAILSCALE_KEY is required"
 }
 
 @test "gemini-hub with key calls docker run" {
-    # We need to ensure REPO_ROOT is correctly detected or at least doesn't crash realpath
-    run "$HUB" --key tskey-auth-mock
-    echo "HUB OUTPUT: $output"
-    echo "HUB STATUS: $status"
+    run gemini-hub --key tskey-auth-123
     assert_success
-    
-    # Check if docker was called
-    [ -f "$TEST_TEMP_DIR/docker_calls.log" ]
-    run grep "docker run" "$TEST_TEMP_DIR/docker_calls.log"
+    run grep "docker run" "$MOCK_DOCKER_LOG"
     assert_success
 }
 
 @test "gemini-hub stop command calls docker stop" {
-    run "$HUB" stop
+    run gemini-hub stop
     assert_success
-    assert_output --partial "Stopping Gemini Hub"
-    
-    [ -f "$TEST_TEMP_DIR/docker_calls.log" ]
-    run grep "docker stop" "$TEST_TEMP_DIR/docker_calls.log"
+    run grep "docker stop gemini-hub-service" "$MOCK_DOCKER_LOG"
     assert_success
 }
 
 @test "gemini-hub uses host networking" {
-    run "$HUB" --key tskey-auth-mock
+    run gemini-hub --key tskey-auth-123
     assert_success
-    
-    [ -f "$TEST_TEMP_DIR/docker_calls.log" ]
-    run grep "\-\-net=host" "$TEST_TEMP_DIR/docker_calls.log"
+    run grep "\-\-net=host" "$MOCK_DOCKER_LOG"
     assert_success
 }

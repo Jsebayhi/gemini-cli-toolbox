@@ -1,66 +1,11 @@
 #!/bin/bash
-set -e
 
-# 0. Resolve script location and Repository Root
-# This ensures we detect the branch of the toolbox itself, even when run from another project.
-REAL_SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$REAL_SOURCE" ]; do
-    DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-    REAL_SOURCE="$(readlink "$REAL_SOURCE")"
-    [[ $REAL_SOURCE != /* ]] && REAL_SOURCE="$DIR/$REAL_SOURCE"
-done
-SCRIPT_DIR="$( cd -P "$( dirname "$REAL_SOURCE" )" >/dev/null 2>&1 && pwd )"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+# Gemini Hub Wrapper Script
+# A dashboard for discovering and connecting to active Gemini sessions via Tailscale.
 
-# Configuration
-DOCKER_HUB_USER="${DOCKER_HUB_USER:-jsebayhi}"
-LOCAL_TAG="gemini-cli-toolbox/hub:latest"
-REMOTE_TAG="${DOCKER_HUB_USER}/gemini-cli-toolbox:latest-hub"
-CONTAINER_NAME="gemini-hub-service"
-PORT="8888"
+# 0. Global Defaults & Functions (Source-safe)
+# These are safe to load when sourcing the script for testing.
 
-# Auth Key
-AUTH_KEY="${GEMINI_REMOTE_KEY:-}"
-WORKSPACE_ROOTS=()
-CONFIG_ROOT="${HOME}/.gemini/configs"
-
-# Auto-detect config root fallback
-if [ ! -d "$CONFIG_ROOT" ] && [ -d "${HOME}/.gemini-profiles" ]; then
-    CONFIG_ROOT="${HOME}/.gemini-profiles"
-fi
-
-# 1. Pre-scan for Override Image
-OVERRIDE_IMAGE=""
-iter_hub_args=("$@")
-for ((i=0; i<${#iter_hub_args[@]}; i++)); do
-    case "${iter_hub_args[i]}" in
-        --image) OVERRIDE_IMAGE="${iter_hub_args[i+1]}" ;;
-    esac
-done
-
-# 2. Resolve Image Name (Local vs Remote)
-# Detect Current Branch for dynamic tagging (based on Toolbox repository)
-BRANCH_SUFFIX=""
-if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)
-    if [ "$CURRENT_BRANCH" != "main" ] && [ -n "$CURRENT_BRANCH" ]; then
-        SAFE_BRANCH="${CURRENT_BRANCH//[!a-zA-Z0-9]/-}"
-        BRANCH_SUFFIX="-$SAFE_BRANCH"
-    fi
-fi
-
-LOCAL_TAG="gemini-cli-toolbox/hub:latest${BRANCH_SUFFIX}"
-
-if [ -n "$OVERRIDE_IMAGE" ]; then
-    IMAGE_NAME="$OVERRIDE_IMAGE"
-elif docker image inspect "$LOCAL_TAG" >/dev/null 2>&1; then
-    IMAGE_NAME="$LOCAL_TAG"
-else
-    # Fallback to remote image (Docker will auto-pull if missing)
-    IMAGE_NAME="$REMOTE_TAG"
-fi
-
-# Help Function
 show_help() {
     echo "Usage: gemini-hub [OPTIONS] [COMMAND]"
     echo ""
@@ -86,190 +31,224 @@ show_help() {
     echo "  gemini-hub --workspace ~/projects --workspace /data/repos"
 }
 
-# Parse Args
-MODE="-it"
-AUTO_SHUTDOWN=false
-PRUNE_ENABLED=true
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -d|--detach) MODE="-d"; shift ;;
-    --image)     OVERRIDE_IMAGE="$2"; shift; shift ;;
-    --key)       AUTH_KEY="$2"; shift; shift ;;
-    --auto-shutdown) AUTO_SHUTDOWN=true; shift ;;
-    --no-worktree-prune) PRUNE_ENABLED=false; shift ;;
-    --workspace) WORKSPACE_ROOTS+=("$2"); shift; shift ;;
-    --config-root) CONFIG_ROOT="$2"; shift; shift ;;
-    -h|--help)   show_help; exit 0 ;;
-    stop)
-        echo ">> Stopping Gemini Hub..."
-        docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || echo ">> Hub is not running."
-        exit 0
-        ;;
-    *)           echo "Error: Unknown argument '$1'"; show_help; exit 1 ;;
-  esac
-done
+main() {
+    set -euo pipefail
 
-if [ -z "$AUTH_KEY" ]; then
-    echo "Error: TAILSCALE_KEY is required for the Hub."
-    echo "Run 'gemini-hub --help' for usage instructions."
-    exit 1
-fi
-
-# Prepare Docker Args for Mounts
-EXTRA_MOUNTS=()
-ROOT_PATHS_LIST=""
-ENV_VARS=()
-
-if [ "$AUTO_SHUTDOWN" = true ]; then
-    ENV_VARS+=("--env" "HUB_AUTO_SHUTDOWN=1")
-fi
-
-if [ "$PRUNE_ENABLED" = false ]; then
-    ENV_VARS+=("--env" "HUB_WORKTREE_PRUNE_ENABLED=false")
-fi
-
-# --- SMART RESTART LOGIC ---
-# Check if Hub is already running
-if [ -n "$(docker ps -q -f name="^/${CONTAINER_NAME}$")" ]; then
-    echo ">> Hub is already running."
-    
-    # 1. Introspect existing configuration
-    EXISTING_ROOTS_STR=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER_NAME" | grep "^HUB_ROOTS=" | cut -d= -f2-)
-    IFS=':' read -ra EXISTING_ROOTS <<< "$EXISTING_ROOTS_STR"
-    
-    # 2. Check for missing roots
-    MISSING_ROOTS=()
-    for new_root in "${WORKSPACE_ROOTS[@]}"; do
-        ABS_NEW=$(realpath -m "$new_root")
-        FOUND=false
-        for old_root in "${EXISTING_ROOTS[@]}"; do
-            if [[ "$ABS_NEW" == "$old_root"* ]]; then
-                FOUND=true
-                break
-            fi
-        done
-        if [ "$FOUND" = false ]; then
-            MISSING_ROOTS+=("$ABS_NEW")
-        fi
+    # 0.1 Resolve script location and Repository Root
+    local real_source="${BASH_SOURCE[0]}"
+    while [ -h "$real_source" ]; do
+        local dir
+        dir="$( cd -P "$( dirname "$real_source" )" >/dev/null 2>&1 && pwd )"
+        real_source="$(readlink "$real_source")"
+        [[ $real_source != /* ]] && real_source="$dir/$real_source"
     done
-    
-    # 3. Decision
-    if [ ${#MISSING_ROOTS[@]} -eq 0 ]; then
-        echo ">> Active Hub already covers all requested workspaces."
-        echo ">> Hub URL: http://localhost:$PORT"
-        exit 0
+    local script_dir
+    script_dir="$( cd -P "$( dirname "$real_source" )" >/dev/null 2>&1 && pwd )"
+    local repo_root
+    repo_root="$(dirname "$script_dir")"
+
+    # 0.2 Configuration
+    local docker_hub_user="${DOCKER_HUB_USER:-jsebayhi}"
+    local container_name="gemini-hub-service"
+    local port="8888"
+
+    local auth_key="${GEMINI_REMOTE_KEY:-}"
+    local workspace_roots=()
+    local config_root="${HOME}/.gemini/configs"
+
+    # Auto-detect config root fallback
+    if [ ! -d "$config_root" ] && [ -d "${HOME}/.gemini-profiles" ]; then
+        config_root="${HOME}/.gemini-profiles"
+    fi
+
+    # 1. Pre-scan for Override Image
+    local override_image=""
+    local iter_hub_args=("$@")
+    for ((i=0; i<${#iter_hub_args[@]}; i++)); do
+        case "${iter_hub_args[i]}" in
+            --image) override_image="${iter_hub_args[i+1]}" ;;
+        esac
+    done
+
+    # 2. Resolve Image Name (Local vs Remote)
+    local branch_suffix=""
+    if command -v git >/dev/null 2>&1 && git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        local current_branch
+        current_branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [ "$current_branch" != "main" ] && [ -n "$current_branch" ]; then
+            local safe_branch="${current_branch//[!a-zA-Z0-9]/-}"
+            branch_suffix="-$safe_branch"
+        fi
+    fi
+
+    local local_tag="gemini-cli-toolbox/hub:latest${branch_suffix}"
+    local remote_tag="${docker_hub_user}/gemini-cli-toolbox:latest-hub"
+    local image_name=""
+
+    if [ -n "$override_image" ]; then
+        image_name="$override_image"
+    elif docker image inspect "$local_tag" >/dev/null 2>&1; then
+        image_name="$local_tag"
     else
-        echo ">> Requested workspaces are NOT covered by the active Hub:"
-        for r in "${MISSING_ROOTS[@]}"; do echo "   - $r"; done
+        image_name="$remote_tag"
+    fi
+
+    # 3. Parse Args
+    local mode="-it"
+    local auto_shutdown=false
+    local prune_enabled=true
+    while [[ $# -gt 0 ]]; do
+      case $1 in
+        -d|--detach) mode="-d"; shift ;;
+        --image)     override_image="$2"; shift; shift ;;
+        --key)       auth_key="$2"; shift; shift ;;
+        --auto-shutdown) auto_shutdown=true; shift ;;
+        --no-worktree-prune) prune_enabled=false; shift ;;
+        --workspace) workspace_roots+=("$2"); shift; shift ;;
+        --config-root) config_root="$2"; shift; shift ;;
+        -h|--help)   show_help; exit 0 ;;
+        stop)
+            echo ">> Stopping Gemini Hub..."
+            docker stop "$container_name" >/dev/null 2>&1 || echo ">> Hub is not running."
+            exit 0
+            ;;
+        *)           echo "Error: Unknown argument '$1'"; show_help; exit 1 ;;
+      esac
+    done
+
+    if [ -z "$auth_key" ]; then
+        echo "Error: TAILSCALE_KEY is required for the Hub."
+        echo "Run 'gemini-hub --help' for usage instructions."
+        exit 1
+    fi
+
+    # 4. Prepare Docker Args
+    local extra_mounts=()
+    local root_paths_list=""
+    local env_vars=()
+
+    if [ "$auto_shutdown" = true ]; then env_vars+=("--env" "HUB_AUTO_SHUTDOWN=1"); fi
+    if [ "$prune_enabled" = false ]; then env_vars+=("--env" "HUB_WORKTREE_PRUNE_ENABLED=false"); fi
+
+    # --- SMART RESTART LOGIC ---
+    if [ -n "$(docker ps -q -f name="^/${container_name}$")" ]; then
+        echo ">> Hub is already running."
+        local existing_roots_str
+        existing_roots_str=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_name" | grep "^HUB_ROOTS=" | cut -d= -f2-)
+        local existing_roots=()
+        IFS=':' read -ra existing_roots <<< "$existing_roots_str"
         
-        if [ -t 0 ]; then
-            echo ""
-            read -p ">> Restart Hub to include them? (Merge/Replace/Cancel) [M/r/c]: " -r RESPONSE
-            RESPONSE=${RESPONSE:-M}
-            if [[ "$RESPONSE" =~ ^[Mm]$ ]]; then
-                # MERGE: Add existing roots to the request list (deduplication happens in mount loop)
-                WORKSPACE_ROOTS+=("${EXISTING_ROOTS[@]}")
-                echo ">> Stopping old Hub..."
-                docker stop "$CONTAINER_NAME" >/dev/null
-            elif [[ "$RESPONSE" =~ ^[Rr]$ ]]; then
-                # REPLACE: Just stop, keeping only new WORKSPACE_ROOTS
-                echo ">> Stopping old Hub..."
-                docker stop "$CONTAINER_NAME" >/dev/null
+        local missing_roots=()
+        for new_root in "${workspace_roots[@]}"; do
+            local abs_new
+            abs_new=$(realpath -m "$new_root")
+            local found=false
+            for old_root in "${existing_roots[@]}"; do
+                if [[ "$abs_new" == "$old_root"* ]]; then found=true; break; fi
+            done
+            if [ "$found" = false ]; then missing_roots+=("$abs_new"); fi
+        done
+        
+        if [ ${#missing_roots[@]} -eq 0 ]; then
+            echo ">> Active Hub already covers all requested workspaces."
+            echo ">> Hub URL: http://localhost:$port"
+            exit 0
+        else
+            echo ">> Requested workspaces are NOT covered by the active Hub:"
+            for r in "${missing_roots[@]}"; do echo "   - $r"; done
+            
+            if [ -t 0 ]; then
+                echo ""
+                read -p ">> Restart Hub to include them? (Merge/Replace/Cancel) [M/r/c]: " -r RESPONSE
+                RESPONSE=${RESPONSE:-M}
+                if [[ "$RESPONSE" =~ ^[Mm]$ ]]; then
+                    workspace_roots+=("${existing_roots[@]}")
+                    echo ">> Stopping old Hub..."
+                    docker stop "$container_name" >/dev/null
+                elif [[ "$RESPONSE" =~ ^[Rr]$ ]]; then
+                    echo ">> Stopping old Hub..."
+                    docker stop "$container_name" >/dev/null
+                else
+                    echo ">> Action cancelled."
+                    exit 0
+                fi
             else
-                echo ">> Action cancelled."
-                exit 0
+                echo ">> Non-interactive mode: Merging roots and restarting..."
+                workspace_roots+=("${existing_roots[@]}")
+                docker stop "$container_name" >/dev/null
+            fi
+        fi
+    fi
+
+    for root in "${workspace_roots[@]}"; do
+        local abs_root
+        abs_root=$(realpath -m "$root")
+        if [ -d "$abs_root" ]; then
+            if [[ "$root_paths_list" != *"$abs_root"* ]]; then
+                extra_mounts+=("-v" "${abs_root}:${abs_root}")
+                root_paths_list="${root_paths_list}${abs_root}:"
             fi
         else
-            # Non-interactive: Default to Merge and Restart (Safe behavior for scripts)
-            echo ">> Non-interactive mode: Merging roots and restarting..."
-            WORKSPACE_ROOTS+=("${EXISTING_ROOTS[@]}")
-            docker stop "$CONTAINER_NAME" >/dev/null
+            echo "Warning: Workspace root '$abs_root' does not exist. Skipping."
         fi
-    fi
-fi
+    done
+    root_paths_list=${root_paths_list%:}
 
-# 1. Mount Workspace Roots
-for root in "${WORKSPACE_ROOTS[@]}"; do
-    ABS_ROOT=$(realpath -m "$root")
-    if [ -d "$ABS_ROOT" ]; then
-        # Deduplication check: Avoid mounting same path twice if merged
-        if [[ "$ROOT_PATHS_LIST" != *"$ABS_ROOT"* ]]; then
-            EXTRA_MOUNTS+=("-v" "${ABS_ROOT}:${ABS_ROOT}")
-            ROOT_PATHS_LIST="${ROOT_PATHS_LIST}${ABS_ROOT}:"
-        fi
+    local abs_config_root
+    abs_config_root=$(realpath -m "$config_root")
+    mkdir -p "$abs_config_root"
+    extra_mounts+=("-v" "${abs_config_root}:${abs_config_root}")
+
+    local worktree_cache="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees}"
+    mkdir -p "$worktree_cache"
+    local abs_worktree_cache
+    abs_worktree_cache=$(realpath -m "$worktree_cache")
+    extra_mounts+=("-v" "${abs_worktree_cache}:${abs_worktree_cache}")
+    env_vars+=("--env" "GEMINI_WORKTREE_ROOT=${abs_worktree_cache}")
+
+    if [ -n "${GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS:-}" ]; then env_vars+=("--env" "GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS=${GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS}"); fi
+    if [ -n "${GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS:-}" ]; then env_vars+=("--env" "GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS=${GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS}"); fi
+    if [ -n "${GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS:-}" ]; then env_vars+=("--env" "GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS=${GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS}"); fi
+
+    extra_mounts+=("-v" "gemini-hub-state:/var/lib/tailscale")
+
+    local toolbox_script="${script_dir}/gemini-toolbox"
+    if [ -f "$toolbox_script" ]; then
+        extra_mounts+=("-v" "${toolbox_script}:/usr/local/bin/gemini-toolbox")
     else
-        echo "Warning: Workspace root '$ABS_ROOT' does not exist. Skipping."
+        echo "Warning: gemini-toolbox script not found at $toolbox_script. Hub will use embedded version."
     fi
-done
-# Remove trailing colon
-ROOT_PATHS_LIST=${ROOT_PATHS_LIST%:}
 
-# 2. Mount Config Root
-ABS_CONFIG_ROOT=$(realpath -m "$CONFIG_ROOT")
-mkdir -p "$ABS_CONFIG_ROOT"
-EXTRA_MOUNTS+=("-v" "${ABS_CONFIG_ROOT}:${ABS_CONFIG_ROOT}")
+    local host_docker_gid=""
+    if command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
+        host_docker_gid=$(getent group docker | cut -d: -f3)
+    fi
 
-# 2.1 Mount Worktree Cache (for Cleanup)
-WORKTREE_CACHE="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees}"
-mkdir -p "$WORKTREE_CACHE"
-ABS_WORKTREE_CACHE=$(realpath -m "$WORKTREE_CACHE")
-EXTRA_MOUNTS+=("-v" "${ABS_WORKTREE_CACHE}:${ABS_WORKTREE_CACHE}")
-ENV_VARS+=("--env" "GEMINI_WORKTREE_ROOT=${ABS_WORKTREE_CACHE}")
+    echo ">> Starting Gemini Hub on port $port..."
+    echo ">> Access at http://localhost:$port (Desktop)"
+    echo ">> Access at http://gemini-hub:8888 (Mobile VPN)"
 
-if [ -n "$GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS" ]; then
-    ENV_VARS+=("--env" "GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS=${GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS}")
+    docker run --rm "$mode" \
+        --name "$container_name" \
+        --net=host \
+        --cap-add=NET_ADMIN \
+        --device /dev/net/tun \
+        --volume "/var/run/docker.sock:/var/run/docker.sock" \
+        "${extra_mounts[@]}" \
+        "${env_vars[@]}" \
+        --env HOST_DOCKER_GID="${host_docker_gid}" \
+        --env HOST_UID="$(id -u)" \
+        --env HOST_GID="$(id -g)" \
+        --env TAILSCALE_AUTH_KEY="$auth_key" \
+        --env HUB_ROOTS="${root_paths_list}" \
+        --env HOST_CONFIG_ROOT="${abs_config_root}" \
+        --env HOST_HOME="${HOME}" \
+        --env TERM \
+        --env COLORTERM \
+        "$image_name"
+}
+
+# Entry point guard
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
 fi
-
-if [ -n "$GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS" ]; then
-    ENV_VARS+=("--env" "GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS=${GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS}")
-fi
-
-if [ -n "$GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS" ]; then
-    ENV_VARS+=("--env" "GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS=${GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS}")
-fi
-
-# 3. Persistence (Named Volume)
-# We use a Docker Named Volume for the Tailscale state.
-# This keeps the host filesystem clean while preventing "New Device" naming collisions (gemini-hub-1).
-EXTRA_MOUNTS+=("-v" "gemini-hub-state:/var/lib/tailscale")
-
-# 4. Mount Toolbox Script (Ensure Hub uses latest version)
-# Use the already resolved SCRIPT_DIR to find sibling toolbox script
-TOOLBOX_SCRIPT="${SCRIPT_DIR}/gemini-toolbox"
-
-if [ -f "$TOOLBOX_SCRIPT" ]; then
-    EXTRA_MOUNTS+=("-v" "${TOOLBOX_SCRIPT}:/usr/local/bin/gemini-toolbox")
-else
-    echo "Warning: gemini-toolbox script not found at $TOOLBOX_SCRIPT. Hub will use embedded version."
-fi
-
-# Detect Host Docker GID (for DooD)
-# We must calculate this on the HOST and pass it to the container.
-HOST_DOCKER_GID=""
-if command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
-    HOST_DOCKER_GID=$(getent group docker | cut -d: -f3)
-fi
-
-echo ">> Starting Gemini Hub on port $PORT..."
-echo ">> Access at http://localhost:$PORT (Desktop)"
-echo ">> Access at http://gemini-hub:8888 (Mobile VPN)"
-
-# Run Container
-docker run --rm "$MODE" \
-    --name "$CONTAINER_NAME" \
-    --net=host \
-    --cap-add=NET_ADMIN \
-    --device /dev/net/tun \
-    --volume "/var/run/docker.sock:/var/run/docker.sock" \
-    "${EXTRA_MOUNTS[@]}" \
-    "${ENV_VARS[@]}" \
-    --env HOST_DOCKER_GID="${HOST_DOCKER_GID}" \
-    --env HOST_UID="$(id -u)" \
-    --env HOST_GID="$(id -g)" \
-    --env TAILSCALE_AUTH_KEY="$AUTH_KEY" \
-    --env HUB_ROOTS="${ROOT_PATHS_LIST}" \
-    --env HOST_CONFIG_ROOT="${ABS_CONFIG_ROOT}" \
-    --env HOST_HOME="${HOME}" \
-    --env TERM \
-    --env COLORTERM \
-    "$IMAGE_NAME"
