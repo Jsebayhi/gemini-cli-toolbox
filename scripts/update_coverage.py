@@ -44,9 +44,9 @@ def load_python_coverage():
         return int(totals.get('covered_lines', 0)), int(totals.get('num_statements', 0))
 
 def get_color(coverage):
-    if coverage >= 90:
+    if coverage >= 80:
         return "brightgreen"
-    elif coverage >= 80:
+    elif coverage >= 70:
         return "yellow"
     else:
         return "red"

@@ -1,7 +1,7 @@
 # 🤖 Gemini CLI Toolbox
 
 [![CI](https://github.com/Jsebayhi/gemini-cli-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/Jsebayhi/gemini-cli-toolbox/actions)
-[![Coverage](https://img.shields.io/badge/Coverage-90%25-brightgreen)](https://github.com/Jsebayhi/gemini-cli-toolbox/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-89.97%25-brightgreen)](https://github.com/Jsebayhi/gemini-cli-toolbox/actions)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jsebayhi/gemini-cli-toolbox)](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)
 
 **[GitHub](https://github.com/Jsebayhi/gemini-cli-toolbox) | [Docker Hub](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)**
