@@ -56,9 +56,15 @@ test-ui:
 	docker run --rm $(IMAGE_NAME)-test python3 -m pytest -n auto --reruns 1 -vv tests/ui
 
 scan:
+
 	@echo ">> Scanning $(IMAGE_NAME):$(IMAGE_TAG)..."
+
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+
 		-v "$(shell pwd)/../../.trivyignore:/.trivyignore" \
+
 		aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore $(IMAGE_NAME):$(IMAGE_TAG)
+
+
 
 ci: rebuild

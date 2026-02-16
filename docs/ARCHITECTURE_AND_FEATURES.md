@@ -12,6 +12,12 @@ The core philosophy of this toolbox is **Host Protection**. By running the agent
 *   **Process Isolation:** If the agent runs `rm -rf /`, it destroys the container's filesystem, not yours.
 *   **Network (Local):** The container shares the host network stack (`--net=host`). This is **required** to support the Google OAuth browser flow (which spins up a local server on varying ports to capture your login token). Strict network isolation (bridge mode) is currently only enabled when using `--remote`.
 
+### Security Scanning (Trivy)
+To maintain a high security posture, all images undergo automated security scans using [Trivy](https://github.com/aquasec/trivy).
+*   **Target:** Scans for OS vulnerabilities (CVEs) and application-level vulnerabilities (npm, pip).
+*   **Threshold:** The CI pipeline is configured to fail on any **CRITICAL** or **HIGH** severity vulnerabilities that have a known fix.
+*   **Vulnerability Ignore Policy:** In rare cases where a vulnerability is unfixable upstream or poses zero risk to local usage (e.g., DoS in a local dev tool), we use a project-wide `.trivyignore` file in the root directory to suppress specific CVEs. This ensures our release pipeline remains unblocked while maintaining visibility into real threats.
+
 ### Permission Management (`gosu`)
 *   **The Problem:** Docker containers typically run as root. If the agent creates a file, it ends up owned by `root` on your host, requiring `sudo` to delete.
 *   **The Solution:** The entrypoint script (`docker-entrypoint.sh`) reads your host UID/GID (passed via env vars). It uses `gosu` to drop privileges to your user level *inside* the container before executing any command.
