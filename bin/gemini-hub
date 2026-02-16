@@ -25,6 +25,7 @@ show_help() {
     echo ""
     echo "Commands:"
     echo "  stop                  Stop the running Gemini Hub service"
+    echo "  status                Check if the Gemini Hub service is running"
     echo ""
     echo "Examples:"
     echo "  gemini-hub --key tskey-auth-xxxx"
@@ -116,6 +117,16 @@ main() {
                     echo "Error: Failed to stop Gemini Hub service." >&2
                     exit 1
                 fi
+            fi
+            exit 0
+            ;;
+        status)
+            local container_id
+            container_id=$(docker ps -aq -f name="^/${container_name}$")
+            if [ -n "$container_id" ] && [ "$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null)" == "true" ]; then
+                echo "Gemini Hub is running (ID: $container_id)"
+            else
+                echo "Gemini Hub is not running."
             fi
             exit 0
             ;;

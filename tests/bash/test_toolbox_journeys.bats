@@ -58,6 +58,14 @@ teardown() {
 }
 
 @test "Journey 8: Connect" {
+    # Mock docker to return the ID for ps check
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+if [[ "\$1" == "ps" ]]; then echo "gem-test-session"; exit 0; fi
+echo "docker \$*" >> "$MOCK_DOCKER_LOG"
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
     run gemini-toolbox connect gem-test-session
     assert_success
     run grep "docker exec .* gem-test-session" "$MOCK_DOCKER_LOG"

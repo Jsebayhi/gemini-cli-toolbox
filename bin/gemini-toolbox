@@ -361,8 +361,11 @@ main() {
             exit 1
         fi
         echo ">> Updating '$image_name'..."
-        docker pull "$image_name"
-        exit $?
+        if ! docker pull "$image_name"; then
+            echo "Error: Failed to pull image '$image_name' from registry." >&2
+            exit 1
+        fi
+        exit 0
     fi
 
     if [ "$stop_hub" = true ]; then
@@ -396,6 +399,10 @@ main() {
 
     if [ -n "$connect_id" ]; then
         echo ">> Connecting to session '$connect_id'..."
+        if [ -z "$(docker ps -q -f name="^/${connect_id}$")" ]; then
+             echo "Error: Session '$connect_id' not found." >&2
+             exit 1
+        fi
         local current_uid
         current_uid=$(id -u)
         if [[ "$connect_id" == *"-bash-"* ]]; then

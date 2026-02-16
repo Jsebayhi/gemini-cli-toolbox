@@ -46,16 +46,18 @@ echo "ENV: COLORTERM=\$COLORTERM" >> "$MOCK_DOCKER_LOG"
 echo "ENV: LANG=\$LANG" >> "$MOCK_DOCKER_LOG"
 
 case "\$1" in
+    ps) exit 0 ;;
     inspect)
-        # Handle HUB_ROOTS inspection
+        if [[ "\$*" == *"--format"*"{{.State.Running}}"* ]]; then
+             echo "true"
+             exit 0
+        fi
         if [[ "\$*" == *"gemini-hub-service"* ]]; then
-             # Default behavior for inspection if not overridden by test
              echo "HUB_ROOTS=/default/root"
              exit 0
         fi
         exit 1 
         ;;
-    ps) exit 0 ;;
     *) exit 0 ;;
 esac
 EOF

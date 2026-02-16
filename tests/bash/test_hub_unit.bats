@@ -202,6 +202,69 @@ EOF
     assert_success
 }
 
+@test "Hub main: status running" {
+    source_hub
+    # Mock hub as running
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+if [[ "\$*" == *"ps -aq"* ]]; then echo "cont123"; exit 0; fi
+if [[ "\$*" == *"inspect"* ]]; then echo "true"; exit 0; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main status
+    assert_success
+    assert_output --partial "Gemini Hub is running (ID: cont123)"
+}
+
+@test "Hub main: status not running" {
+    source_hub
+    # Mock hub as NOT running
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+if [[ "\$*" == *"ps -aq"* ]]; then exit 0; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main status
+    assert_success
+    assert_output --partial "Gemini Hub is not running."
+}
+
+@test "Hub main: status stopped" {
+    source_hub
+    # Mock hub as existing but NOT running
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+if [[ "\$*" == *"ps -aq"* ]]; then echo "cont123"; exit 0; fi
+if [[ "\$*" == *"inspect"* ]]; then echo "false"; exit 0; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main status
+    assert_success
+    assert_output --partial "Gemini Hub is not running."
+}
+
+@test "Hub main: stop command fails but container exists" {
+    source_hub
+    # Mock container exists but stop fails
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+if [[ "\$*" == *"ps -a --format"* ]]; then echo "gemini-hub-service"; exit 0; fi
+if [[ "\$1" == "stop" ]]; then exit 1; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main stop
+    assert_failure
+    assert_output --partial "Error: Failed to stop Gemini Hub service"
+}
+
 @test "Hub main: smart restart interactive logic" {
     # This logic is partially covered by non-interactive Hub Journey tests.
     # Interactive tests require a real TTY which is hard to mock in BATS.

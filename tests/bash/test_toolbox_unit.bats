@@ -135,27 +135,80 @@ EOF
 
 @test "main: connect command bash session" {
     source_toolbox
-    mock_docker
-    run main connect gem-proj-bash-1
+    # Mock docker ps to return ID, and exec to succeed
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+case "\$1" in
+    ps) echo "gem-proj-bash-1"; exit 0 ;;
+    inspect) echo "true"; exit 0 ;;
+    exec) echo "docker \$*" >> "$MOCK_DOCKER_LOG"; exit 0 ;;
+esac
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main connect "gem-proj-bash-1"
     assert_success
-    run grep "docker exec .* bash" "$MOCK_DOCKER_LOG"
+    run grep "exec -it gem-proj-bash-1 gosu 0 bash" "$MOCK_DOCKER_LOG"
     assert_success
 }
 
 @test "main: connect command failure (no tmux)" {
     source_toolbox
-    mock_docker
-    # Mock docker exec to fail on tmux has-session
+    # Mock docker ps to return ID, but exec tmux has-session to fail
     cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
 #!/bin/bash
-if [[ "\$1" == "exec" && "\$*" == *"tmux has-session"* ]]; then exit 1; fi
+case "\$1" in
+    ps) echo "gem-proj-geminicli-1"; exit 0 ;;
+    inspect) echo "true"; exit 0 ;;
+    exec)
+        if [[ "\$*" == *"tmux has-session"* ]]; then exit 1; fi
+        exit 0 ;;
+esac
 exit 0
 EOF
     chmod +x "$TEST_TEMP_DIR/bin/docker"
     
-    run main connect gem-proj-geminicli-1
+    run main connect "gem-proj-geminicli-1"
     assert_failure
     assert_output --partial "Error: Reconnecting to this session is not supported"
+}
+
+@test "main: stop command multiple matches error" {
+    source_toolbox
+    # Mock docker ps to return multiple IDs
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+if [[ "\$1" == "ps" ]]; then
+    echo "gem-myproject-geminicli-1"
+    echo "gem-myproject-geminicli-2"
+    exit 0
+fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main stop "myproject"
+    assert_failure
+    assert_output --partial "Error: Multiple sessions found for project 'myproject'"
+}
+
+@test "main: update command success" {
+    source_toolbox
+    mock_docker
+    # Mock docker image inspect to fail (so it tries to pull), pull to succeed
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+echo "docker \$*" >> "$MOCK_DOCKER_LOG"
+if [[ "\$1" == "image" && "\$2" == "inspect" ]]; then exit 1; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main update
+    assert_success
+    run grep "docker pull" "$MOCK_DOCKER_LOG"
+    assert_success
 }
 
 @test "main: stop-hub command" {
@@ -168,7 +221,23 @@ EOF
 
 @test "main: connect command variants" {
     source_toolbox
-    mock_docker
+    # Mock docker ps to return ID, and exec to succeed
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+case "\$1" in
+    ps) 
+        if [[ "\$*" == *"gem-proj-bash-123"* ]]; then echo "gem-proj-bash-123"; fi
+        if [[ "\$*" == *"gem-proj-geminicli-123"* ]]; then echo "gem-proj-geminicli-123"; fi
+        exit 0 ;;
+    inspect) echo "true"; exit 0 ;;
+    exec)
+        if [[ "\$*" == *"tmux has-session"* ]]; then exit 0; fi
+        echo "docker \$*" >> "$MOCK_DOCKER_LOG"
+        exit 0 ;;
+esac
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
     
     # 1. Connect to bash session
     run main connect gem-proj-bash-123
@@ -177,13 +246,6 @@ EOF
     assert_success
     
     # 2. Connect to tmux session (default)
-    # We need to mock docker exec ... tmux has-session to succeed
-    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
-#!/bin/bash
-if [[ "\$*" == *"tmux has-session"* ]]; then exit 0; fi
-echo "docker \$*" >> "$MOCK_DOCKER_LOG"
-exit 0
-EOF
     run main connect gem-proj-geminicli-123
     assert_success
     run grep "docker exec -it gem-proj-geminicli-123 gosu 0 tmux attach -t gemini" "$MOCK_DOCKER_LOG"
@@ -327,4 +389,190 @@ EOF
     assert_success
     run grep "docker run .* -d" "$MOCK_DOCKER_LOG"
     assert_success
+}
+
+@test "setup_worktree: reuse existing worktree directory" {
+    source_toolbox
+    mock_git
+    local wk_dir="$TEST_TEMP_DIR/.cache/gemini-toolbox/worktrees/myproj/existing-dir"
+    mkdir -p "$wk_dir"
+    
+    run setup_worktree "myproj" "existing-dir" "."
+    assert_success
+    run grep "Worktree already exists at" <<< "$output"
+    assert_success
+}
+
+@test "main: stop-hub script missing error" {
+    source_toolbox
+    # Mock script dir to a place where gemini-hub doesn't exist
+    local fake_bin="$TEST_TEMP_DIR/fake-bin"
+    mkdir -p "$fake_bin"
+    cp "$PROJECT_ROOT/bin/gemini-toolbox" "$fake_bin/"
+    
+    run bash -c "source $fake_bin/gemini-toolbox; main stop-hub"
+    assert_failure
+}
+
+@test "setup_worktree: create new branch" {
+    source_toolbox
+    # Mock git: show-ref fails (branch doesn't exist), but worktree add succeeds
+    # Also must fail git-common-dir to not trigger nested worktree guard
+    cat <<EOF > "$TEST_TEMP_DIR/bin/git"
+#!/bin/bash
+if [[ "\$*" == *"rev-parse --is-inside-work-tree"* ]]; then exit 0; fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then echo "$TEST_TEMP_DIR/myproj"; exit 0; fi
+if [[ "\$*" == *"rev-parse --git-common-dir"* ]]; then exit 1; fi
+if [[ "\$*" == *"show-ref"* ]]; then exit 1; fi
+echo "git \$*" >> "$MOCK_GIT_LOG"
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/git"
+    
+    local myproj="$TEST_TEMP_DIR/myproj"
+    mkdir -p "$myproj"
+    
+    run bash -c "source $PROJECT_ROOT/bin/gemini-toolbox; setup_worktree myproj new-branch $myproj"
+    assert_success
+    run grep "git worktree add -b new-branch" "$MOCK_GIT_LOG"
+    assert_success
+}
+
+@test "main: update command pull failure" {
+    source_toolbox
+    # Mock docker: image inspect fails (not local), pull fails
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+echo "docker \$*" >> "$MOCK_DOCKER_LOG"
+if [[ "\$1" == "image" && "\$2" == "inspect" ]]; then exit 1; fi
+if [[ "\$1" == "pull" ]]; then exit 1; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main update
+    assert_failure
+    assert_output --partial "Error: Failed to pull image"
+}
+
+@test "main: connect command session not found" {
+    source_toolbox
+    # Mock docker ps to return nothing (empty)
+    cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
+#!/bin/bash
+if [[ "\$1" == "ps" ]]; then echo ""; exit 0; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/docker"
+    
+    run main connect "non-existent"
+    assert_failure
+    assert_output --partial "Error: Session 'non-existent' not found"
+}
+
+@test "main: profile without extra-args" {
+    source_toolbox
+    mkdir -p "$TEST_TEMP_DIR/empty-profile"
+    mock_docker
+    run main --profile "$TEST_TEMP_DIR/empty-profile" --bash
+    assert_success
+}
+
+@test "setup_worktree: directory exists but not a worktree warning" {
+    source_toolbox
+    mock_git
+    local wk_dir="$TEST_TEMP_DIR/.cache/gemini-toolbox/worktrees/myproj/exists"
+    mkdir -p "$wk_dir"
+    
+    run setup_worktree "myproj" "exists" "."
+    assert_success
+    assert_output --partial "Worktree already exists at"
+}
+
+@test "main: vscode integration detection" {
+    source_toolbox
+    mock_docker
+    TERM_PROGRAM="vscode" run main --bash
+    assert_success
+}
+
+@test "main: repository root detection (setup_worktree path)" {
+    source_toolbox
+    mock_docker
+    mock_git
+    
+    local orig="/original/repo"
+    local wt="/tmp/worktree"
+    mkdir -p "$wt"
+    
+    # We call main with args that trigger setup_worktree (mocked)
+    # But here we want to test the main() logic after setup_worktree returns
+    # So we need to mock setup_worktree to return the path
+    run bash -c "setup_worktree() { echo \"$wt\"; }; source $PROJECT_ROOT/bin/gemini-toolbox; main --worktree \"task\" --bash"
+    assert_success
+    
+    # Should have volumes for the original repo
+    # orig is $(pwd) in tests by default if not changed. 
+    # In BATS, $(pwd) is $TEST_TEMP_DIR.
+    run grep "volume $TEST_TEMP_DIR" "$MOCK_DOCKER_LOG"
+    assert_success
+}
+
+@test "main: repository root detection (worktree)" {
+    source_toolbox
+    mock_docker
+    
+    # Mock git to return a toplevel which is a worktree
+    local top="$TEST_TEMP_DIR/worktree-node"
+    local common="$TEST_TEMP_DIR/main-repo"
+    mkdir -p "$top" "$common/.git"
+    touch "$top/.git" # File indicates worktree
+    
+    cat <<EOF > "$TEST_TEMP_DIR/bin/git"
+#!/bin/bash
+if [[ "\$*" == *"rev-parse --is-inside-work-tree"* ]]; then exit 0; fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then echo "$top"; exit 0; fi
+if [[ "\$*" == *"rev-parse --git-common-dir"* ]]; then echo "$common/.git"; exit 0; fi
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/git"
+
+    run bash -c "cd $top && source $PROJECT_ROOT/bin/gemini-toolbox && main --bash"
+    assert_success
+    # Should have volumes for the main repo (common dir)
+    run grep "volume $common" "$MOCK_DOCKER_LOG"
+    assert_success
+}
+
+@test "main: repository root detection (non-worktree)" {
+    source_toolbox
+    mock_docker
+    
+    # Mock git to return a toplevel
+    local top="$TEST_TEMP_DIR/my-repo"
+    mkdir -p "$top/.git"
+    
+    cat <<EOF > "$TEST_TEMP_DIR/bin/git"
+#!/bin/bash
+if [[ "\$*" == *"rev-parse --is-inside-work-tree"* ]]; then exit 0; fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then echo "$top"; exit 0; fi
+if [[ "\$*" == *"rev-parse --git-common-dir"* ]]; then exit 1; fi # Not a worktree
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/git"
+
+    run bash -c "cd $top && source $PROJECT_ROOT/bin/gemini-toolbox && main --bash"
+    assert_success
+    # Should NOT have extra volumes for worktree common dir
+    run grep "volume $top" "$MOCK_DOCKER_LOG"
+    assert_success
+}
+
+@test "main: realpath missing error" {
+    source_toolbox
+    # Mock command builtin to fail for realpath
+    # This requires running in a subshell where we can redefine 'command'
+    run bash -c "command() { if [[ \"\$2\" == \"realpath\" ]]; then return 1; fi; builtin command \"\$@\"; }; source $PROJECT_ROOT/bin/gemini-toolbox; main --bash"
+    assert_failure
+    assert_output --partial "Error: 'realpath' is required"
 }
