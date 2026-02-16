@@ -1,6 +1,7 @@
 # 🤖 Gemini CLI Toolbox
 
 [![CI](https://github.com/Jsebayhi/gemini-cli-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/Jsebayhi/gemini-cli-toolbox/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-89.97%25-brightgreen)](https://github.com/Jsebayhi/gemini-cli-toolbox/actions)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jsebayhi/gemini-cli-toolbox)](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)
 
 **[GitHub](https://github.com/Jsebayhi/gemini-cli-toolbox) | [Docker Hub](https://hub.docker.com/r/jsebayhi/gemini-cli-toolbox)**
@@ -151,6 +152,23 @@ gemini-toolbox --worktree
 
 ## 🤝 Contributing
 We love contributors! If you add or modify CLI flags, please remember to update the scripts in `completions/`. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more details.
+
+## 🛠️ Development
+
+If you're contributing to the Toolbox, you can run the full suite of automated tests and linters:
+
+```bash
+# Run all tests (Bash & Python) and linters
+make local-ci
+
+# Run only Bash automated tests (Bats)
+make test-bash
+
+# Run only Python tests (Pytest)
+make test
+```
+
+We use [Bats-core](https://github.com/bats-core/bats-core) for testing our core bash scripts. New tests should be added to `tests/bash/`.
 
 ## 📄 License
 MIT

@@ -113,8 +113,55 @@ lint-python:
 	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
 
 .PHONY: test
-test:
+test: test-bash
 	$(MAKE) -C images/gemini-hub test
+
+.PHONY: test-bash
+test-bash: deps-bash
+	@echo ">> Building Bash Test Runner..."
+	docker build -t gemini-bash-tester tests/bash
+	@echo ">> Running Bash Automated Tests with Coverage (kcov)..."
+	@mkdir -p coverage/bash
+	docker run --rm \
+		--cap-add=SYS_PTRACE \
+		-v "$(shell pwd):/code" \
+		-w /code \
+		--entrypoint kcov \
+		gemini-bash-tester \
+		--include-path=/code/bin,/code/images \
+		/code/coverage/bash \
+		bats tests/bash
+	@echo ""
+	@echo ">> Bash Coverage Summary:"
+	@REPORT_JSON=$$(find coverage/bash -name "coverage.json" | head -n 1); \
+	if [ -n "$$REPORT_JSON" ] && [ -f "$$REPORT_JSON" ]; then \
+		COVERAGE=$$(cat "$$REPORT_JSON" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data['percent_covered'])"); \
+		echo "Percent covered: $$COVERAGE%"; \
+		if python3 -c "import sys; exit(0 if float(sys.argv[1]) >= 85.0 else 1)" "$$COVERAGE"; then \
+			echo ">> Coverage threshold (85%) PASSED."; \
+		else \
+			echo ">> Error: Coverage threshold (85%) FAILED (current: $$COVERAGE%)." >&2; \
+			exit 1; \
+		fi \
+	else \
+		echo ">> Warning: Coverage report not found."; \
+	fi
+	@echo ">> Detailed report: coverage/bash/index.html"
+
+.PHONY: deps-bash
+deps-bash:
+	@if [ ! -d "tests/bash/libs/bats-support" ]; then \
+		echo ">> Downloading bats-support v0.3.0..."; \
+		mkdir -p tests/bash/libs; \
+		curl -sL https://github.com/bats-core/bats-support/archive/refs/tags/v0.3.0.tar.gz | tar -xz -C tests/bash/libs; \
+		mv tests/bash/libs/bats-support-0.3.0 tests/bash/libs/bats-support; \
+	fi
+	@if [ ! -d "tests/bash/libs/bats-assert" ]; then \
+		echo ">> Downloading bats-assert v2.1.0..."; \
+		mkdir -p tests/bash/libs; \
+		curl -sL https://github.com/bats-core/bats-assert/archive/refs/tags/v2.1.0.tar.gz | tar -xz -C tests/bash/libs; \
+		mv tests/bash/libs/bats-assert-2.1.0 tests/bash/libs/bats-assert; \
+	fi
 
 .PHONY: test-ui
 test-ui:

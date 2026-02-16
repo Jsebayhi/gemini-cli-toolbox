@@ -61,6 +61,31 @@ jobs:
           # Run tests (enforces 90% coverage via CMD)
           docker run --rm gemini-hub-test
 
+      - name: Run Bash Automated Tests
+        run: make test-bash
+
+      - name: Compute Global Coverage & Update Badge
+        id: coverage
+        run: |
+          # Create python coverage dir
+          mkdir -p coverage/python
+          chmod 777 coverage/python
+          
+          # Run Python Tests again to generate JSON report (Make test now mounts this volume)
+          cd images/gemini-hub
+          make test
+          cd ../..
+          
+          # Run Computation Script
+          python3 scripts/update_coverage.py
+
+      - name: Commit Coverage Badge Update
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: update coverage badge [skip ci]"
+          file_pattern: README.md
+
   build:
     name: Build & Test
     needs: lint
