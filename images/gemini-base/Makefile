@@ -20,6 +20,11 @@ rebuild:
 	docker build --no-cache -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
 scan:
+
 	@echo ">> Scanning $(IMAGE_NAME):$(IMAGE_TAG)..."
+
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-		aquasec/trivy image --exit-code 1 --ignore-unfixed $(IMAGE_NAME):$(IMAGE_TAG)
+
+		-v "$(shell pwd)/../../.trivyignore:/.trivyignore" \
+
+		aquasec/trivy image --exit-code 1 --ignore-unfixed --ignorefile /.trivyignore $(IMAGE_NAME):$(IMAGE_TAG)

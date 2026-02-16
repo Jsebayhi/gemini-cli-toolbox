@@ -54,6 +54,11 @@ ci: rebuild
 	$(MAKE) tag-version
 
 scan:
+
 	@echo ">> Scanning $(IMAGE_NAME):$(IMAGE_TAG)..."
+
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-		aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed $(IMAGE_NAME):$(IMAGE_TAG)
+
+		-v "$(shell pwd)/../../.trivyignore:/.trivyignore" \
+
+		aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore $(IMAGE_NAME):$(IMAGE_TAG)

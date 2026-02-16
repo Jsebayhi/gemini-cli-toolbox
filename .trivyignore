@@ -1,0 +1,4 @@
+# Ignore CVE-2026-24001 (DoS in jsdiff) as it is low risk for local CLI usage
+# and upstream fix is pending in @google/gemini-cli sub-dependency.
+# See adr/0009-npm-audit-tolerance.md
+CVE-2026-24001
