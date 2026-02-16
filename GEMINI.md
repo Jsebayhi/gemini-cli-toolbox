@@ -48,6 +48,11 @@ make build
 *   **Process:** Create branch -> Implement -> Push -> Open PR -> **STOP**.
 *   **Why:** The user often wants to review the PR diff before merging.
 
+### Testing Strategy
+*   **Bash Scripts:** Use `bats-core`. Tests reside in `tests/bash/`. Use `make test-bash` to execute.
+*   **Python (Hub):** Use `pytest`. Tests reside in `images/gemini-hub/tests/`. Use `make test` to execute.
+*   **Mandatory:** Always run `make local-ci` before submitting a PR.
+
 ## 5. Naming Strategy
 
 ### Consistency Mandate

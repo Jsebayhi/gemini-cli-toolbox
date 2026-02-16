@@ -55,6 +55,8 @@ Pushing and PR conventions.
 *   [Core Mandates](references/mandates.md)
 *   [Architecture](docs/ARCHITECTURE_AND_FEATURES.md)
 *   [Conventions](references/conventions.md)
+*   [Bash Best Practices](references/bash_best_practices.md)
+*   [Bash Testing](references/bash_testing.md)
 *   [Python Engineering Standards](references/python_best_practices.md)
 *   [General Testing](references/general_testing.md)
 *   [General UI Testing](references/general_ui_testing.md)

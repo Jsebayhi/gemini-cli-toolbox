@@ -152,5 +152,22 @@ gemini-toolbox --worktree
 ## 🤝 Contributing
 We love contributors! If you add or modify CLI flags, please remember to update the scripts in `completions/`. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more details.
 
+## 🛠️ Development
+
+If you're contributing to the Toolbox, you can run the full suite of automated tests and linters:
+
+```bash
+# Run all tests (Bash & Python) and linters
+make local-ci
+
+# Run only Bash automated tests (Bats)
+make test-bash
+
+# Run only Python tests (Pytest)
+make test
+```
+
+We use [Bats-core](https://github.com/bats-core/bats-core) for testing our core bash scripts. New tests should be added to `tests/bash/`.
+
 ## 📄 License
 MIT
