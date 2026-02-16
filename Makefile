@@ -128,7 +128,7 @@ test-bash: deps-bash
 		-w /code \
 		--entrypoint kcov \
 		gemini-bash-tester \
-		--include-path=/code/bin \
+		--include-path=/code/bin,/code/images \
 		/code/coverage/bash \
 		bats tests/bash
 	@echo ""
