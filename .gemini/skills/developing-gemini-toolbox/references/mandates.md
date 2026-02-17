@@ -6,6 +6,11 @@
 *   **Explicit State:** Always prefix your strategy or intent with the current workflow phase.
 *   **Evidence-Based Transitions:** Moving from one phase to the next requires evidence (e.g., a comment on an issue, a drafted ADR, or a passing test suite).
 
+## 🔐 Security-First & Risk Governance
+**Security is Non-Negotiable.**
+*   **Zero-Debt Suppressions:** Never suppress a vulnerability to simply "get it done". Every suppression must be justified and time-bound via the [DevSecOps Governance](devsecops.md).
+*   **Documentation:** If you accept a risk, you must document it in the architectural features.
+
 ## 🔍 Mandate for Clarity (Proportional to Ambiguity)
 **Primary Objective:** Avoid error due to unspoken assumptions.
 
