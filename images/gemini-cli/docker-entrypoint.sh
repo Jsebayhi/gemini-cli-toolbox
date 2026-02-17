@@ -14,20 +14,17 @@ main() {
     local LOG_LEVEL=2
     [ "$DEBUG_MODE" = "true" ] && LOG_LEVEL=3
 
-    # Internal logging FD (Defaults to 2/stderr)
-    local _LOG_FD=${GEMINI_LOG_FD:-2}
-
     _log() {
         local level_name="$1"
         local level_val="$2"
         shift 2
         if [ "$LOG_LEVEL" -ge "$level_val" ]; then
             if [ "$level_val" -eq 0 ]; then
-                echo "Error: $*" >&"$_LOG_FD"
+                echo "Error: $*" >&2
             elif [ "$level_val" -eq 1 ]; then
-                echo "Warning: $*" >&"$_LOG_FD"
+                echo "Warning: $*" >&2
             else
-                echo ">> $*" >&"$_LOG_FD"
+                echo ">> $*" >&2
             fi
         fi
     }
@@ -53,7 +50,7 @@ main() {
 
     # Fix permissions
     mkdir -p "$HOME"
-    chown -R "$TARGET_UID:$TARGET_GID" "$HOME"
+    chown -R "$TARGET_UID:$TARGET_GID" "$HOME" >/dev/null 2>&1
 
     # --- Docker-out-of-Docker Setup ---
     local DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"
@@ -64,11 +61,11 @@ main() {
 
         # Check if a group with this GID already exists
         if ! getent group "$HOST_DOCKER_GID" >/dev/null 2>&1; then
-            groupadd -g "$HOST_DOCKER_GID" host-docker
+            groupadd -g "$HOST_DOCKER_GID" host-docker >/dev/null 2>&1
         fi
         
         # Add user to the group
-        usermod -aG "$HOST_DOCKER_GID" "$TARGET_USER"
+        usermod -aG "$HOST_DOCKER_GID" "$TARGET_USER" >/dev/null 2>&1
     fi
 
     # --- Tmux Configuration ---
