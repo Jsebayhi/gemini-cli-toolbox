@@ -19,21 +19,21 @@ The project's Bash scripts (toolbox, hub, and entrypoints) previously used incon
 *   **Reason for Rejection:** Does not scale and was the direct cause of the reported regressions.
 
 ### [Alternative 2: Custom File Descriptors (FD 3)]
-*   **Description:** Use `exec 3>&1` to create an alias for the parent's `stdout` and redirect all UI messages to `>&3`.
+*   **Description:** Use `exec 3>&1` or a configurable `GEMINI_LOG_FD` to bypass subshell captures.
 *   **Pros:** Bypasses subshell captures reliably.
 *   **Cons:** Non-standard; breaks downstream tools (like Hub dashboard or CI) that only capture FD 1 and FD 2. High cognitive load for maintainers.
 *   **Status:** Rejected
-*   **Reason for Rejection:** Violated the Principle of Least Astonishment and introduced compatibility risks with external log aggregators.
+*   **Reason for Rejection:** Violated the Principle of Least Astonishment and introduced unnecessary architectural complexity. Manual redirection of specific verbose commands to `/dev/null` is a simpler way to achieve "Quiet Mode".
 
-### [Alternative 3: Level-Based Logging Module (Selected)]
-*   **Description:** Implement a centralized logging function (`_log`) that defaults to `stderr` and respects a `LOG_LEVEL` variable.
-*   **Pros:** Standard-compliant (uses FD 2 for metadata); provide granularity (ERROR, WARN, INFO, DEBUG); prevents `stdout` pollution by design.
+### [Alternative 3: Pure Level-Based Logging Module (Selected)]
+*   **Description:** Implement a centralized logging function (`_log`) that forces output to `stderr` (FD 2) and respects a `LOG_LEVEL` variable. Use explicit `/dev/null` redirection for verbose utility commands (e.g., `useradd`, `chown`).
+*   **Pros:** Standard-compliant (uses FD 2 for metadata); provide granularity (ERROR, WARN, INFO, DEBUG); prevents `stdout` pollution by design; maximally simple.
 *   **Cons:** Small boilerplate required in each script.
 *   **Status:** Selected
-*   **Reason for Selection:** Best balance of Unix-orthodoxy, robustness, and modern CLI features.
+*   **Reason for Selection:** Best balance of Unix-orthodoxy, robustness, and modern CLI features, while prioritizing codebase simplicity and standard log-capture compatibility.
 
 ## Decision
-Implement a modular logging system in all Bash scripts. All status messages must use `log_info`, `log_warn`, or `log_debug`, which are guaranteed to write to `stderr`. `stdout` is strictly reserved for data/results.
+Implement a modular logging system in all Bash scripts forced to `stderr`. Verbose system setup commands in entrypoints are explicitly silenced via `> /dev/null`.
 
 ## Consequences
 *   **Positive:** Dramatically reduced risk of variable corruption; easier debugging via `LOG_LEVEL=3`; consistent UI across the toolbox.
