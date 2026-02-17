@@ -1,5 +1,6 @@
 # Use our custom secure base image
-FROM gemini-cli-toolbox/base:latest
+ARG BASE_TAG=latest
+FROM gemini-cli-toolbox/base:${BASE_TAG}
 
 # 1. Install Gemini CLI
 # Clean cache to save space

@@ -24,11 +24,11 @@ help:
 	@echo "  make help     : Show this help message"
 
 build: pre-build
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+	docker build --build-arg BASE_TAG=$(IMAGE_TAG) -t $(IMAGE_NAME):$(IMAGE_TAG) .
 	$(MAKE) clean-artifacts
 
 rebuild: pre-build
-	docker build --no-cache -t $(IMAGE_NAME):$(IMAGE_TAG) .
+	docker build --build-arg BASE_TAG=$(IMAGE_TAG) --no-cache -t $(IMAGE_NAME):$(IMAGE_TAG) .
 	$(MAKE) clean-artifacts
 
 pre-build:
