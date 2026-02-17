@@ -4,53 +4,64 @@
 # 2. Reason: Why it is currently ignored (e.g. unfixable upstream).
 # Global Review Cycle: 90 days. Next global review: 2026-05-17.
 
+# jsdiff: Denial of Service in local CLI (low impact).
 # Risk: Denial of Service in local CLI (low impact).
 # Reason: Upstream fix pending in @google/gemini-cli sub-dependency.
 CVE-2026-24001 exp:2026-05-17
 
 # --- New unfixable or low-risk vulnerabilities detected on 2026-02-17 ---
 
+# brace-expansion: juliangruber brace-expansion index.js expand redos (LOW)
 # Risk: Regular expression denial of service (low impact for local tool).
 # Reason: OS-level or npm-level dependency delay.
 CVE-2025-5889 exp:2026-05-17
 
+# cross-spawn: regular expression denial of service (HIGH)
 # Risk: Regular expression denial of service (low impact for local tool).
 # Reason: Fixed in 7.0.5, but upstream @google/gemini-cli is on 7.0.3.
 CVE-2024-21538 exp:2026-05-17
 
+# glob: Command Injection Vulnerability via Malicious Filenames (HIGH)
 # Risk: Command Injection via Malicious Filenames (local execution context only).
 # Reason: Upstream fix pending in @google/gemini-cli dependencies.
 CVE-2025-64756 exp:2026-05-17
 
+# node-tar: Arbitrary file overwrite and symlink poisoning (HIGH)
 # Risk: Arbitrary file overwrite and symlink poisoning (requires malicious input).
 # Reason: Upstream fixes pending in @google/gemini-cli dependencies.
 CVE-2026-23745 exp:2026-05-17
 CVE-2026-23950 exp:2026-05-17
 CVE-2026-24842 exp:2026-05-17
 
+# pip: Information disclosure via path traversal (LOW)
 # Risk: Information disclosure via path traversal (requires specific pip usage).
 # Reason: Low risk for local development sandbox.
 CVE-2026-1703 exp:2026-05-17
 
+# stdlib: Unexpected session resumption in crypto/tls (CRITICAL).
 # Risk: Unexpected session resumption in crypto/tls (CRITICAL).
 # Reason: Affects OS-level Go binaries (docker, gh, tailscale). Bookworm updates pending.
 CVE-2025-68121 exp:2026-05-17
 
+# golang: Memory exhaustion, CPU consumption, etc (HIGH)
 # Risk: Memory exhaustion and CPU consumption in Go binaries.
 # Reason: OS-level updates for Go standard library pending in Debian.
 CVE-2025-61726 exp:2026-05-17
 CVE-2025-61728 exp:2026-05-17
 CVE-2025-61730 exp:2026-05-17
 
+# github.com/sigstore/rekor: DoS and SSRF (MEDIUM)
 # Risk: DoS and SSRF in Rekor component (local tool context).
 # Reason: Low risk for CLI usage; awaiting upstream container updates.
 CVE-2026-23831 exp:2026-05-17
 CVE-2026-24117 exp:2026-05-17
 
+# github.com/sigstore/sigstore: Arbitrary file writes (MEDIUM)
 # Risk: Arbitrary file writes in Sigstore component (local tool context).
 # Reason: Low risk for CLI usage; awaiting upstream container updates.
 CVE-2026-24137 exp:2026-05-17
 
+# github.com/theupdateframework/go-tuf/v2 (MEDIUM)
 # Risk: Ambiguous medium-risk vulnerabilities in Go TUF.
 # Reason: Awaiting upstream library updates in base tools.
 CVE-2026-23991 exp:2026-05-17
