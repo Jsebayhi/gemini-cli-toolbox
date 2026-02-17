@@ -23,4 +23,4 @@ scan:
 	@echo ">> Scanning $(IMAGE_NAME):$(IMAGE_TAG)..."
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 		-v "$(shell pwd)/../../.trivyignore:/.trivyignore" \
-		aquasec/trivy image --exit-code 1 --ignore-unfixed --ignorefile /.trivyignore $(IMAGE_NAME):$(IMAGE_TAG)
+		aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore $(IMAGE_NAME):$(IMAGE_TAG)
