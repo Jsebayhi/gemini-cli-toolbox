@@ -295,3 +295,38 @@ h1 {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Arguments Display */
+.args-display-container {
+    padding: 12px;
+    border: 1px solid var(--input-bg);
+    border-radius: 8px;
+    background: rgba(0,0,0,0.2);
+    font-family: monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.arg-line {
+    min-height: 1em;
+    word-break: break-all;
+}
+
+.arg-line.blank {
+    height: 1em;
+}
+
+.arg-line.comment {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.arg-part {
+    color: var(--accent);
+}
+
+.comment-part {
+    color: var(--text-dim);
+    font-style: italic;
+    opacity: 0.8;
+}

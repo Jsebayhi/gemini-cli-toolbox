@@ -128,11 +128,13 @@ The Hub wizard automatically remembers your last 3 paths (stored in your browser
 ## 🔧 Advanced Configuration
 
 ### Persistent Settings (`extra-args`)
-Inside a profile directory (when using `--profile`), create a file named `extra-args` to store flags you use every time:
+Inside a profile directory (when using `--profile`), create a file named `extra-args` to store flags you use every time. It supports blank lines and comments using `#`:
 ```text
 # ~/.gemini-profiles/work/extra-args
---volume "/mnt/data/docs:/docs"
---no-ide
+--volume "/mnt/data/docs:/docs" # Mount my documentation
+--no-ide # Disable VS Code integration for this profile
+
+--preview # Always use the latest beta features
 ```
 
 ### 📜 Persistent Bash History

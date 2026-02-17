@@ -70,7 +70,7 @@ def test_get_config_details(client, tmp_path):
     with patch("app.config.Config.HOST_CONFIG_ROOT", str(tmp_path)):
         response = client.get('/api/config-details?name=profile1')
         assert response.status_code == 200
-        assert "--preview" in response.json["extra_args"]
+        assert {"type": "arg", "raw": "--preview", "arg": "--preview", "comment": ""} in response.json["extra_args"]
 
 # --- Launcher Tests ---
 

@@ -179,6 +179,26 @@ EOF
     assert_failure
 }
 
+@test "Journey: Profile with Extra Args and Comments" {
+    mkdir -p "$TEST_TEMP_DIR/comments-profile"
+    cat <<EOF > "$TEST_TEMP_DIR/comments-profile/extra-args"
+--no-docker # Using no-docker
+  # A whole line comment
+--preview
+EOF
+    run gemini-toolbox --profile "$TEST_TEMP_DIR/comments-profile" --bash
+    assert_success
+    
+    # Check that --no-docker was applied (no docker sock mount in the command)
+    # The default command includes -v /var/run/docker.sock:/var/run/docker.sock
+    run grep "/var/run/docker.sock" "$MOCK_DOCKER_LOG"
+    assert_failure
+    
+    # Check that --preview was applied (cli-preview image)
+    run grep "gemini-cli-toolbox/cli-preview:latest" "$MOCK_DOCKER_LOG"
+    assert_success
+}
+
 @test "Journey: Invalid Project Path (Failure)" {
     run gemini-toolbox --project /non/existent/path
     assert_failure

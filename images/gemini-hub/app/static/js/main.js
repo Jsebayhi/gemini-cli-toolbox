@@ -373,9 +373,22 @@ async function loadConfigDetails() {
         const res = await fetch(`/api/config-details?name=${encodeURIComponent(config)}`);
         const data = await res.json();
         if (data.extra_args && data.extra_args.length > 0) {
-            let html = "<div style='margin-bottom:5px'>◈ Active profile with custom arguments:</div>";
-            html += "<div style='color:var(--text-dim); padding-left:10px; font-family:monospace; font-size:0.7rem;'>";
-            html += data.extra_args.map(a => `<div>↳ ${a}</div>`).join('');
+            let html = "<div style='margin-bottom:8px'>◈ Active profile arguments:</div>";
+            html += "<div class='args-display-container'>";
+            data.extra_args.forEach(item => {
+                if (item.type === 'blank') {
+                    html += "<div class='arg-line blank'></div>";
+                } else if (item.type === 'comment') {
+                    html += `<div class='arg-line comment'># ${item.comment}</div>`;
+                } else {
+                    html += "<div class='arg-line'>";
+                    html += `<span class="arg-part">${item.arg}</span>`;
+                    if (item.comment) {
+                        html += ` <span class="comment-part"># ${item.comment}</span>`;
+                    }
+                    html += "</div>";
+                }
+            });
             html += "</div>";
             detailsDiv.innerHTML = html;
         } else {

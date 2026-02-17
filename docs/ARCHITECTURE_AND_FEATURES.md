@@ -196,11 +196,16 @@ This nesting ensures that your configuration files are not buried among hundreds
 ### Persistent Arguments (`extra-args`)
 You can define persistent runtime arguments for a specific profile by creating a file named `extra-args` in the profile root.
 *   **Format:** One flag per line (or space-separated).
+*   **Comments:** Supports whole-line and end-of-line comments using `#`.
+*   **Blank Lines:** Supported and preserved in the Hub UI for layout.
 *   **Usage:** Automatically loaded whenever you use this profile.
 
 **Example `extra-args`:**
 ```bash
---no-ide
+--no-ide # Disable companion extension
 --volume "/mnt/data/work-docs:/docs"
---env "MY_API_KEY=secret"
+
+# Sandbox settings
+--no-docker
+--env "MY_API_KEY=secret" # Injected into container
 ```

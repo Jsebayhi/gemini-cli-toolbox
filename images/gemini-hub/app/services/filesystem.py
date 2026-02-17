@@ -1,4 +1,5 @@
 import os
+import shlex
 import logging
 from typing import List, Dict, Any
 from app.config import Config
@@ -28,7 +29,7 @@ class FileSystemService:
 
     @staticmethod
     def get_config_details(name: str) -> Dict[str, Any]:
-        """Reads extra-args from a profile."""
+        """Reads extra-args from a profile, preserving all lines for UI display."""
         if not name:
             return {}
         
@@ -39,12 +40,45 @@ class FileSystemService:
         if os.path.isfile(extra_args_path):
             try:
                 with open(extra_args_path, 'r') as f:
-                    args = []
+                    lines_info = []
                     for line in f:
-                        line = line.strip()
-                        if line and not line.startswith('#'):
-                            args.append(line)
-                    details["extra_args"] = args
+                        raw_line = line.rstrip('\n')
+                        stripped = raw_line.strip()
+                        
+                        if not stripped:
+                            lines_info.append({"type": "blank", "raw": raw_line})
+                            continue
+                            
+                        if stripped.startswith('#'):
+                            lines_info.append({"type": "comment", "raw": raw_line, "arg": "", "comment": stripped[1:].strip()})
+                            continue
+                            
+                        try:
+                            # Use shlex to identify the argument part
+                            tokens = shlex.split(stripped, comments=True)
+                            if not tokens:
+                                lines_info.append({"type": "comment", "raw": raw_line, "arg": "", "comment": stripped.lstrip('#').strip()})
+                                continue
+                                
+                            arg_part = " ".join(shlex.quote(t) for t in tokens)
+                            
+                            # Extract comment part
+                            comment_part = ""
+                            for i in range(len(stripped)):
+                                if stripped[i] == '#':
+                                    before = stripped[:i]
+                                    try:
+                                        if shlex.split(before) == tokens:
+                                            comment_part = stripped[i+1:].strip()
+                                            break
+                                    except ValueError:
+                                        continue
+                            
+                            lines_info.append({"type": "arg", "raw": raw_line, "arg": arg_part, "comment": comment_part})
+                        except ValueError:
+                            lines_info.append({"type": "arg", "raw": raw_line, "arg": stripped, "comment": ""})
+                            
+                    details["extra_args"] = lines_info
             except Exception as e:
                 logger.error(f"Error reading extra-args for {name}: {e}")
                 

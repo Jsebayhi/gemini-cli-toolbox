@@ -217,7 +217,9 @@ main() {
             if [[ -n "$line" && ! "$line" =~ ^# ]]; then
                  local parts=()
                  # Use eval to properly parse quotes arguments (like shell would)
-                 eval "parts=($line)"
+                 # We put the closing paren on a new line to support end-of-line comments
+                 eval "parts=( $line
+)"
                  file_args+=("${parts[@]}")
             fi
         done < "${temp_conf}/extra-args"
