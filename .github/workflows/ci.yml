@@ -159,3 +159,18 @@ jobs:
           repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
           short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion, Git Worktree."
           readme-filepath: ./README_DOCKER.md
+
+  # Gatekeeper job for branch protection.
+  # This job depends on all other jobs. In GitHub settings, only this job 
+  # needs to be marked as "Required" to ensure the entire pipeline passed.
+  all-checks-passed:
+    name: All Checks Passed
+    needs: [lint, build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check dependency status
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: Success
+        run: echo "All checks passed successfully."
