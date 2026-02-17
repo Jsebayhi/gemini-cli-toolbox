@@ -7,17 +7,20 @@ main() {
     local LOG_LEVEL=2
     [ "${DEBUG:-false}" = "true" ] && LOG_LEVEL=3
 
+    # Internal logging FD (Defaults to 2/stderr)
+    local _LOG_FD=${GEMINI_LOG_FD:-2}
+
     _log() {
         local level_name="$1"
         local level_val="$2"
         shift 2
         if [ "$LOG_LEVEL" -ge "$level_val" ]; then
             if [ "$level_val" -eq 0 ]; then
-                echo "Error: $*" >&2
+                echo "Error: $*" >&"$_LOG_FD"
             elif [ "$level_val" -eq 1 ]; then
-                echo "Warning: $*" >&2
+                echo "Warning: $*" >&"$_LOG_FD"
             else
-                echo ">> $*" >&2
+                echo ">> $*" >&"$_LOG_FD"
             fi
         fi
     }

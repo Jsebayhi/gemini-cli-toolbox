@@ -10,6 +10,9 @@
 # Levels: 0=ERROR, 1=WARN, 2=INFO, 3=DEBUG
 LOG_LEVEL="${LOG_LEVEL:-2}"
 
+# Internal logging FD (Defaults to 2/stderr)
+_LOG_FD=${GEMINI_LOG_FD:-2}
+
 _log() {
     local level_name="$1"
     local level_val="$2"
@@ -17,13 +20,13 @@ _log() {
     if [ "$LOG_LEVEL" -ge "$level_val" ]; then
         if [ "$level_val" -eq 0 ]; then
             # ERROR: Use standard Error: prefix
-            echo "Error: $*" >&2
+            echo "Error: $*" >&"$_LOG_FD"
         elif [ "$level_val" -eq 1 ]; then
             # WARN
-            echo "Warning: $*" >&2
+            echo "Warning: $*" >&"$_LOG_FD"
         else
             # INFO and DEBUG: Use the stylized prefix
-            echo ">> $*" >&2
+            echo ">> $*" >&"$_LOG_FD"
         fi
     fi
 }
