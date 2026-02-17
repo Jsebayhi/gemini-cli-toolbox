@@ -25,6 +25,7 @@ This project uses a "Hybrid Agent" workflow designed for speed and clarity.
 *   **Python:** Follow `images/gemini-hub/docs/ENGINEERING_STANDARDS.md`.
 *   **Bash:** Use `shellcheck`.
 *   **Testing:** New features must include tests (or manual verification steps documented in the PR).
+*   **Security Scanning:** All images must pass `make scan`. If you must suppress a vulnerability in `.trivyignore`, you **MUST** include a `# Review Required By: YYYY-MM-DD` comment (90-day TTL) and a justification.
 *   **CLI Updates:** If you add or modify CLI flags/arguments, you **MUST** update the corresponding bash completion script in `completions/`.
 
 ### 5. Task Sizing

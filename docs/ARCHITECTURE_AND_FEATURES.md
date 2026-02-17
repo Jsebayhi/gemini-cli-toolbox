@@ -16,7 +16,8 @@ The core philosophy of this toolbox is **Host Protection**. By running the agent
 To maintain a high security posture, all images undergo automated security scans using [Trivy](https://github.com/aquasec/trivy).
 *   **Target:** Scans for OS vulnerabilities (CVEs) and application-level vulnerabilities (npm, pip).
 *   **Threshold:** The CI pipeline is configured to fail on any **CRITICAL** or **HIGH** severity vulnerabilities that have a known fix.
-*   **Vulnerability Ignore Policy:** In rare cases where a vulnerability is unfixable upstream or poses zero risk to local usage (e.g., DoS in a local dev tool), we use a project-wide `.trivyignore` file in the root directory to suppress specific CVEs. This ensures our release pipeline remains unblocked while maintaining visibility into real threats.
+*   **Vulnerability Ignore Policy:** In rare cases where a vulnerability is unfixable upstream or poses zero risk to local usage (e.g., DoS in a local dev tool), we use a project-wide `.trivyignore` file in the root directory to suppress specific CVEs.
+*   **Governance (TTL):** To prevent "permanent" ignores and security debt, every suppressed CVE must include a `# Review Required By: YYYY-MM-DD` comment. We follow a 90-day review cycle for all unfixable vulnerabilities. This ensures our release pipeline remains unblocked while maintaining rigorous visibility and periodic re-evaluation of real threats.
 
 ### Permission Management (`gosu`)
 *   **The Problem:** Docker containers typically run as root. If the agent creates a file, it ends up owned by `root` on your host, requiring `sudo` to delete.
