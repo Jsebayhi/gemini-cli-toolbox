@@ -145,7 +145,7 @@ EOF
 
     run gemini-toolbox --worktree --name "feat-branch" --bash
     assert_success
-    run grep "gem-feat-branch-bash" "$MOCK_DOCKER_LOG"
+    run grep "gem-worktree-repo-feat-branch-bash" "$MOCK_DOCKER_LOG"
     assert_success
 }
 

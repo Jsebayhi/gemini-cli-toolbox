@@ -81,8 +81,9 @@ setup_worktree() {
     # shellcheck disable=SC2034 # current_project_dir is passed for API symmetry
     local current_project_dir="$3"
 
-    local worktree_base="${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${project_name}"
-    worktree_base="${GEMINI_WORKTREE_ROOT:-$worktree_base}"
+    local worktree_root="${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees"
+    worktree_root="${GEMINI_WORKTREE_ROOT:-$worktree_root}"
+    local worktree_base="${worktree_root}/${project_name}"
     
     local branch_name=""
     local folder_name=""
@@ -286,7 +287,7 @@ main() {
     local stop_session_target=""
     local connect_id=""
     local enable_worktree=false
-    local arg_name=""
+    local worktree_name=""
 
     while [[ $# -gt 0 ]]; do
       case $1 in
@@ -309,7 +310,7 @@ main() {
             shift 
             ;;
         --worktree)    enable_worktree=true; shift ;;
-        --name)        arg_name="$2"; shift; shift ;;
+        --name)        worktree_name="$2"; shift; shift ;;
         --docker-args) 
             IFS=' ' read -r -a split_args <<< "$2"
             extra_docker_args+=("${split_args[@]}")
@@ -361,11 +362,15 @@ main() {
         exit 1
     fi
 
-    local project_name
-    if [ -n "$arg_name" ]; then
-        project_name="$arg_name"
-    else
-        project_name=$(basename "$project_dir")
+    local base_project_name
+    base_project_name=$(basename "$project_dir" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+
+    local project_name="${base_project_name}"
+    if [ -n "$worktree_name" ]; then
+        # Sanitize worktree name
+        local sanitized_name
+        sanitized_name=$(echo "$worktree_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+        project_name="${base_project_name}-${sanitized_name}"
     fi
     # Sanitize: lowercase and replace non-alphanumeric (except hyphens) with hyphens
     project_name=$(echo "$project_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
@@ -386,7 +391,7 @@ main() {
     if [ "$enable_worktree" = true ]; then
         # Capture output separately to honor set -e
         local new_wt
-        new_wt=$(setup_worktree "$project_name" "$arg_name" "$project_dir")
+        new_wt=$(setup_worktree "$base_project_name" "$worktree_name" "$project_dir")
         project_dir="$new_wt"
     fi
 

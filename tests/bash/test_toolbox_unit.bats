@@ -554,6 +554,18 @@ EOF
     assert_success
 }
 
+@test "setup_worktree: custom GEMINI_WORKTREE_ROOT nesting" {
+    source_toolbox
+    mock_git
+    local custom_root="$TEST_TEMP_DIR/custom-wt"
+    mkdir -p "$custom_root"
+    
+    GEMINI_WORKTREE_ROOT="$custom_root" run setup_worktree "my-repo" "my-task" "."
+    assert_success
+    # Should be nested: ROOT/project/task
+    assert_output --partial "$custom_root/my-repo/my-task"
+}
+
 @test "main: repository root detection (setup_worktree path)" {
     source_toolbox
     mock_docker
@@ -643,7 +655,7 @@ EOF
     # but here we just test if --name is sanitized in the container name.
     run main --name "fix/my-bug" --bash
     assert_success
-    # The container name should be sanitized (slashes to dashes)
-    run grep "gem-fix-my-bug-bash-" "$MOCK_DOCKER_LOG"
+    # The container name should be sanitized (slashes to dashes) and include project prefix
+    run grep "gem-.*-fix-my-bug-bash-" "$MOCK_DOCKER_LOG"
     assert_success
 }
