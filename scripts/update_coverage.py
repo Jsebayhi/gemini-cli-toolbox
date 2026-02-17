@@ -82,11 +82,15 @@ def update_readme(coverage):
             f.write(new_content)
         print(f"Updated README with coverage: {coverage:.2f}% ({color})")
         # Output for CI
-        print(f"::set-output name=coverage::{coverage:.2f}")
-        print(f"::set-output name=updated::true")
+        if 'GITHUB_OUTPUT' in os.environ:
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+                print(f"coverage={coverage:.2f}", file=fh)
+                print(f"updated=true", file=fh)
     else:
         print(f"README coverage already up to date: {coverage:.2f}%")
-        print(f"::set-output name=updated::false")
+        if 'GITHUB_OUTPUT' in os.environ:
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+                print(f"updated=false", file=fh)
 
 def main():
     print(">> Computing Global Coverage...")

@@ -105,12 +105,12 @@ setup_worktree() {
         
         if [[ -n "$branch_name" ]]; then
             if git show-ref --verify --quiet "refs/heads/$branch_name"; then
-                git worktree add "$worktree_path" "$branch_name" || { echo "Error: Failed to create git worktree." >&2; exit 1; }
+                git worktree add "$worktree_path" "$branch_name" >&2 || { echo "Error: Failed to create git worktree." >&2; exit 1; }
             else
-                git worktree add -b "$branch_name" "$worktree_path" || { echo "Error: Failed to create git worktree." >&2; exit 1; }
+                git worktree add -b "$branch_name" "$worktree_path" >&2 || { echo "Error: Failed to create git worktree." >&2; exit 1; }
             fi
         else
-            git worktree add --detach "$worktree_path" HEAD || { echo "Error: Failed to create git worktree." >&2; exit 1; }
+            git worktree add --detach "$worktree_path" HEAD >&2 || { echo "Error: Failed to create git worktree." >&2; exit 1; }
         fi
     fi
     
@@ -184,7 +184,7 @@ main() {
     
     local file_args=()
     if [ "$enable_profile_mode" = true ] && [ -f "${temp_conf}/extra-args" ]; then
-        echo ">> Loading profile args from ${temp_conf}/extra-args"
+        echo ">> Loading profile args from ${temp_conf}/extra-args" >&2
         while IFS= read -r line || [ -n "$line" ]; do
             line="${line#"${line%%[![:space:]]*}"}"
             if [[ -n "$line" && ! "$line" =~ ^# ]]; then
@@ -367,7 +367,7 @@ main() {
             echo ">> Error: You are using a local image '$local_tag'. Cannot update from registry." >&2
             exit 1
         fi
-        echo ">> Updating '$image_name'..."
+        echo ">> Updating '$image_name'..." >&2
         if ! docker pull "$image_name"; then
             echo "Error: Failed to pull image '$image_name' from registry." >&2
             exit 1
@@ -399,13 +399,13 @@ main() {
             echo "Please specify a full session ID to stop a specific one." >&2
             exit 1
         fi
-        echo ">> Stopping session: $matches"
+        echo ">> Stopping session: $matches" >&2
         docker stop "$matches"
         exit $?
     fi
 
     if [ -n "$connect_id" ]; then
-        echo ">> Connecting to session '$connect_id'..."
+        echo ">> Connecting to session '$connect_id'..." >&2
         if [ -z "$(docker ps -q -f name="^/${connect_id}$")" ]; then
              echo "Error: Session '$connect_id' not found." >&2
              exit 1
@@ -431,7 +431,7 @@ main() {
         created_sec=$(date -d "$created" +%s 2>/dev/null || echo "0")
         local age=$(( ($(date +%s) - created_sec) / 86400 ))
         if [ "$age" -ge 7 ]; then
-             echo ">> Tip: Your Gemini image is $age days old. Run 'gemini-toolbox update' to refresh."
+             echo ">> Tip: Your Gemini image is $age days old. Run 'gemini-toolbox update' to refresh." >&2
         fi
     fi
 
@@ -524,16 +524,16 @@ main() {
 
     local exec_args=()
     if [ "$use_bash" = true ]; then
-        echo ">> Mode: BASH"
+        echo ">> Mode: BASH" >&2
         exec_args=("--entrypoint" "/usr/local/bin/docker-entrypoint.sh" "$image_name" "bash" "${args[@]}")
     else
         exec_args=("$image_name" "${args[@]}")
     fi
 
     if [ "$detached_mode" = true ]; then
-        echo ">> Starting container in background..."
+        echo ">> Starting container in background..." >&2
         docker run --rm -d "${docker_args[@]}" "${exec_args[@]}"
-        echo ">> Container started: ${gemini_session_id}"
+        echo ">> Container started: ${gemini_session_id}" >&2
     else
         if [ "$use_bash" = true ]; then echo "Starting in BASH mode..."; fi
         docker run --rm -it "${docker_args[@]}" "${exec_args[@]}"
