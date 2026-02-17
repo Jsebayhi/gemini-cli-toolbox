@@ -81,12 +81,21 @@ jobs:
           # Run Computation Script
           python3 scripts/update_coverage.py
 
+      - name: Generate Bypass Token
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Commit Coverage Badge Update
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "docs: update coverage badge [skip ci]"
           file_pattern: README.md
+          token: ${{ steps.generate_token.outputs.token }}
 
   build:
     name: Build & Test
