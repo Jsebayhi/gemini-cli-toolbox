@@ -7,27 +7,41 @@ main() {
     local TARGET_GID=${DEFAULT_GID:-1000}
     local USER=${DEFAULT_USERNAME:-gemini}
     local HOME=${DEFAULT_HOME_DIR:-/home/$USER}
-    local DEBUG=${DEBUG:-false}
+    local DEBUG_MODE=${DEBUG:-false}
 
-    # Setup logging file descriptors
-    # FD 3 -> Debug Stdout
-    # FD 4 -> Debug Stderr
-    if [ "$DEBUG" = "true" ]; then
-        exec 3>&1
-        exec 4>&2
-    else
-        exec 3>/dev/null
-        exec 4>/dev/null
-    fi
+    # Logging Configuration
+    # 0=ERROR, 1=WARN, 2=INFO, 3=DEBUG
+    local LOG_LEVEL=2
+    [ "$DEBUG_MODE" = "true" ] && LOG_LEVEL=3
+
+    _log() {
+        local level_name="$1"
+        local level_val="$2"
+        shift 2
+        if [ "$LOG_LEVEL" -ge "$level_val" ]; then
+            if [ "$level_val" -eq 0 ]; then
+                echo "Error: $*" >&2
+            elif [ "$level_val" -eq 1 ]; then
+                echo "Warning: $*" >&2
+            else
+                echo ">> $*" >&2
+            fi
+        fi
+    }
+
+    log_error() { _log "ERROR" 0 "$@"; }
+    log_warn()  { _log "WARN"  1 "$@"; }
+    log_info()  { _log "INFO"  2 "$@"; }
+    log_debug() { _log "DEBUG" 3 "$@"; }
 
     # Create Group if missing
     if ! getent group "$TARGET_GID" >/dev/null 2>&1; then
-        groupadd -g "$TARGET_GID" "$USER" >&3 2>&4
+        groupadd -g "$TARGET_GID" "$USER" >/dev/null 2>&1
     fi
 
     # Create User if missing
     if ! getent passwd "$TARGET_UID" >/dev/null 2>&1; then
-        useradd -u "$TARGET_UID" -g "$TARGET_GID" -m -d "$HOME" -s /bin/bash "$USER" >&3 2>&4
+        useradd -u "$TARGET_UID" -g "$TARGET_GID" -m -d "$HOME" -s /bin/bash "$USER" >/dev/null 2>&1
     fi
 
     # Identify the actual username for the UID (in case it pre-existed)
@@ -41,17 +55,17 @@ main() {
     # --- Docker-out-of-Docker Setup ---
     local DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"
     if [ -n "${HOST_DOCKER_GID:-}" ] && [ -S "$DOCKER_SOCK" ]; then
-        if [ "$DEBUG" = "true" ]; then
-            echo ">> Setting up Docker Access (GID: $HOST_DOCKER_GID)..." >&3
+        if [ "$DEBUG_MODE" = "true" ]; then
+            log_debug "Setting up Docker Access (GID: $HOST_DOCKER_GID)..."
         fi
 
         # Check if a group with this GID already exists
         if ! getent group "$HOST_DOCKER_GID" >/dev/null 2>&1; then
-            groupadd -g "$HOST_DOCKER_GID" host-docker >&3 2>&4
+            groupadd -g "$HOST_DOCKER_GID" host-docker
         fi
         
         # Add user to the group
-        usermod -aG "$HOST_DOCKER_GID" "$TARGET_USER" >&3 2>&4
+        usermod -aG "$HOST_DOCKER_GID" "$TARGET_USER"
     fi
 
     # --- Tmux Configuration ---
@@ -61,8 +75,8 @@ main() {
 
     if [ "$USE_TMUX" = "true" ]; then
         if [ ! -f "$HOME/.tmux.conf" ]; then
-            if [ "$DEBUG" = "true" ]; then
-                echo ">> Generating default .tmux.conf..." >&3
+            if [ "$DEBUG_MODE" = "true" ]; then
+                log_debug "Generating default .tmux.conf..."
             fi
             {
                 echo "set -g mouse on"
@@ -72,15 +86,15 @@ main() {
         fi
 
         # 1. Create a DETACHED tmux session named 'gemini' running the user's command
-        if [ "$DEBUG" = "true" ]; then
-            echo ">> Starting Shared Session (Tmux) for: $*" >&3
+        if [ "$DEBUG_MODE" = "true" ]; then
+            log_debug "Starting Shared Session (Tmux) for: $*"
         fi
         gosu "$TARGET_USER" tmux new-session -d -s gemini "$@"
     fi
 
     # --- Remote Access (Tailscale) ---
     if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
-        echo ">> Initializing Remote Access Mode (Tailscale)..."
+        log_info "Initializing Remote Access Mode (Tailscale)..."
         # Start tailscaled in the background
         tailscaled --tun=userspace-networking --statedir=/tmp/tailscale &
         
@@ -106,23 +120,23 @@ main() {
         fi
         
         # Authenticate and bring up the node
-        echo ">> Registering VPN Node: ${TS_HOSTNAME}"
+        log_info "Registering VPN Node: ${TS_HOSTNAME}"
         tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="${TS_HOSTNAME}"
-        echo ">> Remote Access Active."
+        log_info "Remote Access Active."
         
         # 2. Start Web Terminal (ttyd) in BACKGROUND
-        echo ">> Starting ttyd on port 3000..."
+        log_info "Starting ttyd on port 3000..."
         ttyd -p 3000 -W gosu "$TARGET_USER" tmux attach -t gemini &
-        echo ">> Web Terminal active at http://<IP>:3000"
+        log_info "Web Terminal active at http://<IP>:3000"
     fi
 
     # --- Execution ---
     if [ "$USE_TMUX" = "true" ]; then
-        echo ">> Attaching to session (Tmux)..."
+        log_info "Attaching to session (Tmux)..."
         if [ -t 0 ]; then
             exec gosu "$TARGET_USER" tmux attach -t gemini
         else
-            echo ">> Detached mode detected. Keeping container alive..."
+            log_info "Detached mode detected. Keeping container alive..."
             while gosu "$TARGET_USER" tmux has-session -t gemini 2>/dev/null; do
                 sleep 1
             done
@@ -130,7 +144,7 @@ main() {
         
         # Cleanup on exit
         if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
-            echo ">> Session ended. Stopping remote services..."
+            log_info "Session ended. Stopping remote services..."
             pkill tailscaled || true
             pkill ttyd || true
         fi

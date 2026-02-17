@@ -6,6 +6,33 @@
 # 0. Global Defaults & Functions (Source-safe)
 # These are safe to load when sourcing the script for testing.
 
+# Logging Configuration
+# Levels: 0=ERROR, 1=WARN, 2=INFO, 3=DEBUG
+LOG_LEVEL="${LOG_LEVEL:-2}"
+
+_log() {
+    local level_name="$1"
+    local level_val="$2"
+    shift 2
+    if [ "$LOG_LEVEL" -ge "$level_val" ]; then
+        if [ "$level_val" -eq 0 ]; then
+            # ERROR: Use standard Error: prefix
+            echo "Error: $*" >&2
+        elif [ "$level_val" -eq 1 ]; then
+            # WARN
+            echo "Warning: $*" >&2
+        else
+            # INFO and DEBUG: Use the stylized prefix
+            echo ">> $*" >&2
+        fi
+    fi
+}
+
+log_error() { _log "ERROR" 0 "$@"; }
+log_warn()  { _log "WARN"  1 "$@"; }
+log_info()  { _log "INFO"  2 "$@"; }
+log_debug() { _log "DEBUG" 3 "$@"; }
+
 show_help() {
     echo "Usage: gemini-hub [OPTIONS] [COMMAND]"
     echo ""
@@ -109,12 +136,12 @@ main() {
         --config-root) config_root="$2"; shift; shift ;;
         -h|--help)   show_help; exit 0 ;;
         stop)
-            echo ">> Stopping Gemini Hub..."
+            log_info "Stopping Gemini Hub..."
             if ! docker stop "$container_name" >/dev/null 2>&1; then
                 if ! docker ps -a --format '{{.Names}}' | grep -q "^${container_name}$"; then
-                    echo ">> Hub is not running."
+                    log_info "Hub is not running."
                 else
-                    echo "Error: Failed to stop Gemini Hub service." >&2
+                    log_error "Failed to stop Gemini Hub service." >&2
                     exit 1
                 fi
             fi
@@ -130,12 +157,12 @@ main() {
             fi
             exit 0
             ;;
-        *)           echo "Error: Unknown argument '$1'"; show_help; exit 1 ;;
+        *)           log_error "Unknown argument '$1'"; show_help; exit 1 ;;
       esac
     done
 
     if [ -z "$auth_key" ]; then
-        echo "Error: TAILSCALE_KEY is required for the Hub."
+        log_error "TAILSCALE_KEY is required for the Hub."
         echo "Run 'gemini-hub --help' for usage instructions."
         exit 1
     fi
@@ -150,7 +177,7 @@ main() {
 
     # --- SMART RESTART LOGIC ---
     if [ -n "$(docker ps -q -f name="^/${container_name}$")" ]; then
-        echo ">> Hub is already running."
+        log_info "Hub is already running."
         local existing_roots_str
         existing_roots_str=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_name" | grep "^HUB_ROOTS=" | cut -d= -f2-)
         local existing_roots=()
@@ -168,11 +195,11 @@ main() {
         done
         
         if [ ${#missing_roots[@]} -eq 0 ]; then
-            echo ">> Active Hub already covers all requested workspaces."
-            echo ">> Hub URL: http://localhost:$port"
+            log_info "Active Hub already covers all requested workspaces."
+            log_info "Hub URL: http://localhost:$port"
             exit 0
         else
-            echo ">> Requested workspaces are NOT covered by the active Hub:"
+            log_info "Requested workspaces are NOT covered by the active Hub:"
             for r in "${missing_roots[@]}"; do echo "   - $r"; done
             
             if [ -t 0 ]; then
@@ -181,17 +208,17 @@ main() {
                 RESPONSE=${RESPONSE:-M}
                 if [[ "$RESPONSE" =~ ^[Mm]$ ]]; then
                     workspace_roots+=("${existing_roots[@]}")
-                    echo ">> Stopping old Hub..."
+                    log_info "Stopping old Hub..."
                     docker stop "$container_name" >/dev/null
                 elif [[ "$RESPONSE" =~ ^[Rr]$ ]]; then
-                    echo ">> Stopping old Hub..."
+                    log_info "Stopping old Hub..."
                     docker stop "$container_name" >/dev/null
                 else
-                    echo ">> Action cancelled."
+                    log_info "Action cancelled."
                     exit 0
                 fi
             else
-                echo ">> Non-interactive mode: Merging roots and restarting..."
+                log_info "Non-interactive mode: Merging roots and restarting..."
                 workspace_roots+=("${existing_roots[@]}")
                 docker stop "$container_name" >/dev/null
             fi
@@ -242,9 +269,9 @@ main() {
         host_docker_gid=$(getent group docker | cut -d: -f3)
     fi
 
-    echo ">> Starting Gemini Hub on port $port..."
-    echo ">> Access at http://localhost:$port (Desktop)"
-    echo ">> Access at http://gemini-hub:8888 (Mobile VPN)"
+    log_info "Starting Gemini Hub on port $port..."
+    log_info "Access at http://localhost:$port (Desktop)"
+    log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
 
     docker run --rm "$mode" \
         --name "$container_name" \
