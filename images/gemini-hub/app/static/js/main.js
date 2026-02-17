@@ -374,18 +374,22 @@ async function loadConfigDetails() {
         const data = await res.json();
         if (data.extra_args && data.extra_args.length > 0) {
             let html = "<div style='margin-bottom:8px'>◈ Active profile arguments:</div>";
-            html += "<div class='args-table-container'>";
-            html += "<table class='args-table'>";
-            html += "<thead><tr><th>Argument</th><th>Comment</th></tr></thead>";
-            html += "<tbody>";
+            html += "<div class='args-display-container'>";
             data.extra_args.forEach(item => {
-                if (!item.arg && !item.comment) return;
-                html += "<tr>";
-                html += `<td class="arg-cell">${item.arg || ""}</td>`;
-                html += `<td class="comment-cell">${item.comment || ""}</td>`;
-                html += "</tr>";
+                if (item.type === 'blank') {
+                    html += "<div class='arg-line blank'></div>";
+                } else if (item.type === 'comment') {
+                    html += `<div class='arg-line comment'># ${item.comment}</div>`;
+                } else {
+                    html += "<div class='arg-line'>";
+                    html += `<span class="arg-part">${item.arg}</span>`;
+                    if (item.comment) {
+                        html += ` <span class="comment-part"># ${item.comment}</span>`;
+                    }
+                    html += "</div>";
+                }
             });
-            html += "</tbody></table></div>";
+            html += "</div>";
             detailsDiv.innerHTML = html;
         } else {
             detailsDiv.innerText = "◈ Active profile using defaults";

@@ -23,14 +23,15 @@ def test_get_config_details_real_fs(tmp_path):
     profile_dir = tmp_path / "work"
     profile_dir.mkdir()
     extra_args_file = profile_dir / "extra-args"
-    extra_args_file.write_text("--preview\n# Comment\n--volume /foo:/bar")
+    extra_args_file.write_text("--preview\n\n# Comment\n--volume /foo:/bar")
     
     with patch("app.config.Config.HOST_CONFIG_ROOT", str(tmp_path)):
         details = FileSystemService.get_config_details("work")
         
-        assert {"arg": "--preview", "comment": ""} in details["extra_args"]
-        assert {"arg": "--volume /foo:/bar", "comment": ""} in details["extra_args"]
-        assert {"arg": "", "comment": "Comment"} in details["extra_args"]
+        assert {"type": "arg", "raw": "--preview", "arg": "--preview", "comment": ""} in details["extra_args"]
+        assert {"type": "blank", "raw": ""} in details["extra_args"]
+        assert {"type": "comment", "raw": "# Comment", "arg": "", "comment": "Comment"} in details["extra_args"]
+        assert {"type": "arg", "raw": "--volume /foo:/bar", "arg": "--volume /foo:/bar", "comment": ""} in details["extra_args"]
 
 def test_get_config_details_with_eol_comments(tmp_path):
     """Test reading config details with complex end-of-line comments."""
@@ -47,11 +48,11 @@ def test_get_config_details_with_eol_comments(tmp_path):
     with patch("app.config.Config.HOST_CONFIG_ROOT", str(tmp_path)):
         details = FileSystemService.get_config_details("work")
         
-        # Verify extraction of both arg and comment
-        assert {"arg": "--preview", "comment": "use preview"} in details["extra_args"]
-        assert {"arg": "", "comment": "Whole line comment with spaces"} in details["extra_args"]
-        assert {"arg": "--volume '/path with spaces:/data'", "comment": "comment"} in details["extra_args"]
-        assert {"arg": "--env 'FOO=#BAR'", "comment": "comment with hash in value"} in details["extra_args"]
+        # Verify extraction of both arg and comment while keeping original structure
+        assert {"type": "arg", "raw": "--preview # use preview", "arg": "--preview", "comment": "use preview"} in details["extra_args"]
+        assert {"type": "comment", "raw": "  # Whole line comment with spaces", "arg": "", "comment": "Whole line comment with spaces"} in details["extra_args"]
+        assert {"type": "arg", "raw": "--volume \"/path with spaces:/data\" # comment", "arg": "--volume '/path with spaces:/data'", "comment": "comment"} in details["extra_args"]
+        assert {"type": "arg", "raw": "--env FOO=\"#BAR\" # comment with hash in value", "arg": "--env 'FOO=#BAR'", "comment": "comment with hash in value"} in details["extra_args"]
 
 def test_browse_real_fs(tmp_path):
     """Test browsing a directory structure."""
