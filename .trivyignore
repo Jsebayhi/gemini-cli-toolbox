@@ -5,41 +5,57 @@ CVE-2026-24001
 
 # --- New unfixable or low-risk vulnerabilities detected on 2026-02-17 ---
 # Policy: Re-evaluate every 90 days.
-# Review Required By: 2026-05-17
 
 # brace-expansion: juliangruber brace-expansion index.js expand redos (LOW)
+# Review Required By: 2026-05-17
 CVE-2025-5889
 
 # cross-spawn: regular expression denial of service (HIGH)
+# Review Required By: 2026-05-17
 CVE-2024-21538
 
 # glob: Command Injection Vulnerability via Malicious Filenames (HIGH)
+# Review Required By: 2026-05-17
 CVE-2025-64756
 
 # node-tar: Arbitrary file overwrite and symlink poisoning (HIGH)
+# Review Required By: 2026-05-17
 CVE-2026-23745
+# Review Required By: 2026-05-17
 CVE-2026-23950
+# Review Required By: 2026-05-17
 CVE-2026-24842
 
 # pip: Information disclosure via path traversal (LOW)
+# Review Required By: 2026-05-17
 CVE-2026-1703
 
 # stdlib: Unexpected session resumption in crypto/tls (CRITICAL)
+# Review Required By: 2026-05-17
 CVE-2025-68121
 
 # golang: Memory exhaustion, CPU consumption, etc (HIGH)
+# Review Required By: 2026-05-17
 CVE-2025-61726
+# Review Required By: 2026-05-17
 CVE-2025-61728
+# Review Required By: 2026-05-17
 CVE-2025-61730
 
 # github.com/sigstore/rekor: DoS and SSRF (MEDIUM)
+# Review Required By: 2026-05-17
 CVE-2026-23831
+# Review Required By: 2026-05-17
 CVE-2026-24117
 
 # github.com/sigstore/sigstore: Arbitrary file writes (MEDIUM)
+# Review Required By: 2026-05-17
 CVE-2026-24137
 
 # github.com/theupdateframework/go-tuf/v2 (MEDIUM)
+# Review Required By: 2026-05-17
 CVE-2026-23991
+# Review Required By: 2026-05-17
 CVE-2026-23992
+# Review Required By: 2026-05-17
 CVE-2026-24686
