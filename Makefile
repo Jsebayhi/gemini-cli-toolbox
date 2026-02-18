@@ -47,8 +47,8 @@ test: test-bash test-hub
 
 .PHONY: test-bash
 test-bash: setup-builder deps-bash
-	@echo ">> Running Bash Automated Tests (Tag: ${IMAGE_TAG})..."
-	docker buildx bake --builder gemini-builder --load bash-test
+	@echo ">> Running Bash Automated Tests (Tag: ${IMAGE_TAG}, Builder: $(BAKE_BUILDER))..."
+	docker buildx bake $(BAKE_FLAGS) bash-test
 	mkdir -p coverage/bash
 	docker run --rm \
 		--cap-add=SYS_PTRACE \
@@ -77,8 +77,8 @@ test-bash: setup-builder deps-bash
 
 .PHONY: test-hub
 test-hub: setup-builder
-	@echo ">> Running Gemini Hub Tests (Unit & Integration, Tag: ${IMAGE_TAG})..."
-	docker buildx bake --builder gemini-builder --load hub-test
+	@echo ">> Running Gemini Hub Tests (Unit & Integration, Tag: ${IMAGE_TAG}, Builder: $(BAKE_BUILDER))..."
+	docker buildx bake $(BAKE_FLAGS) hub-test
 	mkdir -p coverage/python
 	docker run --rm \
 		-v "$(shell pwd)/coverage/python:/coverage" \
@@ -112,48 +112,60 @@ deps-bash:
 
 # --- Build Targets ---
 
+# Detect if we need the advanced builder (only for SLSA/Attestations)
+# Local development defaults to the native 'default' driver for instant incremental builds.
+ifeq ($(ENABLE_ATTESTATIONS),true)
+    BAKE_BUILDER := gemini-builder
+    BAKE_FLAGS := --builder $(BAKE_BUILDER) --load
+else
+    BAKE_BUILDER := default
+    BAKE_FLAGS := --load
+endif
+
 # Ensure we use a builder that supports attestations (docker-container driver)
 .PHONY: setup-builder
 setup-builder:
-	@if ! docker buildx inspect gemini-builder > /dev/null 2>&1; then \
-		echo ">> Creating 'gemini-builder' (docker-container driver) for SLSA support..."; \
-		docker buildx create --name gemini-builder --driver docker-container --use; \
+	@if [ "$(BAKE_BUILDER)" = "gemini-builder" ]; then \
+		if ! docker buildx inspect gemini-builder > /dev/null 2>&1; then \
+			echo ">> Creating 'gemini-builder' (docker-container driver) for SLSA support..."; \
+			docker buildx create --name gemini-builder --driver docker-container --use; \
+		fi \
 	fi
 
 .PHONY: build
 build: setup-builder
-	@echo ">> Building all images via Docker Bake (Builder: gemini-builder)..."
-	docker buildx bake --builder gemini-builder --load
+	@echo ">> Building all images via Docker Bake (Builder: $(BAKE_BUILDER))..."
+	docker buildx bake $(BAKE_FLAGS)
 
 .PHONY: rebuild
 rebuild: setup-builder
-	@echo ">> Rebuilding all images from scratch (no cache)..."
-	docker buildx bake --builder gemini-builder --load --no-cache
+	@echo ">> Rebuilding all images from scratch (no cache, Builder: $(BAKE_BUILDER))..."
+	docker buildx bake $(BAKE_FLAGS) --no-cache
 
 .PHONY: build-base
 build-base: setup-builder
 	@echo ">> Building gemini-base..."
-	docker buildx bake --builder gemini-builder --load base
+	docker buildx bake $(BAKE_FLAGS) base
 
 .PHONY: build-hub
 build-hub: setup-builder
 	@echo ">> Building gemini-hub..."
-	docker buildx bake --builder gemini-builder --load hub
+	docker buildx bake $(BAKE_FLAGS) hub
 
 .PHONY: build-cli
 build-cli: setup-builder
 	@echo ">> Building gemini-cli..."
-	docker buildx bake --builder gemini-builder --load cli
+	docker buildx bake $(BAKE_FLAGS) cli
 
 .PHONY: build-cli-preview
 build-cli-preview: setup-builder
 	@echo ">> Building gemini-cli-preview..."
-	docker buildx bake --builder gemini-builder --load cli-preview
+	docker buildx bake $(BAKE_FLAGS) cli-preview
 
 .PHONY: build-test-images
 build-test-images: setup-builder
 	@echo ">> Building test runner images..."
-	docker buildx bake --builder gemini-builder --load bash-test hub-test
+	docker buildx bake $(BAKE_FLAGS) bash-test hub-test
 
 # --- Security & Docs ---
 
