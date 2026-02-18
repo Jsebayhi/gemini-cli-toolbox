@@ -34,8 +34,9 @@ lint-python:
 test: test-bash test-hub
 
 .PHONY: test-bash
-test-bash: build-test-images deps-bash
+test-bash: deps-bash
 	@echo ">> Running Bash Automated Tests..."
+	docker buildx bake bash-test
 	mkdir -p coverage/bash
 	docker run --rm \
 		--cap-add=SYS_PTRACE \
@@ -48,8 +49,9 @@ test-bash: build-test-images deps-bash
 		bats tests/bash
 
 .PHONY: test-hub
-test-hub: build-test-images
+test-hub:
 	@echo ">> Running Gemini Hub Tests..."
+	docker buildx bake hub-test
 	mkdir -p coverage/python
 	docker run --rm \
 		-v "$(shell pwd)/coverage/python:/coverage" \
@@ -81,6 +83,26 @@ deps-bash:
 build:
 	@echo ">> Building all images via Docker Bake..."
 	docker buildx bake
+
+.PHONY: build-base
+build-base:
+	@echo ">> Building gemini-base..."
+	docker buildx bake base
+
+.PHONY: build-hub
+build-hub:
+	@echo ">> Building gemini-hub..."
+	docker buildx bake hub
+
+.PHONY: build-cli
+build-cli:
+	@echo ">> Building gemini-cli..."
+	docker buildx bake cli
+
+.PHONY: build-cli-preview
+build-cli-preview:
+	@echo ">> Building gemini-cli-preview..."
+	docker buildx bake cli-preview
 
 .PHONY: build-test-images
 build-test-images:
