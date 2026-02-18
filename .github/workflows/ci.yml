@@ -6,8 +6,10 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '0 5 * * 5'
-    - cron: '0 12 * * 6'
+    # Google releases @google/gemini-cli ~Thursday 20:00 UTC.
+    # We build Friday morning to catch the new version immediately.
+    - cron: '0 5 * * 5'  # Friday at 05:00 UTC
+    - cron: '0 12 * * 6' # Saturday at 12:00 UTC (Fallback/Hotfix catch)
 
 jobs:
   lint:
