@@ -17,6 +17,13 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 
 ## 3. Global Workflows
 
+### Adding a New Tool
+1.  Create `images/<new-tool>/`.
+2.  Add `Dockerfile` and `GEMINI.md` specific to that tool.
+3.  Register the new image in `docker-bake.hcl` (add target and inheritance) and `Makefile` (add build/test shortcuts).
+4.  Add a wrapper script in `bin/`.
+5.  Register the tool in the root `README.md`.
+
 ### Building & Testing
 1.  **Local Development:** Use `make build-<tool>` or `make test-<tool>` from the root.
 2.  **Local CI:** Run `make local-ci` to execute linting, building, and testing in parity with the remote CI.

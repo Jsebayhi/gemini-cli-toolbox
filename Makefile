@@ -59,6 +59,21 @@ test-bash: setup-builder deps-bash
 		--include-path=/code/bin,/code/images \
 		/code/coverage/bash \
 		bats tests/bash
+	@echo ""
+	@echo ">> Checking Bash Coverage (Threshold: 85%)..."
+	@REPORT_JSON=$$(find coverage/bash -name "coverage.json" | head -n 1); \
+	if [ -n "$$REPORT_JSON" ] && [ -f "$$REPORT_JSON" ]; then \
+		COVERAGE=$$(cat "$$REPORT_JSON" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data['percent_covered'])"); \
+		echo "Percent covered: $$COVERAGE%"; \
+		if python3 -c "import sys; exit(0 if float(sys.argv[1]) >= 85.0 else 1)" "$$COVERAGE"; then \
+			echo ">> Coverage threshold (85%) PASSED."; \
+		else \
+			echo ">> Error: Coverage threshold (85%) FAILED (current: $$COVERAGE%)." >&2; \
+			exit 1; \
+		fi \
+	else \
+		echo ">> Warning: Coverage report not found."; \
+	fi
 
 .PHONY: test-hub
 test-hub: setup-builder
@@ -157,6 +172,11 @@ docker-readme:
 	cp README.md README_DOCKER.md
 	sed -i 's|(docs/|(https://github.com/Jsebayhi/gemini-cli-toolbox/blob/main/docs/|g' README_DOCKER.md
 	sed -i 's|(adr/|(https://github.com/Jsebayhi/gemini-cli-toolbox/blob/main/adr/|g' README_DOCKER.md
+
+.PHONY: clean-cache
+clean-cache:
+	@echo ">> Pruning gemini-npm-cache..."
+	docker builder prune --force --filter id=gemini-npm-cache
 
 .PHONY: local-ci
 local-ci: lint build test

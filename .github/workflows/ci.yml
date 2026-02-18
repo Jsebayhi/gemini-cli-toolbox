@@ -278,6 +278,22 @@ jobs:
           commit_message: "docs: update coverage badge [skip ci]"
           file_pattern: README.md
 
+      - name: Prepare Docker Hub README
+        run: make docker-readme
+
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
+          short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion, Git Worktree."
+          readme-filepath: ./README_DOCKER.md
+
+  # Gatekeeper job for branch protection.
+  # This job depends on all other jobs. In GitHub settings, only this job 
+  # needs to be marked as "Required" to ensure the entire pipeline passed.
   all-checks-passed:
     name: All Checks Passed
     needs: [lint, build-and-test]
