@@ -1,0 +1,15 @@
+# Ignore ephemeral build artifacts to prevent cache invalidation
+coverage/
+*.log
+.github/
+.git/
+.vscode/
+README_DOCKER.md
+Makefile
+docker-bake.hcl
+GEMINI.md
+ADR/
+LICENSE
+.gitignore
+.trivyignore
+.gemini/
