@@ -39,7 +39,7 @@ target "_with_bin" {
 # --- Real Targets ---
 
 target "base" {
-  inherits = ["_release"]
+  inherits = ["_common"]
   context  = "images/gemini-base"
   tags     = ["gemini-cli-toolbox/base:${IMAGE_TAG}"]
 }
