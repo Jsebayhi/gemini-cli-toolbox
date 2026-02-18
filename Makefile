@@ -8,24 +8,39 @@
 CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 SAFE_BRANCH := $(shell echo $(CURRENT_BRANCH) | sed 's/[^a-zA-Z0-9]/-/g')
 
+# Human-First Defaults: Disable heavy SLSA attestations for local development.
+# The CI overrides this via environment variables or command-line args.
+export ENABLE_ATTESTATIONS ?= false
+
 ifeq ($(CURRENT_BRANCH),main)
     export IMAGE_TAG := latest
 else
     export IMAGE_TAG := latest-$(SAFE_BRANCH)
 endif
 
+# Detect if we need the advanced builder (only for SLSA/Attestations)
+# Local development defaults to the native 'default' driver for instant incremental builds.
+ifeq ($(ENABLE_ATTESTATIONS),true)
+    BAKE_BUILDER := gemini-builder
+    BAKE_FLAGS := --builder $(BAKE_BUILDER) --load
+else
+    BAKE_BUILDER := default
+    BAKE_FLAGS := --load
+endif
+
 .PHONY: help
 help:
 	@echo "Project Orchestration"
 	@echo "====================="
-	       @echo "  make build         : Build ALL images (Parallel via Docker Bake)"
-	       @echo "  make rebuild       : Force rebuild ALL images from scratch"
-	       @echo "  make lint          : Run all linters (ShellCheck, Ruff)"
-	
+	@echo "  make build         : Build ALL images (Parallel via Docker Bake)"
+	@echo "  make check-build   : Fast validation (Build to cache, NO image export)"
+	@echo "  make rebuild       : Force rebuild ALL images from scratch"
+	@echo "  make lint          : Run all linters (ShellCheck, Ruff)"
 	@echo "  make test          : Run all tests (Bash, Hub)"
 	@echo "  make local-ci      : Run everything (Lint + Build + Test)"
 	@echo "  make scan          : Run security scan (Trivy)"
 	@echo "  make docker-readme : Generate README_DOCKER.md"
+	@echo "  make clean-cache   : Prune npm build cache"
 
 # --- Quality Assurance ---
 
@@ -92,8 +107,8 @@ test-hub: setup-builder
 .PHONY: test-hub-ui
 test-hub-ui:
 	@echo ">> Running Gemini Hub UI Tests (Playwright)..."
-	docker buildx bake hub-test
-	docker run --rm gemini-hub-test:latest python3 -m pytest -n auto --reruns 1 -vv tests/ui
+	docker buildx bake $(BAKE_FLAGS) hub-test
+	docker run --rm gemini-hub-test:${IMAGE_TAG} python3 -m pytest -n auto --reruns 1 -vv tests/ui
 
 .PHONY: deps-bash
 deps-bash:
@@ -112,16 +127,6 @@ deps-bash:
 
 # --- Build Targets ---
 
-# Detect if we need the advanced builder (only for SLSA/Attestations)
-# Local development defaults to the native 'default' driver for instant incremental builds.
-ifeq ($(ENABLE_ATTESTATIONS),true)
-    BAKE_BUILDER := gemini-builder
-    BAKE_FLAGS := --builder $(BAKE_BUILDER) --load
-else
-    BAKE_BUILDER := default
-    BAKE_FLAGS := --load
-endif
-
 # Ensure we use a builder that supports attestations (docker-container driver)
 .PHONY: setup-builder
 setup-builder:
@@ -136,6 +141,11 @@ setup-builder:
 build: setup-builder
 	@echo ">> Building all images via Docker Bake (Builder: $(BAKE_BUILDER))..."
 	docker buildx bake $(BAKE_FLAGS)
+
+.PHONY: check-build
+check-build:
+	@echo ">> Rapid Validation (Build to cache, Builder: default)..."
+	docker buildx bake
 
 .PHONY: rebuild
 rebuild: setup-builder
