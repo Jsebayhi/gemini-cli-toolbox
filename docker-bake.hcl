@@ -17,8 +17,11 @@ target "_common" {
   }
   cache-from = ["type=gha"]
   cache-to   = ["type=gha,mode=max"]
-  # SLSA Provenance: Generates build metadata (Level 1+)
-  attest = ["type=provenance,mode=max"]
+  # SLSA Provenance & SBOM: Automated build metadata and package inventory
+  attest = [
+    "type=provenance,mode=max",
+    "type=sbom"
+  ]
 }
 
 # Targets that need the bin/ directory context

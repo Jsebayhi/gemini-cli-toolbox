@@ -47,11 +47,18 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # Required for keyless signing
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Install Cosign
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3
 
       - name: Determine Image Tag
         id: tag
@@ -189,6 +196,23 @@ jobs:
           # Hub
           docker tag gemini-cli-toolbox/hub:$TAG $REPO:latest-hub
           docker push $REPO:latest-hub
+
+      - name: Sign Images (SLSA)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
+          TAG="${{ steps.tag.outputs.tag }}"
+          
+          # Fetch versions for signing (to match exactly what was pushed)
+          VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:$TAG gemini --version | tr -d '\r')
+          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:$TAG gemini --version | tr -d '\r')
+
+          # Sign all tags
+          cosign sign --yes $REPO:latest-stable
+          cosign sign --yes $REPO:$VERSION-stable
+          cosign sign --yes $REPO:latest-preview
+          cosign sign --yes $REPO:$PREVIEW_VER-preview
+          cosign sign --yes $REPO:latest-hub
 
       - name: Update Docker Hub Description
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
