@@ -2,6 +2,14 @@ variable "IMAGE_TAG" {
   default = "latest"
 }
 
+variable "GEMINI_VERSION" {
+  default = ""
+}
+
+variable "DOCKER_HUB_REPO" {
+  default = "jsebayhi/gemini-cli-toolbox"
+}
+
 # Set to true in CI to enable SBOM/Provenance
 variable "ENABLE_ATTESTATIONS" {
   default = false
@@ -28,10 +36,7 @@ target "_common" {
 # Production Integrity (SLSA: Provenance & SBOM) - Only for released images
 target "_release" {
   inherits = ["_common"]
-  attest = [
-    "type=provenance,mode=max,disabled=${!ENABLE_ATTESTATIONS}",
-    "type=sbom,disabled=${!ENABLE_ATTESTATIONS}"
-  ]
+  attest = ENABLE_ATTESTATIONS ? ["type=provenance,mode=max", "type=sbom"] : []
 }
 
 # Artifact Layer (bin/ directory)
@@ -54,7 +59,7 @@ target "base" {
 target "hub" {
   inherits = ["_release", "_with_bin"]
   context  = "images/gemini-hub"
-  tags     = ["gemini-cli-toolbox/hub:${IMAGE_TAG}"]
+  tags     = ["${DOCKER_HUB_REPO}:latest-hub"]
 }
 
 target "cli" {
@@ -63,7 +68,10 @@ target "cli" {
   contexts = {
     "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
   }
-  tags     = ["gemini-cli-toolbox/cli:${IMAGE_TAG}"]
+  tags = [
+    "${DOCKER_HUB_REPO}:latest-stable",
+    GEMINI_VERSION != "" ? "${DOCKER_HUB_REPO}:${GEMINI_VERSION}-stable" : ""
+  ]
 }
 
 target "cli-preview" {
@@ -72,7 +80,10 @@ target "cli-preview" {
   contexts = {
     "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
   }
-  tags     = ["gemini-cli-toolbox/cli-preview:${IMAGE_TAG}"]
+  tags = [
+    "${DOCKER_HUB_REPO}:latest-preview",
+    GEMINI_VERSION != "" ? "${DOCKER_HUB_REPO}:${GEMINI_VERSION}-preview" : ""
+  ]
 }
 
 # Test Runners (Fast & Lean - No SLSA overhead)
