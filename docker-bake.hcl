@@ -6,9 +6,16 @@ variable "GEMINI_VERSION" {
   default = ""
 }
 
-# Default prefix for local builds. Overridden in CI for official releases.
+# Default prefix for local builds.
 variable "REPO_PREFIX" {
   default = "gemini-cli-toolbox"
+}
+
+# Internal flag to switch between Local (sub-repo) and Release (suffix) naming.
+# Local: gemini-cli-toolbox/cli:latest
+# Release: jsebayhi/gemini-cli-toolbox:latest-stable
+variable "RELEASE_TYPE" {
+  default = ""
 }
 
 # Set to true in CI to enable SBOM/Provenance
@@ -24,7 +31,6 @@ group "default" {
 
 # --- Base Templates ---
 
-# Operational Efficiency (Cache & Args) - Essential for everyone
 target "_common" {
   args = {
     IMAGE_TAG = "${IMAGE_TAG}"
@@ -34,20 +40,17 @@ target "_common" {
   cache-to   = ["type=gha,mode=max"]
 }
 
-# Production Integrity (SLSA: Provenance & SBOM) - Only for released images
 target "_release" {
   inherits = ["_common"]
   attest = ENABLE_ATTESTATIONS ? ["type=provenance,mode=max", "type=sbom"] : []
 }
 
-# Artifact Layer (bin/ directory)
 target "_with_bin" {
   contexts = {
     bin = "bin"
   }
 }
 
-# Shared CLI scripts (entrypoint)
 target "_with_scripts" {
   contexts = {
     scripts = "images/gemini-cli"
@@ -57,7 +60,6 @@ target "_with_scripts" {
 # --- Real Targets ---
 
 # Internal intermediate image (not released to public).
-# Inherits only cache settings to avoid SLSA overhead on non-public artifacts.
 target "base" {
   inherits = ["_common"]
   context  = "images/gemini-base"
@@ -67,7 +69,9 @@ target "base" {
 target "hub" {
   inherits = ["_release", "_with_bin"]
   context  = "images/gemini-hub"
-  tags     = ["${REPO_PREFIX}/hub:${IMAGE_TAG}"]
+  tags = [
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-hub" : "${REPO_PREFIX}/hub:${IMAGE_TAG}"
+  ]
 }
 
 target "cli" {
@@ -77,8 +81,8 @@ target "cli" {
     "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
   }
   tags = [
-    "${REPO_PREFIX}/cli:${IMAGE_TAG}",
-    GEMINI_VERSION != "" ? "${REPO_PREFIX}/cli:${GEMINI_VERSION}" : ""
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-stable" : "${REPO_PREFIX}/cli:${IMAGE_TAG}",
+    RELEASE_TYPE == "suffix" && GEMINI_VERSION != "" ? "${REPO_PREFIX}:${GEMINI_VERSION}-stable" : ""
   ]
 }
 
@@ -89,12 +93,12 @@ target "cli-preview" {
     "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
   }
   tags = [
-    "${REPO_PREFIX}/cli-preview:${IMAGE_TAG}",
-    GEMINI_VERSION != "" ? "${REPO_PREFIX}/cli-preview:${GEMINI_VERSION}" : ""
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-preview" : "${REPO_PREFIX}/cli-preview:${IMAGE_TAG}",
+    RELEASE_TYPE == "suffix" && GEMINI_VERSION != "" ? "${REPO_PREFIX}:${GEMINI_VERSION}-preview" : ""
   ]
 }
 
-# Test Runners (Fast & Lean - No SLSA overhead)
+# Test Runners
 target "hub-test" {
   inherits   = ["_common"]
   context    = "images/gemini-hub"

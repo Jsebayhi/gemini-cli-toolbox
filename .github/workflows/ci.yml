@@ -147,7 +147,13 @@ jobs:
       - name: Security Scan (Parallel)
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
-          images=("gemini-cli-toolbox/base:$TAG" "gemini-cli-toolbox/hub:$TAG" "gemini-cli-toolbox/cli:$TAG")
+          # We scan base, hub, cli, and preview in parallel
+          images=(
+            "gemini-cli-toolbox/base:$TAG" 
+            "gemini-cli-toolbox/hub:$TAG" 
+            "gemini-cli-toolbox/cli:$TAG" 
+            "gemini-cli-toolbox/cli-preview:$TAG"
+          )
           for img in "${images[@]}"; do
             echo "Scanning $img..."
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
@@ -190,6 +196,7 @@ jobs:
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
             REPO_PREFIX=${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
+            RELEASE_TYPE=suffix
             IMAGE_TAG=${{ steps.tag.outputs.tag }}
             ENABLE_ATTESTATIONS=true
           push: true
@@ -208,6 +215,7 @@ jobs:
             --set "*.cache-from=type=gha" \
             --set "*.cache-to=type=gha,mode=max" \
             --set "REPO_PREFIX=$REPO" \
+            --set "RELEASE_TYPE=suffix" \
             --set "IMAGE_TAG=$TAG" \
             --set "GEMINI_VERSION=$VERSION" \
             --set "ENABLE_ATTESTATIONS=true" \
@@ -217,6 +225,7 @@ jobs:
             --set "*.cache-from=type=gha" \
             --set "*.cache-to=type=gha,mode=max" \
             --set "REPO_PREFIX=$REPO" \
+            --set "RELEASE_TYPE=suffix" \
             --set "IMAGE_TAG=$TAG" \
             --set "GEMINI_VERSION=$PREVIEW_VER" \
             --set "ENABLE_ATTESTATIONS=true" \
@@ -230,16 +239,16 @@ jobs:
           
           # Stable (latest & version)
           VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:$TAG gemini --version | tr -d '\r')
-          cosign sign --yes $REPO/cli:$TAG
-          cosign sign --yes $REPO/cli:$VERSION
+          cosign sign --yes $REPO:$TAG-stable
+          cosign sign --yes $REPO:$VERSION-stable
 
           # Preview (latest & version)
           PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:$TAG gemini --version | tr -d '\r')
-          cosign sign --yes $REPO/cli-preview:$TAG
-          cosign sign --yes $REPO/cli-preview:$PREVIEW_VER
+          cosign sign --yes $REPO:$TAG-preview
+          cosign sign --yes $REPO:$PREVIEW_VER-preview
 
           # Hub
-          cosign sign --yes $REPO/hub:$TAG
+          cosign sign --yes $REPO:$TAG-hub
 
       - name: Update Docker Hub Description
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
