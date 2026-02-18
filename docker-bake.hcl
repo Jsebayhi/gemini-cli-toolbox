@@ -46,6 +46,13 @@ target "_with_bin" {
   }
 }
 
+# Shared CLI scripts (entrypoint)
+target "_with_scripts" {
+  contexts = {
+    scripts = "images/gemini-cli"
+  }
+}
+
 # --- Real Targets ---
 
 # Internal intermediate image (not released to public).
@@ -63,7 +70,7 @@ target "hub" {
 }
 
 target "cli" {
-  inherits = ["_release", "_with_bin"]
+  inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli"
   contexts = {
     "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
@@ -75,7 +82,7 @@ target "cli" {
 }
 
 target "cli-preview" {
-  inherits = ["_release", "_with_bin"]
+  inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli-preview"
   contexts = {
     "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"

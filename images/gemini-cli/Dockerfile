@@ -34,7 +34,7 @@ RUN CORE_DIR=$(npm root -g)/@google/gemini-cli/node_modules/@google/gemini-cli-c
     fi
 
 # 4. Copy Entrypoint
-COPY docker-entrypoint.sh /usr/local/bin/
+COPY --from=scripts docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # 5. Create Extensions Directory
