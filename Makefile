@@ -4,6 +4,16 @@
 # Default target
 .DEFAULT_GOAL := help
 
+# Detect Branch and Suffix Tag for image isolation
+CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+SAFE_BRANCH := $(shell echo $(CURRENT_BRANCH) | sed 's/[^a-zA-Z0-9]/-/g')
+
+ifeq ($(CURRENT_BRANCH),main)
+    export IMAGE_TAG := latest
+else
+    export IMAGE_TAG := latest-$(SAFE_BRANCH)
+endif
+
 .PHONY: help
 help:
 	@echo "Project Orchestration"
@@ -35,7 +45,7 @@ test: test-bash test-hub
 
 .PHONY: test-bash
 test-bash: deps-bash
-	@echo ">> Running Bash Automated Tests..."
+	@echo ">> Running Bash Automated Tests (Tag: ${IMAGE_TAG})..."
 	docker buildx bake bash-test
 	mkdir -p coverage/bash
 	docker run --rm \
@@ -43,19 +53,19 @@ test-bash: deps-bash
 		-v "$(shell pwd):/code" \
 		-w /code \
 		--entrypoint kcov \
-		gemini-bash-tester:latest \
+		gemini-bash-tester:${IMAGE_TAG} \
 		--include-path=/code/bin,/code/images \
 		/code/coverage/bash \
 		bats tests/bash
 
 .PHONY: test-hub
 test-hub:
-	@echo ">> Running Gemini Hub Tests (Unit & Integration)..."
+	@echo ">> Running Gemini Hub Tests (Unit & Integration, Tag: ${IMAGE_TAG})..."
 	docker buildx bake hub-test
 	mkdir -p coverage/python
 	docker run --rm \
 		-v "$(shell pwd)/coverage/python:/coverage" \
-		gemini-hub-test:latest \
+		gemini-hub-test:${IMAGE_TAG} \
 		python3 -m pytest -n auto -vv \
 		--cov=app \
 		--cov-report=json:/coverage/coverage.json \

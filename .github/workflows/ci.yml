@@ -87,6 +87,7 @@ jobs:
         run: |
           echo "::group::Parallel Test Execution"
           mkdir -p coverage/bash coverage/python
+          TAG="${{ steps.tag.outputs.tag }}"
           
           # Run Bash Automated Tests
           docker run --rm \
@@ -94,7 +95,7 @@ jobs:
             -v "$(pwd):/code" \
             -w /code \
             --entrypoint kcov \
-            gemini-bash-tester:latest \
+            gemini-bash-tester:$TAG \
             --include-path=/code/bin,/code/images \
             /code/coverage/bash \
             bats tests/bash > tests-bash.log 2>&1 &
@@ -103,7 +104,7 @@ jobs:
           # Run Hub Automated Tests
           docker run --rm \
             -v "$(pwd)/coverage/python:/coverage" \
-            gemini-hub-test:latest \
+            gemini-hub-test:$TAG \
             python3 -m pytest -n auto -vv \
             --cov=app \
             --cov-report=json:/coverage/coverage.json \

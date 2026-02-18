@@ -75,11 +75,11 @@ target "hub-test" {
   inherits   = ["_common"]
   context    = "images/gemini-hub"
   dockerfile = "tests/Dockerfile"
-  tags       = ["gemini-hub-test:latest"]
+  tags       = ["gemini-hub-test:${IMAGE_TAG}"]
 }
 
 target "bash-test" {
   inherits = ["_common"]
   context  = "tests/bash"
-  tags     = ["gemini-bash-tester:latest"]
+  tags     = ["gemini-bash-tester:${IMAGE_TAG}"]
 }
