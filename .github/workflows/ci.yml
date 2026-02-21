@@ -83,6 +83,7 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           ENABLE_ATTESTATIONS: false
         with:
+          builder: ${{ steps.buildx.outputs.name }}
           targets: default
           set: |
             *.cache-from=type=gha
