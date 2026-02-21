@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
   schedule:
     # Google releases @google/gemini-cli ~Thursday 20:00 UTC.
     # We build Friday morning to catch the new version immediately.
@@ -78,15 +79,27 @@ jobs:
         with:
           driver: docker-container
 
-      # Turbo-parallel Bake step using docker-container driver
-      - name: Bake All Images (Parallel)
+      - name: Bake Base Image
         uses: docker/bake-action@v5
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           ENABLE_ATTESTATIONS: false
         with:
           builder: ${{ steps.buildx.outputs.name }}
-          targets: default
+          targets: base
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+
+      # Turbo-parallel Bake step: Apps and Tests
+      - name: Bake App & Test Images (Parallel)
+        uses: docker/bake-action@v5
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          ENABLE_ATTESTATIONS: false
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          targets: hub, cli, cli-preview, hub-test, bash-test
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
