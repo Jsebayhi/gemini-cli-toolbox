@@ -90,6 +90,17 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
+
+      # Explicitly load images needed for tests into the Docker daemon
+      - name: Load Test Images
+        uses: docker/bake-action@v5
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          ENABLE_ATTESTATIONS: false
+        with:
+          targets: hub-test, bash-test, base, hub, cli, cli-preview
+          set: |
+            *.cache-from=type=gha
           load: true
 
       - name: Run Tests & Security Scan (Concurrent)
