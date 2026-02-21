@@ -63,19 +63,18 @@ jobs:
       # PRODUCTION-GRADE UNIFIED BUILD
       # We build everything in one shot to ensure gemini-base-internal resolution.
       # Only 'push' if we are on main. Otherwise, we 'load' for testing.
+      # CRITICAL: Attestations (SLSA) must be OFF for 'load' to work with internal aliases.
       - name: Unified Bake (Build & Resolve)
         uses: docker/bake-action@v5
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
-          # Enable SLSA attestations if we are pushing to registry (main branch)
-          ENABLE_ATTESTATIONS: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+          ENABLE_ATTESTATIONS: false
         with:
           targets: default
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-          push: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
-          load: ${{ !(github.ref == 'refs/heads/main' && github.event_name != 'pull_request') }}
+          load: true
 
       - name: Run Tests & Security Scan (Concurrent)
         run: |
@@ -84,7 +83,6 @@ jobs:
           
           # Run Bash Automated Tests
           # Note: libs are already inside the image at /code/tests/bash/libs
-          # We mount individual directories to avoid hiding the pre-built libs
           docker run --rm \
             --cap-add=SYS_PTRACE \
             -v "$(pwd)/bin:/code/bin" \
@@ -131,7 +129,7 @@ jobs:
               aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore "$img" > "scan-${img//\//-}.log" 2>&1 &
           done
 
-          # Wait for ALL parallel processes (Tests + Scans)
+          # Wait for ALL parallel processes
           FAIL=0
           for pid in $(jobs -p); do
             wait "$pid" || FAIL=1
@@ -157,7 +155,23 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
       # Final Release Step (Main Only)
+      # Here we build with PUSH and ATTESTATIONS enabled.
       - name: Release & Sign (SLSA)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: docker/bake-action@v5
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          REPO_PREFIX: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
+          RELEASE_TYPE: suffix
+          ENABLE_ATTESTATIONS: true
+        with:
+          targets: hub, cli, cli-preview
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+          push: true
+
+      - name: Sign Images (Cosign)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
