@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
   schedule:
     # Google releases @google/gemini-cli ~Thursday 20:00 UTC.
     # We build Friday morning to catch the new version immediately.
