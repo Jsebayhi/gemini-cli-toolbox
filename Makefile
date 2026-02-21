@@ -13,16 +13,20 @@ SAFE_BRANCH := $(shell echo $(CURRENT_BRANCH) | sed 's/[^a-zA-Z0-9]/-/g')
 export ENABLE_ATTESTATIONS ?= false
 
 ifeq ($(CURRENT_BRANCH),main)
-    export IMAGE_TAG ?= latest
+    export IMAGE_TAG := latest
 else
-    export IMAGE_TAG ?= latest-$(SAFE_BRANCH)
+    export IMAGE_TAG := latest-$(SAFE_BRANCH)
 endif
 
 # Detect if we need the advanced builder (only for SLSA/Attestations)
 # Local development defaults to the native 'default' driver for instant incremental builds.
-# In CI, we often pass BUILDER_NAME from setup-buildx-action.
-export BUILDER_NAME ?= $(if $(filter true,$(ENABLE_ATTESTATIONS)),gemini-builder,default)
-BAKE_FLAGS ?= --builder $(BUILDER_NAME) --load
+ifeq ($(ENABLE_ATTESTATIONS),true)
+    BAKE_BUILDER := gemini-builder
+    BAKE_FLAGS := --builder $(BAKE_BUILDER) --load
+else
+    BAKE_BUILDER := default
+    BAKE_FLAGS := --builder default --load
+endif
 
 .PHONY: help
 help:
@@ -46,8 +50,7 @@ lint: lint-shell lint-python
 .PHONY: lint-shell
 lint-shell:
 	@echo ">> Linting Bash Scripts (ShellCheck)..."
-	docker run --rm -v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck bin/gemini-toolbox bin/gemini-hub
-	find images -name "*.sh" -print0 | xargs -0 -I {} docker run --rm -v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck "{}"
+	docker run --rm -v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck bin/gemini-toolbox bin/gemini-hub images/gemini-cli/docker-entrypoint.sh images/gemini-hub/docker-entrypoint.sh
 
 .PHONY: lint-python
 lint-python:
@@ -59,24 +62,12 @@ test: test-bash test-hub
 
 .PHONY: test-bash
 test-bash: setup-builder deps-bash
-	@echo ">> Running Bash Automated Tests (Tag: ${IMAGE_TAG}, Builder: $(BUILDER_NAME))..."
+	@echo ">> Running Bash Automated Tests (Tag: ${IMAGE_TAG}, Builder: $(BAKE_BUILDER))..."
 	docker buildx bake $(BAKE_FLAGS) bash-test
 	mkdir -p coverage/bash
 	docker run --rm \
 		--cap-add=SYS_PTRACE \
-		-v "$(shell pwd)/bin:/code/bin" \
-		-v "$(shell pwd)/images:/code/images" \
-		-v "$(shell pwd)/tests/bash/test_entrypoint_cli.bats:/code/tests/bash/test_entrypoint_cli.bats" \
-		-v "$(shell pwd)/tests/bash/test_entrypoint_hub.bats:/code/tests/bash/test_entrypoint_hub.bats" \
-		-v "$(shell pwd)/tests/bash/test_helper.bash:/code/tests/bash/test_helper.bash" \
-		-v "$(shell pwd)/tests/bash/test_hub_journeys.bats:/code/tests/bash/test_hub_journeys.bats" \
-		-v "$(shell pwd)/tests/bash/test_hub_unit.bats:/code/tests/bash/test_hub_unit.bats" \
-		-v "$(shell pwd)/tests/bash/test_hub.bats:/code/tests/bash/test_hub.bats" \
-		-v "$(shell pwd)/tests/bash/test_toolbox_fidelity.bats:/code/tests/bash/test_toolbox_fidelity.bats" \
-		-v "$(shell pwd)/tests/bash/test_toolbox_journeys.bats:/code/tests/bash/test_toolbox_journeys.bats" \
-		-v "$(shell pwd)/tests/bash/test_toolbox_unit.bats:/code/tests/bash/test_toolbox_unit.bats" \
-		-v "$(shell pwd)/tests/bash/test_toolbox.bats:/code/tests/bash/test_toolbox.bats" \
-		-v "$(shell pwd)/coverage/bash:/code/coverage/bash" \
+		-v "$(shell pwd):/code" \
 		-w /code \
 		--entrypoint kcov \
 		gemini-cli-toolbox/bash-test:${IMAGE_TAG} \
@@ -101,7 +92,7 @@ test-bash: setup-builder deps-bash
 
 .PHONY: test-hub
 test-hub: setup-builder
-	@echo ">> Running Gemini Hub Tests (Unit & Integration, Tag: ${IMAGE_TAG}, Builder: $(BUILDER_NAME))..."
+	@echo ">> Running Gemini Hub Tests (Unit & Integration, Tag: ${IMAGE_TAG}, Builder: $(BAKE_BUILDER))..."
 	docker buildx bake $(BAKE_FLAGS) hub-test
 	mkdir -p coverage/python
 	docker run --rm \
@@ -139,7 +130,7 @@ deps-bash:
 # Ensure we use a builder that supports attestations (docker-container driver)
 .PHONY: setup-builder
 setup-builder:
-	@if [ "$(BUILDER_NAME)" = "gemini-builder" ]; then \
+	@if [ "$(BAKE_BUILDER)" = "gemini-builder" ]; then \
 		if ! docker buildx inspect gemini-builder > /dev/null 2>&1; then \
 			echo ">> Creating 'gemini-builder' (docker-container driver) for SLSA support..."; \
 			docker buildx create --name gemini-builder --driver docker-container; \
@@ -148,7 +139,7 @@ setup-builder:
 
 .PHONY: build
 build: setup-builder
-	@echo ">> Building all images via Docker Bake (Builder: $(BUILDER_NAME))..."
+	@echo ">> Building all images via Docker Bake (Builder: $(BAKE_BUILDER))..."
 	docker buildx bake $(BAKE_FLAGS)
 
 .PHONY: check-build
@@ -158,7 +149,7 @@ check-build:
 
 .PHONY: rebuild
 rebuild: setup-builder
-	@echo ">> Rebuilding all images from scratch (no cache, Builder: $(BUILDER_NAME))..."
+	@echo ">> Rebuilding all images from scratch (no cache, Builder: $(BAKE_BUILDER))..."
 	docker buildx bake $(BAKE_FLAGS) --no-cache
 
 .PHONY: build-base
@@ -190,8 +181,8 @@ build-test-images: setup-builder
 
 .PHONY: scan
 scan:
-	@echo ">> Scanning images (base, hub, cli, preview)..."
-	@for img in "gemini-cli-toolbox/base:${IMAGE_TAG}" "gemini-cli-toolbox/hub:${IMAGE_TAG}" "gemini-cli-toolbox/cli:${IMAGE_TAG}" "gemini-cli-toolbox/cli-preview:${IMAGE_TAG}"; do \
+	@echo ">> Scanning images (base, hub, cli)..."
+	@for img in "gemini-cli-toolbox/base:latest" "gemini-cli-toolbox/hub:latest" "gemini-cli-toolbox/cli:latest"; do \
 		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \
 			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore $$img; \

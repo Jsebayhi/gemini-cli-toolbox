@@ -5,9 +5,11 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:
   schedule:
+    # Google releases @google/gemini-cli ~Thursday 20:00 UTC.
+    # We build Friday morning to catch the new version immediately.
     - cron: '0 5 * * 5'  # Friday at 05:00 UTC
+    - cron: '0 12 * * 6' # Saturday at 12:00 UTC (Fallback/Hotfix catch)
 
 jobs:
   lint:
@@ -17,8 +19,32 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run Linters
-        run: make lint
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Validate Bash Scripts
+        run: |
+          echo "::group::Syntax Check"
+          bash -n bin/gemini-toolbox bin/gemini-hub
+          find images -name "*.sh" -print0 | xargs -0 -I {} bash -n "{}"
+          echo "::endgroup::"
+          
+          echo "::group::ShellCheck"
+          shellcheck bin/gemini-toolbox bin/gemini-hub
+          find images -name "*.sh" -print0 | xargs -0 shellcheck
+          echo "::endgroup::"
+
+      - name: Validate Python
+        run: |
+          echo "::group::Ruff & Syntax"
+          find images/gemini-hub -name "*.py" -exec python -m py_compile {} +
+          ruff check images/gemini-hub
+          echo "::endgroup::"
 
   build-and-test:
     name: Build & Test
@@ -26,6 +52,8 @@ jobs:
     permissions:
       contents: write
       id-token: write # Required for keyless signing
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -33,12 +61,6 @@ jobs:
       - name: Install Cosign
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
 
       - name: Determine Image Tag
         id: tag
@@ -50,62 +72,273 @@ jobs:
             echo "tag=latest-$SAFE_BRANCH" >> $GITHUB_OUTPUT
           fi
 
-      # PRODUCTION-GRADE UNIFIED BUILD (via Makefile)
-      # We build everything in one shot to ensure local-base-internal-build resolution.
-      # CRITICAL: Attestations (SLSA) must be OFF for 'load' to work with internal aliases.
-      - name: Unified Bake (Build & Load)
-        run: |
-          make build \
-            BUILDER_NAME=${{ steps.buildx.outputs.name }} \
-            IMAGE_TAG=${{ steps.tag.outputs.tag }} \
-            ENABLE_ATTESTATIONS=false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Run Tests & Security Scan
+      - name: Bake All Images (Parallel)
+        uses: docker/bake-action@v5
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          ENABLE_ATTESTATIONS: false
+        with:
+          targets: default
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+          load: true
+
+      - name: Run Tests (Parallel)
         run: |
-          make test \
-            BUILDER_NAME=${{ steps.buildx.outputs.name }} \
-            IMAGE_TAG=${{ steps.tag.outputs.tag }} \
-            ENABLE_ATTESTATIONS=false
+          echo "::group::Parallel Test Execution"
+          mkdir -p coverage/bash coverage/python
+          TAG="${{ steps.tag.outputs.tag }}"
           
-          make scan \
-            IMAGE_TAG=${{ steps.tag.outputs.tag }}
+          # Run Bash Automated Tests
+          docker run --rm \
+            --cap-add=SYS_PTRACE \
+            -v "$(pwd):/code" \
+            -v "$(pwd)/tests/bash/libs:/code/tests/bash/libs" \
+            -w /code \
+            --entrypoint kcov \
+            gemini-cli-toolbox/bash-test:$TAG \
+            --include-path=/code/bin,/code/images \
+            /code/coverage/bash \
+            bats tests/bash > tests-bash.log 2>&1 &
+          BASH_PID=$!
+
+          # Run Hub Automated Tests
+          docker run --rm \
+            -v "$(pwd)/coverage/python:/coverage" \
+            gemini-cli-toolbox/hub-test:$TAG \
+            python3 -m pytest -n auto -vv \
+            --cov=app \
+            --cov-report=json:/coverage/coverage.json \
+            --cov-fail-under=90 \
+            tests/unit tests/integration > tests-hub.log 2>&1 &
+          HUB_PID=$!
+
+      - name: Run Tests & Security Scan (Concurrent)
+        run: |
+          mkdir -p coverage/bash coverage/python
+          TAG="${{ steps.tag.outputs.tag }}"
+          
+          echo "::group::Parallel Test & Scan Execution"
+          # Run Bash Automated Tests
+          # Note: libs are already inside the image at /code/tests/bash/libs
+          # We mount individual directories to avoid hiding the pre-built libs
+          docker run --rm \
+            --cap-add=SYS_PTRACE \
+            -v "$(pwd)/bin:/code/bin" \
+            -v "$(pwd)/images:/code/images" \
+            -v "$(pwd)/tests/bash/test_entrypoint_cli.bats:/code/tests/bash/test_entrypoint_cli.bats" \
+            -v "$(pwd)/tests/bash/test_entrypoint_hub.bats:/code/tests/bash/test_entrypoint_hub.bats" \
+            -v "$(pwd)/tests/bash/test_helper.bash:/code/tests/bash/test_helper.bash" \
+            -v "$(pwd)/tests/bash/test_hub_journeys.bats:/code/tests/bash/test_hub_journeys.bats" \
+            -v "$(pwd)/tests/bash/test_hub_unit.bats:/code/tests/bash/test_hub_unit.bats" \
+            -v "$(pwd)/tests/bash/test_hub.bats:/code/tests/bash/test_hub.bats" \
+            -v "$(pwd)/tests/bash/test_toolbox_fidelity.bats:/code/tests/bash/test_toolbox_fidelity.bats" \
+            -v "$(pwd)/tests/bash/test_toolbox_journeys.bats:/code/tests/bash/test_toolbox_journeys.bats" \
+            -v "$(pwd)/tests/bash/test_toolbox_unit.bats:/code/tests/bash/test_toolbox_unit.bats" \
+            -v "$(pwd)/tests/bash/test_toolbox.bats:/code/tests/bash/test_toolbox.bats" \
+            -v "$(pwd)/coverage/bash:/code/coverage/bash" \
+            -w /code \
+            --entrypoint kcov \
+            gemini-cli-toolbox/bash-test:$TAG \
+            --include-path=/code/bin,/code/images \
+            /code/coverage/bash \
+            bats tests/bash > tests-bash.log 2>&1 &
+          BASH_PID=$!
+
+          # Run Hub Automated Tests
+          docker run --rm \
+            -v "$(pwd)/coverage/python:/coverage" \
+            gemini-cli-toolbox/hub-test:$TAG \
+            python3 -m pytest -n auto -vv \
+            --cov=app \
+            --cov-report=json:/coverage/coverage.json \
+            --cov-fail-under=90 \
+            tests/unit tests/integration > tests-hub.log 2>&1 &
+          HUB_PID=$!
+
+          # Parallel Security Scan
+          images=(
+            "gemini-cli-toolbox/base:$TAG" 
+            "gemini-cli-toolbox/hub:$TAG" 
+            "gemini-cli-toolbox/cli:$TAG" 
+            "gemini-cli-toolbox/cli-preview:$TAG"
+          )
+          for img in "${images[@]}"; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$(pwd)/.trivyignore:/.trivyignore" \
+              aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore "$img" > "scan-${img//\//-}.log" 2>&1 &
+          done
+
+          # Wait for ALL parallel processes (Tests + Scans)
+          FAIL=0
+          for pid in $(jobs -p); do
+            wait "$pid" || FAIL=1
+          done
+          echo "::endgroup::"
+
+          # Logs and Exit
+          if [ $FAIL -ne 0 ]; then
+            echo "::group::Bash Test Logs"
+            cat tests-bash.log
+            echo "::endgroup::"
+            echo "::group::Hub Test Logs"
+            cat tests-hub.log
+            echo "::endgroup::"
+            for f in scan-*.log; do
+               if [ -f "$f" ]; then
+                 echo "::group::Scan Log: $f"
+                 cat "$f"
+                 echo "::endgroup::"
+               fi
+            done
+            exit 1
+          fi
+          echo "All parallel tests and scans passed."
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: coverage/
 
       - name: Log in to Docker Hub
+        # Official releases (signing/publishing) only occur on the trusted main branch.
+        # This covers: Merges, Direct Pushes, and Scheduled bi-weekly updates.
+        # We explicitly exclude PR events as they represent untrusted code.
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-      # Final Release Step (Main Only)
-      # Here we build with PUSH and ATTESTATIONS enabled.
-      - name: Release & Sign (SLSA)
+      - name: Publish Hub
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: docker/bake-action@v5
+        env:
+          REPO_PREFIX: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
+          RELEASE_TYPE: suffix
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          ENABLE_ATTESTATIONS: true
+        with:
+          targets: hub
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+          push: true
+
+      - name: Publish CLI & Preview
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          # Fetch versions for tagging
+          TAG="${{ steps.tag.outputs.tag }}"
+          REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
+          VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:$TAG gemini --version | tr -d '\r')
+          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:$TAG gemini --version | tr -d '\r')
+          
+          # Use export to pass variables to Bake via environment
+          export REPO_PREFIX="$REPO"
+          export RELEASE_TYPE="suffix"
+          export IMAGE_TAG="$TAG"
+          export ENABLE_ATTESTATIONS="true"
+
+          # Use bake to push both with their respective versions
+          GEMINI_VERSION="$VERSION" docker buildx bake cli \
+            --set "*.cache-from=type=gha" \
+            --set "*.cache-to=type=gha,mode=max" \
+            --push
+            
+          GEMINI_VERSION="$PREVIEW_VER" docker buildx bake cli-preview \
+            --set "*.cache-from=type=gha" \
+            --set "*.cache-to=type=gha,mode=max" \
+            --push
+
+      - name: Sign Images (SLSA)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
           REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
           
-          # 1. Build and Push with Attestations
-          # Note: We use raw docker buildx here because the Makefile 'build' target uses --load by default
-          docker buildx bake hub cli cli-preview \
-            --builder ${{ steps.buildx.outputs.name }} \
-            --set "*.cache-from=type=gha" \
-            --set "*.cache-to=type=gha,mode=max" \
-            --push
-          
-          # 2. Sign all public images
+          # Stable (latest & version)
+          VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:$TAG gemini --version | tr -d '\r')
           cosign sign --yes $REPO:$TAG-stable
+          cosign sign --yes $REPO:$VERSION-stable
+
+          # Preview (latest & version)
+          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:$TAG gemini --version | tr -d '\r')
           cosign sign --yes $REPO:$TAG-preview
+          cosign sign --yes $REPO:$PREVIEW_VER-preview
+
+          # Hub
           cosign sign --yes $REPO:$TAG-hub
-          
+
+      - name: Update Docker Hub Description
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
           make docker-readme
 
+  update-coverage-badge:
+    name: Update Coverage Badge
+    needs: [build-and-test]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Coverage Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+          path: coverage/
+
+      - name: Generate Bypass Token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Compute Global Coverage & Update Badge
+        run: |
+          python3 scripts/update_coverage.py
+
+      - name: Commit Coverage Badge Update
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          token: ${{ steps.generate_token.outputs.token || github.token }}
+          commit_message: "docs: update coverage badge [skip ci]"
+          file_pattern: README.md
+
+      - name: Prepare Docker Hub README
+        run: make docker-readme
+
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
+          short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion, Git Worktree."
+          readme-filepath: ./README_DOCKER.md
+
+  # Gatekeeper job for branch protection.
+  # This job depends on all other jobs. In GitHub settings, only this job 
+  # needs to be marked as "Required" to ensure the entire pipeline passed.
   all-checks-passed:
     name: All Checks Passed
     needs: [lint, build-and-test]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Success
+      - name: Check dependency status
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: exit 1
+      - name: Success
+        run: echo "All checks passed successfully."

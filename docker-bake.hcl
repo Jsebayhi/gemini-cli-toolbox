@@ -76,7 +76,7 @@ target "cli" {
   inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli"
   contexts = {
-    "local-base-internal-build:${IMAGE_TAG}" = "target:base"
+    "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
   }
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-stable" : "${REPO_PREFIX}/cli:${IMAGE_TAG}",
@@ -88,7 +88,7 @@ target "cli-preview" {
   inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli-preview"
   contexts = {
-    "local-base-internal-build:${IMAGE_TAG}" = "target:base"
+    "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
   }
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-preview" : "${REPO_PREFIX}/cli-preview:${IMAGE_TAG}",
