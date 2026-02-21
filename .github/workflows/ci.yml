@@ -75,20 +75,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Bake Images (Base & Tests)
+      - name: Bake All Images (Parallel)
         uses: docker/bake-action@v5
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           ENABLE_ATTESTATIONS: false
         with:
-          targets: base, hub, hub-test, bash-test
+          targets: default
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
           load: true
-
-      - name: Download Bash Test Dependencies
-        run: make deps-bash
 
       - name: Run Tests (Parallel)
         run: |
@@ -120,40 +117,37 @@ jobs:
             tests/unit tests/integration > tests-hub.log 2>&1 &
           HUB_PID=$!
 
-          wait $BASH_PID || (cat tests-bash.log && exit 1)
-          wait $HUB_PID || (cat tests-hub.log && exit 1)
-          echo "::endgroup::"
-          
-          echo "::group::Bash Test Logs"
-          cat tests-bash.log
-          echo "::endgroup::"
-          
-          echo "::group::Hub Test Logs"
-          cat tests-hub.log
-          echo "::endgroup::"
-
-      - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: coverage/
-
-      - name: Bake Images (Apps)
-        uses: docker/bake-action@v5
-        env:
-          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
-          ENABLE_ATTESTATIONS: false
-        with:
-          targets: cli, cli-preview
-          set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
-          load: true
-
-      - name: Security Scan (Parallel)
+      - name: Run Tests & Security Scan (Concurrent)
         run: |
+          mkdir -p coverage/bash coverage/python
           TAG="${{ steps.tag.outputs.tag }}"
-          # We scan base, hub, cli, and preview in parallel
+          
+          echo "::group::Parallel Test & Scan Execution"
+          # Run Bash Automated Tests
+          # Note: libs are already inside the image
+          docker run --rm \
+            --cap-add=SYS_PTRACE \
+            -v "$(pwd):/code" \
+            -w /code \
+            --entrypoint kcov \
+            gemini-cli-toolbox/bash-test:$TAG \
+            --include-path=/code/bin,/code/images \
+            /code/coverage/bash \
+            bats tests/bash > tests-bash.log 2>&1 &
+          BASH_PID=$!
+
+          # Run Hub Automated Tests
+          docker run --rm \
+            -v "$(pwd)/coverage/python:/coverage" \
+            gemini-cli-toolbox/hub-test:$TAG \
+            python3 -m pytest -n auto -vv \
+            --cov=app \
+            --cov-report=json:/coverage/coverage.json \
+            --cov-fail-under=90 \
+            tests/unit tests/integration > tests-hub.log 2>&1 &
+          HUB_PID=$!
+
+          # Parallel Security Scan
           images=(
             "gemini-cli-toolbox/base:$TAG" 
             "gemini-cli-toolbox/hub:$TAG" 
@@ -161,27 +155,42 @@ jobs:
             "gemini-cli-toolbox/cli-preview:$TAG"
           )
           for img in "${images[@]}"; do
-            echo "Scanning $img..."
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$(pwd)/.trivyignore:/.trivyignore" \
               aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore "$img" > "scan-${img//\//-}.log" 2>&1 &
           done
-          
-          # Wait and check results
+
+          # Wait for ALL parallel processes (Tests + Scans)
           FAIL=0
           for pid in $(jobs -p); do
             wait "$pid" || FAIL=1
           done
-          
+          echo "::endgroup::"
+
+          # Logs and Exit
           if [ $FAIL -ne 0 ]; then
+            echo "::group::Bash Test Logs"
+            cat tests-bash.log
+            echo "::endgroup::"
+            echo "::group::Hub Test Logs"
+            cat tests-hub.log
+            echo "::endgroup::"
             for f in scan-*.log; do
-               echo "::group::Scan Log: $f"
-               cat "$f"
-               echo "::endgroup::"
+               if [ -f "$f" ]; then
+                 echo "::group::Scan Log: $f"
+                 cat "$f"
+                 echo "::endgroup::"
+               fi
             done
             exit 1
           fi
-          echo "All scans passed."
+          echo "All parallel tests and scans passed."
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: coverage/
 
       - name: Log in to Docker Hub
         # Official releases (signing/publishing) only occur on the trusted main branch.

@@ -34,6 +34,13 @@ RUN curl -sL https://github.com/SimonKagstrom/kcov/archive/refs/tags/v42.tar.gz 
 
 WORKDIR /code
 
+# Pre-download bats-support and bats-assert for CI speed
+RUN mkdir -p /code/tests/bash/libs && \
+    curl -sL https://github.com/bats-core/bats-support/archive/refs/tags/v0.3.0.tar.gz | tar -xz -C /code/tests/bash/libs && \
+    mv /code/tests/bash/libs/bats-support-0.3.0 /code/tests/bash/libs/bats-support && \
+    curl -sL https://github.com/bats-core/bats-assert/archive/refs/tags/v2.1.0.tar.gz | tar -xz -C /code/tests/bash/libs && \
+    mv /code/tests/bash/libs/bats-assert-2.1.0 /code/tests/bash/libs/bats-assert
+
 # We keep bats as the entrypoint for backward compatibility if run manually,
 # but the Makefile will now wrap it with kcov.
 ENTRYPOINT ["bats"]
