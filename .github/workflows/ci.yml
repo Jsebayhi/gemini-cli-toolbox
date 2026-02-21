@@ -90,7 +90,7 @@ jobs:
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
 
-      # Turbo-parallel Bake step using docker-container driver
+      # Turbo-parallel Bake step: Apps and Tests
       - name: Bake App & Test Images (Parallel)
         uses: docker/bake-action@v5
         env:
