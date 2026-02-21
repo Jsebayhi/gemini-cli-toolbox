@@ -34,6 +34,16 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3
 
+      - name: Determine Image Tag
+        id: tag
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          else
+            SAFE_BRANCH=$(echo "${{ github.head_ref || github.ref_name }}" | sed 's/[^a-zA-Z0-9]/-/g')
+            echo "tag=latest-$SAFE_BRANCH" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
@@ -41,16 +51,24 @@ jobs:
           driver: docker-container
 
       # PRODUCTION-GRADE UNIFIED BUILD (via Makefile)
-      # We build everything in one shot to ensure gemini-base-internal resolution.
+      # We build everything in one shot to ensure local-base-internal-build resolution.
       # CRITICAL: Attestations (SLSA) must be OFF for 'load' to work with internal aliases.
       - name: Unified Bake (Build & Load)
         run: |
-          make build BUILDER_NAME=${{ steps.buildx.outputs.name }} ENABLE_ATTESTATIONS=false
+          make build \
+            BUILDER_NAME=${{ steps.buildx.outputs.name }} \
+            IMAGE_TAG=${{ steps.tag.outputs.tag }} \
+            ENABLE_ATTESTATIONS=false
 
       - name: Run Tests & Security Scan
         run: |
-          make test BUILDER_NAME=${{ steps.buildx.outputs.name }} ENABLE_ATTESTATIONS=false
-          make scan
+          make test \
+            BUILDER_NAME=${{ steps.buildx.outputs.name }} \
+            IMAGE_TAG=${{ steps.tag.outputs.tag }} \
+            ENABLE_ATTESTATIONS=false
+          
+          make scan \
+            IMAGE_TAG=${{ steps.tag.outputs.tag }}
 
       - name: Log in to Docker Hub
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -64,7 +82,7 @@ jobs:
       - name: Release & Sign (SLSA)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
-          TAG="latest"
+          TAG="${{ steps.tag.outputs.tag }}"
           REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
           
           # 1. Build and Push with Attestations

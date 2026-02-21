@@ -190,28 +190,12 @@ build-test-images: setup-builder
 
 .PHONY: scan
 scan:
-	@echo ">> Scanning images (base, hub, cli)..."
+	@echo ">> Scanning images (base, hub, cli, preview)..."
 	@for img in "gemini-cli-toolbox/base:${IMAGE_TAG}" "gemini-cli-toolbox/hub:${IMAGE_TAG}" "gemini-cli-toolbox/cli:${IMAGE_TAG}" "gemini-cli-toolbox/cli-preview:${IMAGE_TAG}"; do \
 		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \
 			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore $$img; \
 	done
-
-.PHONY: docker-readme
-docker-readme:
-	@echo ">> Generating README_DOCKER.md..."
-	cp README.md README_DOCKER.md
-	sed -i 's|(docs/|(https://github.com/Jsebayhi/gemini-cli-toolbox/blob/main/docs/|g' README_DOCKER.md
-	sed -i 's|(adr/|(https://github.com/Jsebayhi/gemini-cli-toolbox/blob/main/adr/|g' README_DOCKER.md
-
-.PHONY: clean-cache
-clean-cache:
-	@echo ">> Pruning gemini-npm-cache..."
-	docker builder prune --force --filter id=gemini-npm-cache
-
-.PHONY: local-ci
-local-ci: lint build test
-	@echo ">> All local checks passed."
 
 .PHONY: docker-readme
 docker-readme:
