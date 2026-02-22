@@ -181,8 +181,8 @@ build-test-images: setup-builder
 
 .PHONY: scan
 scan:
-	@echo ">> Scanning images (base, hub, cli)..."
-	@for img in "gemini-cli-toolbox/base:latest" "gemini-cli-toolbox/hub:latest" "gemini-cli-toolbox/cli:latest"; do \
+	@echo ">> Scanning images (base, hub, cli) with tag: ${IMAGE_TAG}..."
+	@for img in "gemini-cli-toolbox/base:${IMAGE_TAG}" "gemini-cli-toolbox/hub:${IMAGE_TAG}" "gemini-cli-toolbox/cli:${IMAGE_TAG}"; do \
 		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \
 			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore $$img; \
