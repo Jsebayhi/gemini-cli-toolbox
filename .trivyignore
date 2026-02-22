@@ -50,6 +50,16 @@ CVE-2025-61726 exp:2026-05-17
 CVE-2025-61728 exp:2026-05-17
 CVE-2025-61730 exp:2026-05-17
 
+# sqlite: SQLite integer overflow (CRITICAL)
+# Risk: Integer overflow in sqlite library.
+# Reason: Affects python:3.11-slim-bookworm base. No fixed version in Debian stable yet.
+CVE-2025-7458 exp:2026-05-17
+
+# zlib: integer overflow in zipOpenNewFileInZip4_6 (CRITICAL)
+# Risk: Buffer overflow in zlib.
+# Reason: Marked as 'will_not_fix' in Debian Bookworm. Low risk for Hub context.
+CVE-2023-45853 exp:2026-05-17
+
 # github.com/sigstore/rekor: DoS and SSRF (MEDIUM)
 # Risk: DoS and SSRF in Rekor component (local tool context).
 # Reason: Low risk for CLI usage; awaiting upstream container updates.

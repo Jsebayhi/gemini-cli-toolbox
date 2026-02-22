@@ -160,8 +160,11 @@ We love contributors! If you add or modify CLI flags, please remember to update 
 If you're contributing to the Toolbox, you can run the full suite of automated tests and linters:
 
 ```bash
-# Run all tests (Bash & Python) and linters
+# Run all tests (Bash & Python), linters, and security scans
 make local-ci
+
+# Run security vulnerability scan (Trivy)
+make scan
 
 # Run only Bash automated tests (Bats)
 make test-bash

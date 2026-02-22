@@ -4,19 +4,13 @@
 # Default target
 .DEFAULT_GOAL := help
 
-# Detect Branch and Suffix Tag for image isolation
-CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-SAFE_BRANCH := $(shell echo $(CURRENT_BRANCH) | sed 's/[^a-zA-Z0-9]/-/g')
-
 # Human-First Defaults: Disable heavy SLSA attestations for local development.
 # The CI overrides this via environment variables or command-line args.
 export ENABLE_ATTESTATIONS ?= false
 
-ifeq ($(CURRENT_BRANCH),main)
-    export IMAGE_TAG := latest
-else
-    export IMAGE_TAG := latest-$(SAFE_BRANCH)
-endif
+# Detect environment for Bake. Local builds default to empty refs (which Bake maps to 'latest').
+export GITHUB_REF ?= $(shell git symbolic-ref -q HEAD || echo "")
+export GITHUB_EVENT_NAME ?= local
 
 # Detect if we need the advanced builder (only for SLSA/Attestations)
 # Local development defaults to the native 'default' driver for instant incremental builds.
@@ -27,6 +21,9 @@ else
     BAKE_BUILDER := default
     BAKE_FLAGS := --builder default --load
 endif
+
+# Common Bake execution with context variables
+BAKE_CMD := docker buildx bake $(BAKE_FLAGS)
 
 .PHONY: help
 help:
@@ -62,15 +59,17 @@ test: test-bash test-hub
 
 .PHONY: test-bash
 test-bash: setup-builder deps-bash
-	@echo ">> Running Bash Automated Tests (Tag: ${IMAGE_TAG}, Builder: $(BAKE_BUILDER))..."
-	docker buildx bake $(BAKE_FLAGS) bash-test
+	@echo ">> Running Bash Automated Tests (Ref: ${GITHUB_REF})..."
+	$(BAKE_CMD) bash-test
 	mkdir -p coverage/bash
+	# Use docker inspect to get the exact tag built by bake
+	@TAG=$$(docker buildx bake bash-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['bash-test']['tags'][0].split(':')[-1])"); \
 	docker run --rm \
 		--cap-add=SYS_PTRACE \
 		-v "$(shell pwd):/code" \
 		-w /code \
 		--entrypoint kcov \
-		gemini-cli-toolbox/bash-test:${IMAGE_TAG} \
+		gemini-cli-toolbox/bash-test:$$TAG \
 		--include-path=/code/bin,/code/images \
 		/code/coverage/bash \
 		bats tests/bash
@@ -92,12 +91,13 @@ test-bash: setup-builder deps-bash
 
 .PHONY: test-hub
 test-hub: setup-builder
-	@echo ">> Running Gemini Hub Tests (Unit & Integration, Tag: ${IMAGE_TAG}, Builder: $(BAKE_BUILDER))..."
-	docker buildx bake $(BAKE_FLAGS) hub-test
+	@echo ">> Running Gemini Hub Tests (Unit & Integration, Ref: ${GITHUB_REF})..."
+	$(BAKE_CMD) hub-test
 	mkdir -p coverage/python
+	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
 	docker run --rm \
 		-v "$(shell pwd)/coverage/python:/coverage" \
-		gemini-cli-toolbox/hub-test:${IMAGE_TAG} \
+		gemini-cli-toolbox/hub-test:$$TAG \
 		python3 -m pytest -n auto -vv \
 		--cov=app \
 		--cov-report=json:/coverage/coverage.json \
@@ -107,8 +107,9 @@ test-hub: setup-builder
 .PHONY: test-hub-ui
 test-hub-ui:
 	@echo ">> Running Gemini Hub UI Tests (Playwright)..."
-	docker buildx bake $(BAKE_FLAGS) hub-test
-	docker run --rm gemini-cli-toolbox/hub-test:${IMAGE_TAG} python3 -m pytest -n auto --reruns 1 -vv tests/ui
+	$(BAKE_CMD) hub-test
+	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
+	docker run --rm gemini-cli-toolbox/hub-test:$$TAG python3 -m pytest -n auto --reruns 1 -vv tests/ui
 
 .PHONY: deps-bash
 deps-bash:
@@ -140,7 +141,7 @@ setup-builder:
 .PHONY: build
 build: setup-builder
 	@echo ">> Building all images via Docker Bake (Builder: $(BAKE_BUILDER))..."
-	docker buildx bake $(BAKE_FLAGS)
+	$(BAKE_CMD)
 
 .PHONY: check-build
 check-build:
@@ -150,42 +151,44 @@ check-build:
 .PHONY: rebuild
 rebuild: setup-builder
 	@echo ">> Rebuilding all images from scratch (no cache, Builder: $(BAKE_BUILDER))..."
-	docker buildx bake $(BAKE_FLAGS) --no-cache
+	$(BAKE_CMD) --no-cache
 
 .PHONY: build-base
 build-base: setup-builder
 	@echo ">> Building gemini-base..."
-	docker buildx bake $(BAKE_FLAGS) base
+	$(BAKE_CMD) base
 
 .PHONY: build-hub
 build-hub: setup-builder
 	@echo ">> Building gemini-hub..."
-	docker buildx bake $(BAKE_FLAGS) hub
+	$(BAKE_CMD) hub
 
 .PHONY: build-cli
 build-cli: setup-builder
 	@echo ">> Building gemini-cli..."
-	docker buildx bake $(BAKE_FLAGS) cli
+	$(BAKE_CMD) cli
 
 .PHONY: build-cli-preview
 build-cli-preview: setup-builder
 	@echo ">> Building gemini-cli-preview..."
-	docker buildx bake $(BAKE_FLAGS) cli-preview
+	$(BAKE_CMD) cli-preview
 
 .PHONY: build-test-images
 build-test-images: setup-builder
 	@echo ">> Building test runner images..."
-	docker buildx bake $(BAKE_FLAGS) bash-test hub-test
+	$(BAKE_CMD) bash-test hub-test
 
 # --- Security & Docs ---
 
 .PHONY: scan
 scan:
-	@echo ">> Scanning images (base, hub, cli)..."
-	@for img in "gemini-cli-toolbox/base:latest" "gemini-cli-toolbox/hub:latest" "gemini-cli-toolbox/cli:latest"; do \
+	@echo ">> Scanning images (base, hub, cli) for Ref: ${GITHUB_REF}..."
+	@TAG=$$(docker buildx bake base --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['base']['tags'][0].split(':')[-1])"); \
+	for img in "gemini-cli-toolbox/base:$$TAG" "gemini-cli-toolbox/hub:$$TAG" "gemini-cli-toolbox/cli:$$TAG"; do \
+		echo ">> Scanning $$img..."; \
 		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \
-			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --ignorefile /.trivyignore $$img; \
+			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignorefile /.trivyignore $$img; \
 	done
 
 .PHONY: docker-readme
@@ -201,5 +204,5 @@ clean-cache:
 	docker builder prune --force --filter id=gemini-npm-cache
 
 .PHONY: local-ci
-local-ci: lint build test
+local-ci: lint build test scan
 	@echo ">> All local checks passed."
