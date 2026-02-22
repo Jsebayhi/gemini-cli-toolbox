@@ -87,36 +87,6 @@ jobs:
             *.cache-to=type=gha,mode=max
           load: true
 
-      - name: Run Tests (Parallel)
-        run: |
-          echo "::group::Parallel Test Execution"
-          mkdir -p coverage/bash coverage/python
-          TAG="${{ steps.tag.outputs.tag }}"
-          
-          # Run Bash Automated Tests
-          docker run --rm \
-            --cap-add=SYS_PTRACE \
-            -v "$(pwd):/code" \
-            -v "$(pwd)/tests/bash/libs:/code/tests/bash/libs" \
-            -w /code \
-            --entrypoint kcov \
-            gemini-cli-toolbox/bash-test:$TAG \
-            --include-path=/code/bin,/code/images \
-            /code/coverage/bash \
-            bats tests/bash > tests-bash.log 2>&1 &
-          BASH_PID=$!
-
-          # Run Hub Automated Tests
-          docker run --rm \
-            -v "$(pwd)/coverage/python:/coverage" \
-            gemini-cli-toolbox/hub-test:$TAG \
-            python3 -m pytest -n auto -vv \
-            --cov=app \
-            --cov-report=json:/coverage/coverage.json \
-            --cov-fail-under=90 \
-            tests/unit tests/integration > tests-hub.log 2>&1 &
-          HUB_PID=$!
-
       - name: Run Tests & Security Scan (Concurrent)
         run: |
           mkdir -p coverage/bash coverage/python
