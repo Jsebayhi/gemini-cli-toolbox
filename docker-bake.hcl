@@ -6,12 +6,12 @@ variable "GEMINI_VERSION" {
   default = ""
 }
 
-# Default prefix for local builds (matches main's sub-directory convention)
+# Default prefix for local builds
 variable "REPO_PREFIX" {
   default = "gemini-cli-toolbox"
 }
 
-# Internal flag to switch between Local (sub-repo) and Release (flat with suffix) naming.
+# Internal flag to switch between Local and Release naming.
 variable "RELEASE_TYPE" {
   default = ""
 }
@@ -40,7 +40,7 @@ target "_common" {
 
 target "_release" {
   inherits = ["_common"]
-  attest = ENABLE_ATTESTATIONS ? ["type=provenance,mode=max", "type=sbom"] : []
+  attest = ENABLE_ATTESTATIONS == "true" ? ["type=provenance,mode=max", "type=sbom"] : []
 }
 
 target "_with_bin" {
@@ -57,11 +57,13 @@ target "_with_scripts" {
 
 # --- Real Targets ---
 
-# Internal intermediate image (not released to public).
+# Internal intermediate image.
 target "base" {
   inherits = ["_common"]
   context  = "images/gemini-base"
-  tags     = ["gemini-cli-toolbox/base:${IMAGE_TAG}"]
+  tags     = [
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-base" : "${REPO_PREFIX}/base:${IMAGE_TAG}"
+  ]
 }
 
 target "hub" {
@@ -76,7 +78,7 @@ target "cli" {
   inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli"
   contexts = {
-    "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
+    "internal-base-build-scratchpad" = "target:base"
   }
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-stable" : "${REPO_PREFIX}/cli:${IMAGE_TAG}",
@@ -88,7 +90,7 @@ target "cli-preview" {
   inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli-preview"
   contexts = {
-    "gemini-cli-toolbox/base:${IMAGE_TAG}" = "target:base"
+    "internal-base-build-scratchpad" = "target:base"
   }
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-preview" : "${REPO_PREFIX}/cli-preview:${IMAGE_TAG}",
@@ -96,16 +98,20 @@ target "cli-preview" {
   ]
 }
 
-# Test Runners
+# Test Runners (Also respect REPO_PREFIX for PR verification)
 target "hub-test" {
   inherits   = ["_common"]
   context    = "images/gemini-hub"
   dockerfile = "tests/Dockerfile"
-  tags       = ["gemini-cli-toolbox/hub-test:${IMAGE_TAG}"]
+  tags       = [
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-hub-test" : "${REPO_PREFIX}/hub-test:${IMAGE_TAG}"
+  ]
 }
 
 target "bash-test" {
   inherits = ["_common"]
   context  = "tests/bash"
-  tags     = ["gemini-cli-toolbox/bash-test:${IMAGE_TAG}"]
+  tags     = [
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${IMAGE_TAG}-bash-test" : "${REPO_PREFIX}/bash-test:${IMAGE_TAG}"
+  ]
 }

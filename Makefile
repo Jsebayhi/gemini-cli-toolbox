@@ -138,6 +138,16 @@ build: setup-builder
 	@echo ">> Building all images (Tag: ${IMAGE_TAG}, Builder: $(BUILDER_NAME))..."
 	@docker buildx bake $(BAKE_FLAGS)
 
+.PHONY: check-build
+check-build:
+	@echo ">> Rapid Validation (Build to cache, Builder: default)..."
+	@docker buildx bake --builder default
+
+.PHONY: rebuild
+rebuild: setup-builder
+	@echo ">> Rebuilding all images from scratch (no cache, Builder: $(BUILDER_NAME))..."
+	@docker buildx bake $(BAKE_FLAGS) --no-cache
+
 .PHONY: scan
 scan:
 	@echo ">> Scanning images (base, hub, cli, preview)..."
