@@ -1,12 +1,8 @@
 # Use our custom secure base image
-ARG BASE_TAG=latest
-FROM gemini-cli-toolbox/base:${BASE_TAG}
+FROM local-base-internal-build
 
 # 1. Install Gemini CLI
 # Clean cache to save space
-# 1. Install Gemini CLI
-# Clean cache to save space
-# Added --verbose to debug slow install
 # Added --mount=type=cache to speed up rebuilds (persists ~/.npm)
 # Added id=gemini-npm-cache to allow surgical pruning
 RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
