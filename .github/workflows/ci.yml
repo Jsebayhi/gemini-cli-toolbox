@@ -155,7 +155,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write # Required for keyless signing
     steps:
       - name: Checkout Code
@@ -207,7 +207,20 @@ jobs:
           for img in "$REPO:latest-hub" "$REPO:latest-stable" "$REPO:$VERSION-stable" "$REPO:latest-preview" "$REPO:$PREVIEW_VER-preview"; do
             digest=$(docker buildx imagetools inspect "$img" --format "{{json .Manifest.Digest}}" | tr -d '"')
             echo "Signing $img ($digest)..."
-            cosign sign --yes "$REPO@$digest"
+            
+            # Retry loop for Sigstore/Rekor reliability (ADR-0046)
+            for i in {1..3}; do
+              cosign sign --yes "$REPO@$digest" && break || {
+                if [ $i -lt 3 ]; then
+                  echo "Sign failed, retrying in 10s... ($i/3)"
+                  sleep 10
+                else
+                  echo "Sign failed after 3 attempts."
+                  exit 1
+                fi
+              }
+            done
+
             # Also verify (ADR-0046)
             cosign verify "$REPO@$digest" --certificate-identity-regexp "https://github.com/Jsebayhi/gemini-cli-toolbox/.github/workflows/ci.yml" --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
           done
@@ -223,6 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write # Required for updating PR/Commits
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
