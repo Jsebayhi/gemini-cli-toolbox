@@ -164,17 +164,17 @@ jobs:
 
       - name: Publish All Images
         run: |
+          # Fetch versions for tagging (using local defaults)
+          make build
+          VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:latest gemini --version | tr -d '\r')
+          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:latest gemini --version | tr -d '\r')
+          
           # Use Bake to push images with official tags
           export GITHUB_REF="${{ github.ref }}"
           export GITHUB_EVENT_NAME="${{ github.event_name }}"
           export REPO_PREFIX="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
           export RELEASE_TYPE="suffix"
           export ENABLE_ATTESTATIONS="true"
-          
-          # Fetch versions for tagging
-          make build # Ensure local images are available for version extraction
-          VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:latest gemini --version | tr -d '\r')
-          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:latest gemini --version | tr -d '\r')
           
           # Push everything
           docker buildx bake hub --push
