@@ -182,9 +182,9 @@ build-test-images: setup-builder
 
 .PHONY: scan
 scan:
-	@echo ">> Scanning images (base, hub, cli) for Ref: ${GITHUB_REF}..."
+	@echo ">> Scanning images (base, hub, cli, cli-preview) for Ref: ${GITHUB_REF}..."
 	@TAG=$$(docker buildx bake base --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['base']['tags'][0].split(':')[-1])"); \
-	for img in "gemini-cli-toolbox/base:$$TAG" "gemini-cli-toolbox/hub:$$TAG" "gemini-cli-toolbox/cli:$$TAG"; do \
+	for img in "gemini-cli-toolbox/base:$$TAG" "gemini-cli-toolbox/hub:$$TAG" "gemini-cli-toolbox/cli:$$TAG" "gemini-cli-toolbox/cli-preview:$$TAG"; do \
 		echo ">> Scanning $$img..."; \
 		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \

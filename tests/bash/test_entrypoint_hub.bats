@@ -18,6 +18,8 @@ mock_hub_commands() {
     cat <<EOF > "$TEST_TEMP_DIR/bin/tailscaled"
 #!/bin/bash
 echo "tailscaled started"
+mkdir -p /run/tailscale
+touch /run/tailscale/tailscaled.sock
 EOF
     cat <<EOF > "$TEST_TEMP_DIR/bin/tailscale"
 #!/bin/bash
@@ -75,11 +77,11 @@ EOF
     run "$TEST_TEMP_DIR/run_hub.sh"
     # Note: Test 10 often fails in containerized bats due to process management (tailscaled &)
     # but we verify the logical calls in the mock log.
-    run grep "tailscale --socket=/tmp/tailscaled.sock up" "$MOCK_GIT_LOG"
+    run grep "tailscale --socket=/run/tailscale/tailscaled.sock up" "$MOCK_GIT_LOG"
     assert_success
     run grep "groupadd -g 1000 gemini" "$MOCK_GIT_LOG"
     assert_success
-    run grep "chown gemini /tmp/tailscaled.sock" "$MOCK_GIT_LOG"
+    run grep "chown gemini /run/tailscale /run/tailscale/tailscaled.sock" "$MOCK_GIT_LOG"
     assert_success
     run grep "python run.py" "$MOCK_GIT_LOG"
     assert_success

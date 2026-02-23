@@ -12,8 +12,8 @@ class TailscaleService:
     def get_status() -> Dict[str, Any]:
         """Executes `tailscale status --json`."""
         try:
-            # We use the custom socket path defined in the entrypoint
-            cmd = ["tailscale", "--socket=/tmp/tailscaled.sock", "status", "--json"]
+            # We use the FHS-compliant socket path
+            cmd = ["tailscale", "--socket=/run/tailscale/tailscaled.sock", "status", "--json"]
             # Timeout added for safety
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             

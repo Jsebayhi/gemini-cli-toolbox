@@ -216,10 +216,10 @@ main() {
             line="${line#"${line%%[![:space:]]*}"}"
             if [[ -n "$line" && ! "$line" =~ ^# ]]; then
                  local parts=()
-                 # Use eval to properly parse quotes arguments (like shell would)
-                 # We put the closing paren on a new line to support end-of-line comments
-                 eval "parts=( $line
-)"
+                 # Use xargs to safely parse quotes without invoking a full shell evaluator
+                 while IFS= read -r -d '' part; do
+                     parts+=("$part")
+                 done < <(echo "$line" | xargs printf '%s\0')
                  file_args+=("${parts[@]}")
             fi
         done < "${temp_conf}/extra-args"
@@ -352,7 +352,7 @@ main() {
 
     # Pre-create host cache directories if running on the host
     # This prevents Docker from creating them as 'root' during the mount
-    if [ ! -f /.dockerenv ]; then
+    if [ ! -f /.dockerenv ] && [ "${GEMINI_INTERNAL_RUN:-false}" != "true" ]; then
         local required_dirs=(
             "${HOME}/.m2" "${HOME}/.gradle" "${HOME}/.sbt" "${HOME}/.ivy2"
             "${HOME}/.cache/coursier" "${HOME}/go/pkg/mod" "${HOME}/.cache/go-build"

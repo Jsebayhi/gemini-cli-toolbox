@@ -29,10 +29,13 @@ main() {
     # 1. Start Tailscale Daemon (Userspace Networking)
     # --tun=userspace-networking: Avoids needing /dev/net/tun device
     # --statedir: Using /var/lib/tailscale for persistence (mapped to named volume)
-    # --socket: Custom socket path to allow easy permission management
+    # --socket: FHS-compliant socket path
+    local SOCKET_DIR="/run/tailscale"
+    local SOCKET_PATH="${SOCKET_DIR}/tailscaled.sock"
     log_info "Starting Tailscaled..."
     mkdir -p /var/lib/tailscale
-    tailscaled --tun=userspace-networking --statedir=/var/lib/tailscale --socket=/tmp/tailscaled.sock &
+    mkdir -p "$SOCKET_DIR"
+    tailscaled --tun=userspace-networking --statedir=/var/lib/tailscale --socket="$SOCKET_PATH" &
     sleep 3
 
     # 2. Authenticate
@@ -45,7 +48,7 @@ main() {
     # Fixed hostname for consistent DNS (http://gemini-hub:8888)
     # --force-reauth: Aggressively reclaim the 'gemini-hub' name if state was lost
     local HOSTNAME="gemini-hub"
-    tailscale --socket=/tmp/tailscaled.sock up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
+    tailscale --socket="$SOCKET_PATH" up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
 
     log_info "Gemini Hub Online: http://$HOSTNAME:8888"
     
@@ -68,7 +71,7 @@ main() {
 
     # 2.2 Tailscale Socket Permissions
     # Allow the non-root user to talk to the Tailscale daemon
-    chown "$TARGET_USER" /tmp/tailscaled.sock
+    chown "$TARGET_USER" "$SOCKET_DIR" "$SOCKET_PATH"
 
     # 2.3 Docker-out-of-Docker Setup
     local DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"
