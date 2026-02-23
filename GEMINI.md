@@ -32,10 +32,11 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 5.  **Bake:** All Docker builds are orchestrated via `docker buildx bake`. Do not use `docker build` directly in scripts.
 
 ### CI/CD & Security
-*   **Parallelism:** The CI is optimized for < 3 minutes via parallel GHA jobs and Docker Bake caching.
+*   **Job Isolation:** The CI is broken into discrete jobs (`lint`, `build`, `test`, `scan`, `publish`) to ensure observability and environment fidelity (Bake-in-Job strategy).
+*   **Parallelism:** Parallel execution is maintained within and across jobs, optimized for < 3 minutes via GHA and Docker Bake caching.
 *   **SLSA Compliance:** All official images generate SBOMs and Provenance metadata.
-*   **Keyless Signing:** Images published to Docker Hub are signed using Cosign (OIDC) to ensure integrity.
-*   **Release Logic:** Official releases (signing/publishing) occur on any `main` branch event that is NOT a PR (e.g., merge, schedule).
+*   **Immutable Signing:** Images are signed using their SHA256 digests (Cosign/OIDC) to prevent tag-stealing and ensure absolute integrity.
+*   **Strict Scanning:** Vulnerability scans are mandatory and strict (no `--ignore-unfixed`). Suppressions are managed via `.trivyignore` with enforced TTLs via `scripts/check_trivy_ttl.py`.
 
 
 ## 4. Core Mandates
@@ -62,6 +63,7 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 ### Testing Strategy
 *   **Bash Scripts:** Use `bats-core`. Tests reside in `tests/bash/`. Use `make test-bash` to execute.
 *   **Python (Hub):** Use `pytest`. Tests reside in `images/gemini-hub/tests/`. Use `make test` to execute.
+*   **Test Fidelity Mandate:** To prevent local files from masking image-internal dependencies, always mount only the specific directories required for the test (e.g., `bin`, `images`) instead of the project root.
 *   **Mandatory:** Always run `make local-ci` before submitting a PR.
 
 ## 5. Naming Strategy
