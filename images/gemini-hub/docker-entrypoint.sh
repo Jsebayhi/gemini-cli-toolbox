@@ -27,10 +27,12 @@ main() {
     log_debug() { _log 3 "$@"; }
 
     # 1. Start Tailscale Daemon (Userspace Networking)
-    # --tun=userspace-networking: Avoids needing /dev/net/tun device (sometimes)
-    # --statedir: Mapped to named volume (/var/lib/tailscale) to persist Device ID
+    # --tun=userspace-networking: Avoids needing /dev/net/tun device
+    # --statedir: Using /var/lib/tailscale for persistence (mapped to named volume)
+    # --socket: Custom socket path to allow easy permission management
     log_info "Starting Tailscaled..."
-    tailscaled --tun=userspace-networking --statedir=/var/lib/tailscale &
+    mkdir -p /var/lib/tailscale
+    tailscaled --tun=userspace-networking --statedir=/var/lib/tailscale --socket=/tmp/tailscaled.sock &
     sleep 3
 
     # 2. Authenticate
@@ -43,12 +45,43 @@ main() {
     # Fixed hostname for consistent DNS (http://gemini-hub:8888)
     # --force-reauth: Aggressively reclaim the 'gemini-hub' name if state was lost
     local HOSTNAME="gemini-hub"
-    tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
+    tailscale --socket=/tmp/tailscaled.sock up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
 
     log_info "Gemini Hub Online: http://$HOSTNAME:8888"
+    
+    # 2.1 User Creation: Create a non-root user matching the host UID/GID
+    # This allows the Flask app to safely operate on host-mounted volumes
+    local TARGET_UID=${HOST_UID:-1000}
+    local TARGET_GID=${HOST_GID:-1000}
+    local USER="gemini"
+    
+    if ! getent group "$TARGET_GID" >/dev/null 2>&1; then
+        groupadd -g "$TARGET_GID" "$USER" >/dev/null 2>&1
+    fi
+
+    if ! getent passwd "$TARGET_UID" >/dev/null 2>&1; then
+        useradd -u "$TARGET_UID" -g "$TARGET_GID" -m -s /bin/bash "$USER" >/dev/null 2>&1
+    fi
+
+    local TARGET_USER
+    TARGET_USER=$(getent passwd "$TARGET_UID" | cut -d: -f1)
+
+    # 2.2 Tailscale Socket Permissions
+    # Allow the non-root user to talk to the Tailscale daemon
+    chown "$TARGET_USER" /tmp/tailscaled.sock
+
+    # 2.3 Docker-out-of-Docker Setup
+    local DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"
+    if [ -n "${HOST_DOCKER_GID:-}" ] && [ -S "$DOCKER_SOCK" ]; then
+        if ! getent group "$HOST_DOCKER_GID" >/dev/null 2>&1; then
+            groupadd -g "$HOST_DOCKER_GID" host-docker >/dev/null 2>&1
+        fi
+        usermod -aG "$HOST_DOCKER_GID" "$TARGET_USER" >/dev/null 2>&1
+    fi
 
     # 3. Start Flask App
-    exec python run.py
+    # We use gosu to drop privileges for the Flask app
+    exec gosu "$TARGET_USER" python run.py
 }
 
 # Entry point guard

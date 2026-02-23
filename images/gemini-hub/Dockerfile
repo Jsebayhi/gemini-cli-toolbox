@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     git \
     procps \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Install Tailscale (Official Repo)

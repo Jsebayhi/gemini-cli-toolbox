@@ -350,13 +350,17 @@ main() {
     fi
     mkdir -p "$HOST_CONF_DIR"
 
-    local required_dirs=(
-        "${HOME}/.m2" "${HOME}/.gradle" "${HOME}/.sbt" "${HOME}/.ivy2"
-        "${HOME}/.cache/coursier" "${HOME}/go/pkg/mod" "${HOME}/.cache/go-build"
-    )
-    for dir in "${required_dirs[@]}"; do
-        if [ ! -d "$dir" ]; then mkdir -p "$dir"; fi
-    done
+    # Pre-create host cache directories if running on the host
+    # This prevents Docker from creating them as 'root' during the mount
+    if [ ! -f /.dockerenv ]; then
+        local required_dirs=(
+            "${HOME}/.m2" "${HOME}/.gradle" "${HOME}/.sbt" "${HOME}/.ivy2"
+            "${HOME}/.cache/coursier" "${HOME}/go/pkg/mod" "${HOME}/.cache/go-build"
+        )
+        for dir in "${required_dirs[@]}"; do
+            if [ ! -d "$dir" ]; then mkdir -p "$dir"; fi
+        done
+    fi
 
     project_dir=$(realpath -m "$project_dir")
     if [ ! -d "$project_dir" ]; then

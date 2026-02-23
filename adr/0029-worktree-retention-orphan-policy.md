@@ -1,7 +1,7 @@
 # ADR 0029: Worktree Retention & Orphan Policy
 
 ## Status
-Accepted
+Accepted (Amended by [ADR-0047](0047-hub-non-root-execution-and-git-alignment.md))
 
 ## Context
 The Gemini Hub is responsible for cleaning up stale worktrees to manage disk usage. However, because the Hub runs in a container with a restricted view of the host filesystem, it often cannot execute `git` commands to introspect the worktree state (e.g., checking if it's on a branch or detached HEAD) due to absolute path mismatches in the `.git` file.
