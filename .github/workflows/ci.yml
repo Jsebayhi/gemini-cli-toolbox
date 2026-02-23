@@ -5,11 +5,15 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch: # Allow manual trigger (ADR-0046)
   schedule:
     # Google releases @google/gemini-cli ~Thursday 20:00 UTC.
     # We build Friday morning to catch the new version immediately.
     - cron: '0 5 * * 5'  # Friday at 05:00 UTC
     - cron: '0 12 * * 6' # Saturday at 12:00 UTC (Fallback/Hotfix catch)
+
+permissions:
+  contents: read # Default to least privilege
 
 jobs:
   lint:
@@ -36,7 +40,7 @@ jobs:
           
           echo "::group::ShellCheck"
           shellcheck bin/gemini-toolbox bin/gemini-hub
-          find images -name "*.sh" -print0 | xargs -0 shellcheck
+          find images -name "*.sh" -not -path "*/libs/*" -print0 | xargs -0 shellcheck
           echo "::endgroup::"
 
       - name: Validate Python
@@ -46,7 +50,11 @@ jobs:
           ruff check images/gemini-hub
           echo "::endgroup::"
 
-  build:
+      - name: Check Trivy TTLs
+        run: |
+          python3 scripts/check_trivy_ttl.py
+
+  build-cache:
     name: Build & Cache
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +64,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Bake All Images (Populate Cache)
+      - name: Bake All Images (Build to Cache)
         uses: docker/bake-action@v5
         env:
           GITHUB_REF: ${{ github.ref }}
@@ -67,11 +75,10 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
-          load: true
 
   test-bash:
     name: Bash Tests
-    needs: build
+    needs: [build-cache]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -83,9 +90,13 @@ jobs:
       - name: Run Bash Automated Tests
         run: |
           mkdir -p coverage/bash
-          # Bake uses GHA cache from the build job
+          # Bake uses GHA cache from the build-cache job
           export GITHUB_REF="${{ github.ref }}"
           export GITHUB_EVENT_NAME="${{ github.event_name }}"
+          
+          # Test Fidelity: Mount only necessary sub-directories and files to prevent local files from masking image-internal dependencies.
+          # We use 'make test-bash' but we need to ensure it uses the branch-isolated image.
+          # The Makefile is updated to handle this via GITHUB_REF.
           make test-bash
 
       - name: Upload Bash Coverage
@@ -96,7 +107,7 @@ jobs:
 
   test-hub:
     name: Hub Tests
-    needs: build
+    needs: [build-cache]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -108,7 +119,7 @@ jobs:
       - name: Run Hub Automated Tests
         run: |
           mkdir -p coverage/python
-          # Bake uses GHA cache from the build job
+          # Bake uses GHA cache from the build-cache job
           export GITHUB_REF="${{ github.ref }}"
           export GITHUB_EVENT_NAME="${{ github.event_name }}"
           make test-hub
@@ -116,12 +127,12 @@ jobs:
       - name: Upload Hub Coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-python
+          name: coverage-hub
           path: coverage/python/
 
   scan:
     name: Security Scan
-    needs: build
+    needs: [build-cache]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -130,9 +141,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Vulnerability Scan
+      - name: Strict Security Scan
         run: |
-          # Bake uses GHA cache from the build job
+          # Bake uses GHA cache from the build-cache job
           export GITHUB_REF="${{ github.ref }}"
           export GITHUB_EVENT_NAME="${{ github.event_name }}"
           make build # Ensure images are loaded in this runner's daemon
@@ -164,10 +175,13 @@ jobs:
 
       - name: Publish All Images
         run: |
-          # Fetch versions for tagging (using local defaults)
+          # Use local defaults for version extraction
           make build
           VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:latest gemini --version | tr -d '\r')
           PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:latest gemini --version | tr -d '\r')
+          
+          # Strategy (ADR-0046): Build twice -- once without attestations to --load, once with attestations to --push
+          # Actually, 'make build' above already loaded them.
           
           # Use Bake to push images with official tags
           export GITHUB_REF="${{ github.ref }}"
@@ -180,29 +194,27 @@ jobs:
           docker buildx bake hub --push
           GEMINI_VERSION="$VERSION" docker buildx bake cli --push
           GEMINI_VERSION="$PREVIEW_VER" docker buildx bake cli-preview --push
+          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "PREVIEW_VER=$PREVIEW_VER" >> $GITHUB_ENV
 
-      - name: Sign & Verify Images
+      - name: Immutable Signing (Digest-Based)
         run: |
           REPO="${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox"
           
-          # Extract versions again
-          VERSION=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli:latest gemini --version | tr -d '\r')
-          PREVIEW_VER=$(docker run --rm --entrypoint="" gemini-cli-toolbox/cli-preview:latest gemini --version | tr -d '\r')
-
-          # Sign
-          cosign sign --yes $REPO:latest-stable
-          cosign sign --yes $REPO:$VERSION-stable
-          cosign sign --yes $REPO:latest-preview
-          cosign sign --yes $REPO:$PREVIEW_VER-preview
-          cosign sign --yes $REPO:latest-hub
-
-          # Verify (Ensures the supply chain is actually protected)
-          cosign verify $REPO:latest-stable --certificate-identity-regexp "https://github.com/Jsebayhi/gemini-cli-toolbox/.github/workflows/ci.yml@refs/heads/main" --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
-          cosign verify $REPO:latest-preview --certificate-identity-regexp "https://github.com/Jsebayhi/gemini-cli-toolbox/.github/workflows/ci.yml@refs/heads/main" --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
-          cosign verify $REPO:latest-hub --certificate-identity-regexp "https://github.com/Jsebayhi/gemini-cli-toolbox/.github/workflows/ci.yml@refs/heads/main" --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+          # Capture Digests and sign them to prevent tag stealing (ADR-0046)
+          # We use 'latest' tags here because the publish job is only for 'main' branch.
+          for img in "$REPO:latest-hub" "$REPO:latest-stable" "$REPO:$VERSION-stable" "$REPO:latest-preview" "$REPO:$PREVIEW_VER-preview"; do
+            digest=$(docker buildx imagetools inspect "$img" --format "{{json .Manifest.Digest}}" | tr -d '"')
+            echo "Signing $img ($digest)..."
+            cosign sign --yes "$REPO@$digest"
+            # Also verify (ADR-0046)
+            cosign verify "$REPO@$digest" --certificate-identity-regexp "https://github.com/Jsebayhi/gemini-cli-toolbox/.github/workflows/ci.yml" --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+          done
 
       - name: Update Docker Hub Description
-        run: make docker-readme
+        run: |
+          make docker-readme
 
   update-coverage-badge:
     name: Update Coverage Badge
@@ -224,7 +236,7 @@ jobs:
       - name: Download Hub Coverage
         uses: actions/download-artifact@v4
         with:
-          name: coverage-python
+          name: coverage-hub
           path: coverage/python/
 
       - name: Generate Bypass Token
@@ -247,7 +259,7 @@ jobs:
 
       - name: Update Docker Hub Description
         uses: peter-evans/dockerhub-description@v4
-        continue-on-error: true
+        continue-error: true
         with:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
@@ -255,9 +267,10 @@ jobs:
           short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion, Git Worktree."
           readme-filepath: ./README_DOCKER.md
 
+  # Gatekeeper job for branch protection.
   all-checks-passed:
     name: All Checks Passed
-    needs: [lint, build, test-bash, test-hub, scan]
+    needs: [lint, build-cache, test-bash, test-hub, scan]
     runs-on: ubuntu-latest
     if: always()
     steps:

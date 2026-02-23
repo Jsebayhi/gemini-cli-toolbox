@@ -56,7 +56,8 @@ target "_common" {
   args = {
     IMAGE_TAG = get_tag(GITHUB_REF)
     BASE_TAG  = get_tag(GITHUB_REF)
-    BASE_IMAGE = "base-image"
+    # The ARG Pattern (ADR-0045): Use a public fallback for base images.
+    BASE_IMAGE = "local-base-${get_tag(GITHUB_REF)}:latest"
   }
   cache-from = ["type=gha"]
   cache-to   = ["type=gha,mode=max"]
@@ -85,12 +86,19 @@ target "_with_scripts" {
 target "base" {
   inherits = ["_common"]
   context  = "images/gemini-base"
-  tags     = ["gemini-cli-toolbox/base:${get_tag(GITHUB_REF)}"]
+  args = {
+    BASE_IMAGE = "python:slim"
+  }
+  # Context Isolation: Branch-prefixed tag to prevent build pollution on shared runners.
+  tags     = ["local-base-${get_tag(GITHUB_REF)}:latest"]
 }
 
 target "hub" {
   inherits = ["_release", "_with_bin"]
   context  = "images/gemini-hub"
+  args = {
+    BASE_IMAGE = "python:3.11-slim-bookworm"
+  }
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-hub" : "${REPO_PREFIX}/hub:${get_tag(GITHUB_REF)}"
   ]
@@ -99,8 +107,9 @@ target "hub" {
 target "cli" {
   inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli"
+  # Map the BASE_IMAGE argument to the branch-prefixed local target.
   contexts = {
-    base-image = "target:base"
+    "local-base-${get_tag(GITHUB_REF)}:latest" = "target:base"
   }
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-stable" : "${REPO_PREFIX}/cli:${get_tag(GITHUB_REF)}",
@@ -112,7 +121,7 @@ target "cli-preview" {
   inherits = ["_release", "_with_bin", "_with_scripts"]
   context  = "images/gemini-cli-preview"
   contexts = {
-    base-image = "target:base"
+    "local-base-${get_tag(GITHUB_REF)}:latest" = "target:base"
   }
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-preview" : "${REPO_PREFIX}/cli-preview:${get_tag(GITHUB_REF)}",
@@ -125,11 +134,11 @@ target "hub-test" {
   inherits   = ["_common"]
   context    = "images/gemini-hub"
   dockerfile = "tests/Dockerfile"
-  tags       = ["gemini-cli-toolbox/hub-test:${get_tag(GITHUB_REF)}"]
+  tags       = ["local-hub-test-${get_tag(GITHUB_REF)}:latest"]
 }
 
 target "bash-test" {
   inherits = ["_common"]
   context  = "tests/bash"
-  tags     = ["gemini-cli-toolbox/bash-test:${get_tag(GITHUB_REF)}"]
+  tags     = ["local-bash-test-${get_tag(GITHUB_REF)}:latest"]
 }
