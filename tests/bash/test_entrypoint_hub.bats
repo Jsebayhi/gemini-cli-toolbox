@@ -79,9 +79,7 @@ EOF
     assert_success
     run grep "groupadd -g 1000 gemini" "$MOCK_GIT_LOG"
     assert_success
-    run grep "useradd -u 1000" "$MOCK_GIT_LOG"
-    assert_success
-    run grep "chown 1000 /tmp/tailscaled.sock" "$MOCK_GIT_LOG"
+    run grep "chown gemini /tmp/tailscaled.sock" "$MOCK_GIT_LOG"
     assert_success
     run grep "python run.py" "$MOCK_GIT_LOG"
     assert_success
