@@ -30,7 +30,11 @@ CVE-2025-64756 exp:2026-05-17
 # Risk: Arbitrary file overwrite and symlink poisoning (requires malicious input).
 # Reason: Upstream fixes pending in @google/gemini-cli dependencies.
 CVE-2026-23745 exp:2026-05-17
+# Risk: Arbitrary file overwrite and symlink poisoning (requires malicious input).
+# Reason: Upstream fixes pending in @google/gemini-cli dependencies.
 CVE-2026-23950 exp:2026-05-17
+# Risk: Arbitrary file overwrite and symlink poisoning (requires malicious input).
+# Reason: Upstream fixes pending in @google/gemini-cli dependencies.
 CVE-2026-24842 exp:2026-05-17
 
 # pip: Information disclosure via path traversal (LOW)
@@ -47,23 +51,19 @@ CVE-2025-68121 exp:2026-05-17
 # Risk: Memory exhaustion and CPU consumption in Go binaries.
 # Reason: OS-level updates for Go standard library pending in Debian.
 CVE-2025-61726 exp:2026-05-17
+# Risk: Memory exhaustion and CPU consumption in Go binaries.
+# Reason: OS-level updates for Go standard library pending in Debian.
 CVE-2025-61728 exp:2026-05-17
+# Risk: Memory exhaustion and CPU consumption in Go binaries.
+# Reason: OS-level updates for Go standard library pending in Debian.
 CVE-2025-61730 exp:2026-05-17
-
-# sqlite: SQLite integer overflow (CRITICAL)
-# Risk: Integer overflow in sqlite library.
-# Reason: Affects python:3.11-slim-bookworm base. No fixed version in Debian stable yet.
-CVE-2025-7458 exp:2026-05-17
-
-# zlib: integer overflow in zipOpenNewFileInZip4_6 (CRITICAL)
-# Risk: Buffer overflow in zlib.
-# Reason: Marked as 'will_not_fix' in Debian Bookworm. Low risk for Hub context.
-CVE-2023-45853 exp:2026-05-17
 
 # github.com/sigstore/rekor: DoS and SSRF (MEDIUM)
 # Risk: DoS and SSRF in Rekor component (local tool context).
 # Reason: Low risk for CLI usage; awaiting upstream container updates.
 CVE-2026-23831 exp:2026-05-17
+# Risk: DoS and SSRF in Rekor component (local tool context).
+# Reason: Low risk for CLI usage; awaiting upstream container updates.
 CVE-2026-24117 exp:2026-05-17
 
 # github.com/sigstore/sigstore: Arbitrary file writes (MEDIUM)
@@ -75,5 +75,9 @@ CVE-2026-24137 exp:2026-05-17
 # Risk: Ambiguous medium-risk vulnerabilities in Go TUF.
 # Reason: Awaiting upstream library updates in base tools.
 CVE-2026-23991 exp:2026-05-17
+# Risk: Ambiguous medium-risk vulnerabilities in Go TUF.
+# Reason: Awaiting upstream library updates in base tools.
 CVE-2026-23992 exp:2026-05-17
+# Risk: Ambiguous medium-risk vulnerabilities in Go TUF.
+# Reason: Awaiting upstream library updates in base tools.
 CVE-2026-24686 exp:2026-05-17

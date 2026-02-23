@@ -42,17 +42,22 @@ help:
 # --- Quality Assurance ---
 
 .PHONY: lint
-lint: lint-shell lint-python
+lint: lint-shell lint-python lint-trivy
 
 .PHONY: lint-shell
 lint-shell:
 	@echo ">> Linting Bash Scripts (ShellCheck)..."
-	docker run --rm -v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck bin/gemini-toolbox bin/gemini-hub images/gemini-cli/docker-entrypoint.sh images/gemini-hub/docker-entrypoint.sh
+	docker run --rm -v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck $(shell find . -maxdepth 3 -name "*.sh" -not -path "*/libs/*") bin/gemini-toolbox bin/gemini-hub
 
 .PHONY: lint-python
 lint-python:
 	@echo ">> Linting Python Code (Ruff)..."
 	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
+
+.PHONY: lint-trivy
+lint-trivy:
+	@echo ">> Checking Trivy TTLs (.trivyignore)..."
+	python3 scripts/check_trivy_ttl.py
 
 .PHONY: test
 test: test-bash test-hub
@@ -63,13 +68,18 @@ test-bash: setup-builder deps-bash
 	$(BAKE_CMD) bash-test
 	mkdir -p coverage/bash
 	# Use docker inspect to get the exact tag built by bake
-	@TAG=$$(docker buildx bake bash-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['bash-test']['tags'][0].split(':')[-1])"); \
+	@TAG=$$(docker buildx bake bash-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['bash-test']['tags'][0])"); \
+	echo ">> Testing with image: $$TAG"; \
+	# Test Fidelity: Mount only necessary sub-directories and files to prevent local files from masking image-internal dependencies.
 	docker run --rm \
 		--cap-add=SYS_PTRACE \
-		-v "$(shell pwd):/code" \
+		-v "$(shell pwd)/bin:/code/bin" \
+		-v "$(shell pwd)/images:/code/images" \
+		-v "$(shell pwd)/tests/bash:/code/tests/bash" \
+		-v "$(shell pwd)/coverage/bash:/code/coverage/bash" \
 		-w /code \
 		--entrypoint kcov \
-		gemini-cli-toolbox/bash-test:$$TAG \
+		$$TAG \
 		--include-path=/code/bin,/code/images \
 		/code/coverage/bash \
 		bats tests/bash
@@ -94,10 +104,11 @@ test-hub: setup-builder
 	@echo ">> Running Gemini Hub Tests (Unit & Integration, Ref: ${GITHUB_REF})..."
 	$(BAKE_CMD) hub-test
 	mkdir -p coverage/python
-	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
+	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0])"); \
+	echo ">> Testing with image: $$TAG"; \
 	docker run --rm \
 		-v "$(shell pwd)/coverage/python:/coverage" \
-		gemini-cli-toolbox/hub-test:$$TAG \
+		$$TAG \
 		python3 -m pytest -n auto -vv \
 		--cov=app \
 		--cov-report=json:/coverage/coverage.json \
@@ -108,8 +119,9 @@ test-hub: setup-builder
 test-hub-ui:
 	@echo ">> Running Gemini Hub UI Tests (Playwright)..."
 	$(BAKE_CMD) hub-test
-	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
-	docker run --rm gemini-cli-toolbox/hub-test:$$TAG python3 -m pytest -n auto --reruns 1 -vv tests/ui
+	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0])"); \
+	echo ">> Testing UI with image: $$TAG"; \
+	docker run --rm $$TAG python3 -m pytest -n auto --reruns 1 -vv tests/ui
 
 .PHONY: deps-bash
 deps-bash:
@@ -182,13 +194,14 @@ build-test-images: setup-builder
 
 .PHONY: scan
 scan:
-	@echo ">> Scanning images (base, hub, cli) for Ref: ${GITHUB_REF}..."
-	@TAG=$$(docker buildx bake base --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['base']['tags'][0].split(':')[-1])"); \
-	for img in "gemini-cli-toolbox/base:$$TAG" "gemini-cli-toolbox/hub:$$TAG" "gemini-cli-toolbox/cli:$$TAG"; do \
-		echo ">> Scanning $$img..."; \
+	@echo ">> Scanning images (base, hub, cli, cli-preview) for Ref: ${GITHUB_REF}..."
+	@# Strict Scanning (ADR-0046): Audit all vulnerabilities; never use --ignore-unfixed.
+	@for target in "base" "hub" "cli" "cli-preview"; do \
+		img_tag=$$(docker buildx bake --print $$target | python3 -c "import sys, json; data=json.load(sys.stdin); print(data['target']['$$target']['tags'][0])"); \
+		echo "Scanning $$img_tag..."; \
 		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \
-			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignorefile /.trivyignore $$img; \
+			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignorefile /.trivyignore $$img_tag; \
 	done
 
 .PHONY: docker-readme

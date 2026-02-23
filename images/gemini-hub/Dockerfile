@@ -1,4 +1,5 @@
-FROM python:3.11-slim-bookworm
+ARG BASE_IMAGE=python:3.11-slim-bookworm
+FROM ${BASE_IMAGE}
 
 # 1. Install Dependencies
 # - curl, gnupg: for tailscale and docker repos

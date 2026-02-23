@@ -1,14 +1,14 @@
 # Base Image for Gemini CLI Toolbox
 # Contains: Python (Latest Stable), Node.js 20, OS Security Updates, Gosu, Git, GH CLI, GLAB CLI
 
-# --- Stage 1: Source Node.js ---
-# We harvest the Node.js binaries from the official image to ensure they are correct
-FROM node:20-bookworm-slim AS node-source
+ARG NODE_IMAGE=node:20-bookworm-slim
+ARG BASE_IMAGE=python:slim
 
-# --- Stage 2: Final Image ---
-# We use 'python:slim' which always points to the LATEST stable Python version on Debian
-# This satisfies the requirement: "not have to update the dockerfile... when there will be a new release"
-FROM python:slim
+# Stage 1: Source Node.js
+FROM ${NODE_IMAGE} AS node-source
+
+# Stage 2: Final Image
+FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
