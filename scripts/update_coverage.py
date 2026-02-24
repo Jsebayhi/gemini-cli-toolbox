@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 import json
 import os
-import re
 import sys
 
 # Paths to coverage files
 BASH_COVERAGE_PATH = "coverage/bash/bats.e38fe61c8733e2cd/coverage.json"
 PYTHON_COVERAGE_PATH = "coverage/python/coverage.json"
-README_PATH = "README.md"
 
 def load_bash_coverage():
     # Bash (kcov) output structure:
@@ -51,46 +49,23 @@ def get_color(coverage):
     else:
         return "red"
 
-def update_readme(coverage):
-    if not os.path.exists(README_PATH):
-        print(f"Error: {README_PATH} not found.")
-        sys.exit(1)
-
-    with open(README_PATH, 'r') as f:
-        content = f.read()
-
+def update_coverage_json(coverage):
     color = get_color(coverage)
-    # Regex to match: [![Coverage](https://img.shields.io/badge/Coverage-XX%25-COLOR)](...)
-    # We allow flexible matching for the number and color
-    pattern = r"(\[!\[Coverage\]\(https://img\.shields\.io/badge/Coverage-)(\d+(?:\.\d+)?)(%25-\w+\)\].*)"
+    data = {
+        "schemaVersion": 1,
+        "label": "Coverage",
+        "message": f"{coverage:.2f}%",
+        "color": color
+    }
     
-    def replacement(m):
-        return f"{m.group(1)}{coverage:.2f}{m.group(3).replace(m.group(3).split('-')[-1].split(')')[0], color)}"
-
-    # Simpler regex replacement
-    # Match: Coverage-90%25-brightgreen
-    new_badge = f"Coverage-{coverage:.2f}%25-{color}"
+    with open("coverage.json", "w") as f:
+        json.dump(data, f, indent=2)
     
-    new_content = re.sub(
-        r"Coverage-\d+(?:\.\d+)?%25-[a-zA-Z]+",
-        new_badge,
-        content
-    )
-
-    if new_content != content:
-        with open(README_PATH, 'w') as f:
-            f.write(new_content)
-        print(f"Updated README with coverage: {coverage:.2f}% ({color})")
-        # Output for CI
-        if 'GITHUB_OUTPUT' in os.environ:
-            with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-                print(f"coverage={coverage:.2f}", file=fh)
-                print(f"updated=true", file=fh)
-    else:
-        print(f"README coverage already up to date: {coverage:.2f}%")
-        if 'GITHUB_OUTPUT' in os.environ:
-            with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-                print(f"updated=false", file=fh)
+    print(f"Generated coverage.json with coverage: {coverage:.2f}% ({color})")
+    
+    if 'GITHUB_OUTPUT' in os.environ:
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            print(f"coverage={coverage:.2f}", file=fh)
 
 def main():
     print(">> Computing Global Coverage...")
@@ -109,7 +84,7 @@ def main():
     print(f"Python: {py_covered}/{py_total}")
     print(f"Total:  {total_covered}/{total_lines} = {global_coverage:.2f}%")
 
-    update_readme(global_coverage)
+    update_coverage_json(global_coverage)
 
 if __name__ == "__main__":
     main()
