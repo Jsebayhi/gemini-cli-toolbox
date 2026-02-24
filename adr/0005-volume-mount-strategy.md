@@ -1,4 +1,4 @@
-# ADR 0004: Configuration Volume Strategy
+# ADR-0005: Configuration Volume Strategy
 
 ## Status
 Accepted

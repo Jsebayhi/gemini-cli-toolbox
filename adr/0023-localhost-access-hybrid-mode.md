@@ -1,4 +1,4 @@
-# ADR 0023: Localhost Access (Hybrid Mode)
+# ADR-0023: Localhost Access (Hybrid Mode)
 
 ## Status
 Accepted

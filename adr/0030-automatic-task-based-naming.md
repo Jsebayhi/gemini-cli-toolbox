@@ -1,4 +1,4 @@
-# ADR 0030: Automatic Task-Based Branch Naming (Rejected)
+# ADR-0030: Automatic Task-Based Branch Naming (Rejected)
 
 ## Status
 Rejected

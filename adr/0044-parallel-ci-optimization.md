@@ -1,7 +1,7 @@
-# ADR-0043: Parallel CI Optimization
+# ADR-0044: Parallel CI Optimization
 
 ## Status
-Superseded by [ADR-0046](0046-native-job-isolation-and-centralized-bake-tagging.md)
+Superseded by [ADR-0047](0047-native-job-isolation-and-centralized-bake-tagging.md)
 
 ## Context
 Initial CI run times were 10-14 minutes due to sequential job execution, redundant build-from-scratch steps (e.g., rebuilding kcov and Playwright on every run), and multiple checkout/setup overheads.

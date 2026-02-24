@@ -1,4 +1,4 @@
-# ADR 0006: Hub Lifecycle and Profile Discovery
+# ADR-0019: Hub Lifecycle and Profile Discovery
 
 ## Status
 Accepted

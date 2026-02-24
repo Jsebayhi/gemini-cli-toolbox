@@ -1,4 +1,4 @@
-# ADR 0005: Removal of monolithic "Full" image variant
+# ADR-0018: Removal of monolithic "Full" image variant
 
 ## Status
 Accepted

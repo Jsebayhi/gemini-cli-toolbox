@@ -1,4 +1,4 @@
-# ADR 0047: Hub Non-Root Execution and Git Identity Alignment
+# ADR-0048: Hub Non-Root Execution and Git Identity Alignment
 
 ## Status
 Accepted

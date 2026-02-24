@@ -1,4 +1,4 @@
-# 0033. Progressive Agent Skill Architecture
+# ADR-0033: Progressive Agent Skill Architecture
 
 ## Context
 As the repository grows, "Agent Skills" are required to guide AI maintainers. To ensure these skills are effective, we must establish a design pattern that prevents context bloat, documentation rot, and premature implementation.

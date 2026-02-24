@@ -1,4 +1,4 @@
-# ADR 0003: Network Mode Host
+# ADR-0004: Network Mode Host
 
 ## Status
 Accepted

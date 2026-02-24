@@ -1,4 +1,4 @@
-# ADR-0044: SLSA Provenance and Keyless Signing
+# ADR-0045: SLSA Provenance and Keyless Signing
 
 ## Status
 Accepted

@@ -1,4 +1,4 @@
-# ADR 0035: Automatic Worktree Parent Detection
+# ADR-0035: Automatic Worktree Parent Detection
 
 ## Status
 Accepted

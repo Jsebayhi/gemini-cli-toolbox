@@ -1,4 +1,4 @@
-# ADR 0028: Worktree Reference Resolution
+# ADR-0028: Worktree Reference Resolution
 
 ## Status
 Accepted

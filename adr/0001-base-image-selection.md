@@ -1,4 +1,4 @@
-# ADR 0001: Base Image Selection
+# ADR-0001: Base Image Selection
 
 ## Status
 Accepted

@@ -1,4 +1,4 @@
-# 0041. Standardized Bash Logging Module
+# ADR-0042: Standardized Bash Logging Module
 
 ## Status
 Accepted

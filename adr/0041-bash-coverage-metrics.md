@@ -1,4 +1,4 @@
-# 0040. Bash Coverage Metrics
+# ADR-0041: Bash Coverage Metrics
 
 ## Status
 Proposed

@@ -1,4 +1,4 @@
-# ADR 0048: Gemini CLI Evolution: Interactive-by-Default Handling
+# ADR-0050: Gemini CLI Evolution: Interactive-by-Default Handling
 
 Date: 2026-02-24
 Status: Proposed

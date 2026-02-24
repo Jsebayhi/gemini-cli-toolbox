@@ -1,4 +1,4 @@
-# 0039. Default Docker Hub Registry
+# ADR-0040: Default Docker Hub Registry
 
 ## Status
 Accepted

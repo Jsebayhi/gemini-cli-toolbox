@@ -1,4 +1,4 @@
-# ADR-0042: Docker Bake Orchestration
+# ADR-0043: Docker Bake Orchestration
 
 ## Status
 Accepted

@@ -1,4 +1,4 @@
-# ADR-0045: Robust Bake Contexts for Internal Base Images
+# ADR-0046: Robust Bake Contexts for Internal Base Images
 
 ## Status
 Proposed

@@ -1,4 +1,4 @@
-# ADR 0037: Automated UI Testing with Playwright
+# ADR-0038: Automated UI Testing with Playwright
 
 ## Status
 Accepted
