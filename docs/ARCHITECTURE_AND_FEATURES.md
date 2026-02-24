@@ -154,20 +154,21 @@ The reaper uses Unix `mtime` for aging and Git introspection for classification.
 
 ---
 
-## 📦 6. Caching & Persistence
+## 📦 6. Caching & Persistence (Opt-in)
 
-To make the ephemeral container practical, we selectively persist critical data.
+By default, every session is a "Clean Slate." The container is fully sandboxed, and any language-specific caches created during a session are ephemeral. This ensures that the agent cannot pollute your host's build environments without your explicit consent.
 
-### Build Caches
-We mount standard cache directories from your host to speed up builds:
-*   `~/.m2` (Maven)
-*   `~/.gradle` (Gradle)
-*   `~/.sbt` (SBT/Scala)
-*   `~/.ivy2` (Ivy)
-*   `~/.cache/coursier` (Coursier)
-*   `~/go/pkg/mod` (Go)
-*   `~/.cache/go-build` (Go)
-*   `~/.npm` (Node)
+### Reusing Host Caches for Speed
+If you are working on a large project and want to leverage your host's existing build caches (e.g., Maven, Gradle, Go), you can explicitly mount them using a **Configuration Profile** (see Section 7).
+
+**Example `extra-args` for Caching:**
+```text
+# Speed up builds by sharing host caches
+--volume "/home/user/.m2:/home/gemini/.m2"
+--volume "/home/user/.gradle:/home/gemini/.gradle"
+--volume "/home/user/.npm:/home/gemini/.npm"
+--volume "/home/user/go/pkg/mod:/home/gemini/go/pkg/mod"
+```
 
 ---
 
