@@ -18,7 +18,7 @@ The `/api/launch` endpoint now accepts:
 The Hub constructs the `gemini-toolbox` command based on these parameters:
 
 *   **Task + Interactive:** `gemini-toolbox ... -- -i "the task"`
-*   **Task Only:** `gemini-toolbox ... -- "the task"`
+*   **Task Only (Non-interactive):** `gemini-toolbox ... -- -p "the task"`
 *   **No Task:** `gemini-toolbox ...` (Standard interactive shell)
 
 ### 3. UI Integration

@@ -64,7 +64,7 @@ class LauncherService:
             if interactive:
                  cmd.extend(["--", "-i", task])
             else:
-                 cmd.extend(["--", task])
+                 cmd.extend(["--", "-p", task])
 
         cmd_str = ' '.join(cmd)
         

@@ -273,3 +273,24 @@ This document tracks the full end-to-end user journeys for regression testing. U
     *   Execute `make test`.
     *   **Verify:** Standard unit and integration tests pass with >=90% coverage.
 
+## 🤖 Journey 19: Interactive Evolution & Prompt Flag
+**Goal:** Verify the new interactive default and the `-p` flag for headless tasks.
+
+1.  **Default Interactive:**
+    *   Run `gemini-toolbox "echo Hello"`.
+    *   **Verify:** A `tmux` session is created and the terminal remains open in interactive mode (Gemini CLI waiting for input).
+2.  **Headless Task:**
+    *   Run `gemini-toolbox -- -p "echo Hello"`.
+    *   **Verify:** The container executes the task and exits immediately (Headless mode confirmed).
+3.  **Hub Autonomous Task:**
+    *   Open Hub. Click "New Session".
+    *   Enter Task: `"echo 'Success' > result.txt"`.
+    *   Uncheck "Interactive". Launch.
+    *   **Verify:** The container finishes and exits (Status: Offline).
+    *   Check `result.txt` on the host.
+4.  **Hub Interactive Task:**
+    *   Open Hub. Click "New Session".
+    *   Enter Task: `"echo 'Wait for me' > result.txt"`.
+    *   Check "Interactive". Launch.
+    *   **Verify:** The session remains "Online" and re-attachable.
+

@@ -51,8 +51,8 @@ def test_launch_success_with_task_non_interactive():
             assert result["returncode"] == 0
             args, _ = mock_run.call_args
             cmd = args[0]
-            # Verify task is passed without -i
-            assert cmd[-2:] == ["--", "Hello Bot"]
+            # Verify task is passed with -p
+            assert cmd[-3:] == ["--", "-p", "Hello Bot"]
 
 def test_launch_with_variant_and_docker():
     """Test launch with preview variant and docker disabled."""

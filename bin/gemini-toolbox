@@ -63,9 +63,10 @@ show_help() {
     echo "  connect <id>         Attach to a running background session"
     echo ""
     echo "Examples:"
-    echo "  gemini-toolbox chat"
-    echo "  gemini-toolbox --remote tskey-auth-xxxx chat"
-    echo "  gemini-toolbox --worktree \"Refactor auth\""
+    echo "  gemini-toolbox"
+    echo "  gemini-toolbox -- -p \"Summarize the changes in this directory\""
+    echo "  gemini-toolbox --remote tskey-auth-xxxx"
+    echo "  gemini-toolbox --worktree -- -p \"Refactor auth\""
 }
 
 # Worktree Setup Function

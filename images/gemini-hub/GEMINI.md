@@ -66,6 +66,7 @@ The Hub uses `--net=host` to ensure reliable peer discovery and MagicDNS resolut
 *   **Advanced Options:** The Hub supports most `gemini-toolbox` flags (Preview, No-IDE, No-Docker, Worktrees, Custom Image, and Extra Docker Args).
 *   **TMUX Mandate:** The `--no-tmux` flag is **explicitly forbidden** in the Hub UI. 
     *   **Reason:** The Hub always launches sessions with `--remote` to enable web-based access via `ttyd`. `ttyd` relies on `tmux` to serve the terminal. Disabling TMUX would cause the session to be unreachable remotely and the container to exit immediately.
+*   **Autonomous (Bot) Mode:** When a task is provided and "Interactive" is unchecked, the Hub launcher automatically injects the `-p` flag into the positional arguments (after `--`) to ensure the session terminates after the task completes.
 
 ### Auto-Shutdown
 The Hub will automatically terminate after **60 seconds** of inactivity (when no hostnames starting with `gem-` are detected in the Tailnet). This is intentional to save resources and VPN license seats.
