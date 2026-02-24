@@ -1,7 +1,7 @@
-# ADR 0003: Permission Handling Strategy (gosu)
+# ADR-0003: Permission Handling Strategy (gosu)
 
 ## Status
-Accepted (Amended by [ADR-0047](0047-hub-non-root-execution-and-git-alignment.md))
+Accepted (Amended by [ADR-0048](0048-hub-non-root-execution-and-git-alignment.md))
 
 ## Date
 2025-12-17

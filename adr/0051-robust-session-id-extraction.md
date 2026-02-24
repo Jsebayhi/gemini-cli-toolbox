@@ -1,10 +1,10 @@
-# 0048. Robust Session ID Extraction for Hub Integration
+# ADR-0051: Robust Session ID Extraction for Hub Integration
 
 ## Status
 Accepted
 
 ## Context
-Following the implementation of ADR-0041 (Standardized Bash Logging), all informational messages in `gemini-toolbox` were moved to `stderr`. This included the "Container started: <ID>" message. 
+Following the implementation of ADR-0042 (Standardized Bash Logging), all informational messages in `gemini-toolbox` were moved to `stderr`. This included the "Container started: <ID>" message. 
 
 The Gemini Hub UI relies on extracting this ID from the process output to provide a direct "Connect" link to the user. Because it was looking only at `stdout`, the link disappeared, degrading the user experience.
 

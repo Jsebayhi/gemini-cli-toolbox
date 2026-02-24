@@ -1,4 +1,4 @@
-# 0038. Bash Automated Testing
+# ADR-0039: Bash Automated Testing
 
 ## Status
 Proposed

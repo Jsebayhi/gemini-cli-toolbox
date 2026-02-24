@@ -1,10 +1,10 @@
-# ADR-0046: Native Job Isolation and Centralized Bake Tagging
+# ADR-0047: Native Job Isolation and Centralized Bake Tagging
 
 ## Status
 Proposed
 
 ## Context
-The previous CI system (ADR-0043) used background shell processes (`&`) within a single GitHub runner to achieve speed. While fast, this led to resource contention, interleaved logs that are hard to debug, and a "tag mismatch" bug on the `main` branch (ADR-0045) because tagging logic was scattered across the Makefile, GHA YAML, and Bake.
+The previous CI system (ADR-0044) used background shell processes (`&`) within a single GitHub runner to achieve speed. While fast, this led to resource contention, interleaved logs that are hard to debug, and a "tag mismatch" bug on the `main` branch (ADR-0046) because tagging logic was scattered across the Makefile, GHA YAML, and Bake.
 
 ## Decision
 We will refactor the CI into a professional-grade pipeline using native GitHub Actions jobs and centralized logic.

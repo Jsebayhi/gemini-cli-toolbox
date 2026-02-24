@@ -1,4 +1,4 @@
-# ADR 0026: Ephemeral Worktrees and Structural Isolation
+# ADR-0026: Ephemeral Worktrees and Structural Isolation
 
 ## Status
 Accepted

@@ -1,4 +1,4 @@
-# 0036. Session Lifecycle Management (Stop)
+# ADR-0037: Session Lifecycle Management (Stop)
 
 ## Status
 Proposed

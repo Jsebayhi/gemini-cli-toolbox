@@ -1,4 +1,4 @@
-# ADR 0010: Configuration Profiles and Extra Args
+# ADR-0021: Configuration Profiles and Extra Args
 
 ## Status
 Accepted

@@ -1,4 +1,4 @@
-# ADR 0027: Stateless Lifecycle Management
+# ADR-0027: Stateless Lifecycle Management
 
 ## Status
 Accepted

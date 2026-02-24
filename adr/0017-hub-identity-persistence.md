@@ -1,4 +1,4 @@
-# ADR 0005: Hub Identity Persistence
+# ADR-0017: Hub Identity Persistence
 
 ## Status
 Accepted

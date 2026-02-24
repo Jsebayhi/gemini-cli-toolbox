@@ -1,4 +1,4 @@
-# ADR-0048: Removal of Automatic Language Cache Mounting
+# ADR-0049: Removal of Automatic Language Cache Mounting
 
 ## Status
 Accepted

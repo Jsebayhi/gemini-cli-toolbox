@@ -1,4 +1,4 @@
-# ADR 0020: Hub Session Execution and Architecture
+# ADR-0020: Hub Session Execution and Architecture
 
 ## Status
 Accepted

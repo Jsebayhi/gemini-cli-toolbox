@@ -1,4 +1,4 @@
-# ADR 0036: Launch Option Parity in Gemini Hub
+# ADR-0036: Launch Option Parity in Gemini Hub
 
 ## Status
 Proposed
