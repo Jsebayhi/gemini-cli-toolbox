@@ -204,6 +204,16 @@ jobs:
       - name: Update Docker Hub Description
         run: make docker-readme
 
+      - name: Push README to Docker Hub
+        uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
+          short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion, Git Worktree."
+          readme-filepath: ./README_DOCKER.md
+
   update-coverage-badge:
     name: Update Coverage Badge
     needs: [test-bash, test-hub]
@@ -234,26 +244,22 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Compute Global Coverage & Update Badge
+      - name: Compute Global Coverage
         run: |
           python3 scripts/update_coverage.py
+          mkdir -p deploy
+          mv coverage.json deploy/
 
-      - name: Commit Coverage Badge Update
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Deploy Coverage to branch
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ steps.generate_token.outputs.token || github.token }}
-          commit_message: "docs: update coverage badge [skip ci]"
-          file_pattern: README.md
-
-      - name: Update Docker Hub Description
-        uses: peter-evans/dockerhub-description@v4
-        continue-on-error: true
-        with:
-          username: ${{ secrets.DOCKER_HUB_USER }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          repository: ${{ secrets.DOCKER_HUB_USER }}/gemini-cli-toolbox
-          short-description: "Gemini CLI sandbox: Multi-Profile, Remote Access, Docker, VS Code Companion, Git Worktree."
-          readme-filepath: ./README_DOCKER.md
+          branch: coverage
+          folder: deploy
+          single-commit: true
+          git-config-name: "github-actions[bot]"
+          git-config-email: "github-actions[bot]@users.noreply.github.com"
+          commit-message: "docs: update coverage data"
 
   all-checks-passed:
     name: All Checks Passed
