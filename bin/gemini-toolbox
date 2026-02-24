@@ -348,18 +348,11 @@ main() {
         profile_root="$HOST_CONF_DIR"
         HOST_CONF_DIR="${HOST_CONF_DIR}/.gemini"
     fi
-    mkdir -p "$HOST_CONF_DIR"
 
-    # Pre-create host cache directories if running on the host
-    # This prevents Docker from creating them as 'root' during the mount
+    # Pre-create host config directory if running on the host
+    # This prevents Docker from creating it as 'root' during the mount
     if [ ! -f /.dockerenv ] && [ "${GEMINI_INTERNAL_RUN:-false}" != "true" ]; then
-        local required_dirs=(
-            "${HOME}/.m2" "${HOME}/.gradle" "${HOME}/.sbt" "${HOME}/.ivy2"
-            "${HOME}/.cache/coursier" "${HOME}/go/pkg/mod" "${HOME}/.cache/go-build"
-        )
-        for dir in "${required_dirs[@]}"; do
-            if [ ! -d "$dir" ]; then mkdir -p "$dir"; fi
-        done
+        mkdir -p "$HOST_CONF_DIR"
     fi
 
     project_dir=$(realpath -m "$project_dir")
@@ -534,11 +527,6 @@ main() {
 
     docker_args+=(
         --volume "${HOST_CONF_DIR}:/home/gemini/.gemini"
-        --volume "${HOME}/.m2:/home/gemini/.m2" --volume "${HOME}/.gradle:/home/gemini/.gradle"
-        --volume "${HOME}/.sbt:/home/gemini/.sbt" --volume "${HOME}/.ivy2:/home/gemini/.ivy2"
-        --volume "${HOME}/.cache/coursier:/home/gemini/.cache/coursier"
-        --volume "${HOME}/go/pkg/mod:/home/gemini/go/pkg/mod"
-        --volume "${HOME}/.cache/go-build:/home/gemini/.cache/go-build"
         --env DEFAULT_UID="${HOST_UID:-$(id -u)}" --env DEFAULT_GID="${HOST_GID:-$(id -g)}"
         --env GEMINI_SESSION_ID="${gemini_session_id}" --env GEMINI_PROJECT_NAME="${project_name}"
         --env GEMINI_SESSION_TYPE="${session_type}" --env TERM="${TERM:-xterm-256color}"

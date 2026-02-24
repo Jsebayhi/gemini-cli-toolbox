@@ -17,7 +17,6 @@
 *   **🛡️ Secure Sandbox:** The agent is trapped in the container. It cannot access files outside your project folder, guaranteeing no side effects on your OS.
 *   **💻 VS Code Companion:** Native integration with your host IDE for context awareness and auto-diffs.
 *   **🐳 Docker-Powered:** Extends the agent to any language. Build and test projects (Rust, PHP) using your host's Docker images, saving bandwidth and setup time.
-*   **📦 Persistent Caching:** Mounts your host's `~/.m2`, `~/.gradle`, and `~/.npm` caches for instant builds.
 *   **📱 Remote Access:** Code from your phone via Tailscale VPN.
 *   **🌳 Ephemeral Worktrees:** Launch isolated worktrees of your repo for risk-free refactors or parallel tasks without touching your primary working directory.
 *   **🔑 Multi-Profile:** Switch seamlessly between personal, work, and bot accounts using different config dirs.
@@ -135,6 +134,15 @@ Inside a profile directory (when using `--profile`), create a file named `extra-
 --no-ide # Disable VS Code integration for this profile
 
 --preview # Always use the latest beta features
+```
+
+### 📦 Speeding up builds (Caching)
+Since sessions are fully sandboxed by default, language caches (Maven, Gradle, etc.) are ephemeral. To reuse your host's caches for faster builds, add them to your profile's `extra-args`:
+```text
+# ~/.gemini-profiles/work/extra-args
+--volume "/home/user/.m2:/home/gemini/.m2"
+--volume "/home/user/.gradle:/home/gemini/.gradle"
+--volume "/home/user/.npm:/home/gemini/.npm"
 ```
 
 ### 📜 Persistent Bash History
