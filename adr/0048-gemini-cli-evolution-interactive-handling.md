@@ -12,35 +12,42 @@ With the latest version, **interactive mode is the new default**. Any query pass
 Our current implementation of `gemini-toolbox` and `gemini-hub` relies on the old behavior for "one-shot" or autonomous tasks (e.g., the Hub's "Bot Mode"). This means these tasks will now incorrectly start an interactive `tmux` session inside the container, keeping it alive even after the task is done, which wastes resources and deviates from user intent.
 
 ## Decision
-We will update the toolbox and hub to align with the CLI's new interactive-by-default behavior.
+We will align the toolbox and hub with the CLI's new interactive-by-default behavior by delegating flag handling to the underlying tool.
 
-### 1. Gemini Toolbox Flag Expansion
-We will add `--prompt / -p` to `gemini-toolbox`. This flag will be forwarded directly to the CLI inside the container to trigger non-interactive mode.
+### 1. Minimal Wrapper Design
+We explicitly **reject** adding \`--prompt / -p\` as first-class flags to the \`gemini-toolbox\` wrapper. This ensures the wrapper remains lean and doesn't need to be updated for every upstream CLI change. Users should use the standard \`--\` separator to pass application-specific flags (e.g., \`gemini-toolbox -- -p "task"\`).
 
 ### 2. Gemini Hub Launcher Update
-The `LauncherService` in the Hub will be updated to inject the `-p` flag instead of using positional arguments when the `interactive` toggle is unchecked.
+The \`LauncherService\` in the Hub will be updated to inject the \`-p\` flag directly into the application arguments (after \`--\`) when the \`interactive\` toggle is unchecked.
 
 ### 3. Documentation Alignment
-All user-facing documentation (`README.md`, `USER_GUIDE.md`, and `completions/`) will be updated to reflect that one-shot tasks now require the `--prompt` flag.
+All user-facing documentation (\`README.md\`, \`USER_GUIDE.md\`, and \`completions/\`) will be updated to reflect that one-shot tasks now require passing \`-p\` via application arguments.
 
 ## Alternatives Considered
 
-### Alternative 1: Explicit Flag Mapping (Selected)
-*   **Description:** Directly expose and use the CLI's new `-p/--prompt` flag in the toolbox wrapper.
-*   **Pros:** Minimal friction, aligns with upstream CLI conventions, simple to implement.
-*   **Cons:** Requires user awareness of the new flag for one-shot tasks.
+### Alternative 1: Explicit Flag Mapping (Rejected)
+*   **Description:** Directly expose and use the CLI's new \`-p/--prompt\` flag in the toolbox wrapper.
+*   **Pros:** Slightly shorter command for the user.
+*   **Cons:** Increases wrapper complexity, introduces maintenance debt for upstream changes.
+*   **Reason for Rejection:** Deviates from the "lean wrapper" philosophy. The underlying CLI's flags are already accessible via \`--\`.
 
-### Alternative 2: Automatic Task Detection (Non-selected)
-*   **Description:** Attempt to detect if the session *should* be non-interactive based on the presence of a positional task and auto-inject `-p`.
+### Alternative 2: Automatic Task Detection (Rejected)
+*   **Description:** Attempt to detect if the session *should* be non-interactive based on the presence of a positional task and auto-inject \`-p\`.
 *   **Pros:** Maintains backward compatibility for positional arguments.
-*   **Cons:** Brittle; conflicts with the CLI's new intent (which allows starting an interactive session with an initial query). It would create confusion if a user *wants* an interactive session with an initial prompt.
-*   **Reason for Rejection:** The upstream CLI choice is deliberate. Attempting to override it with "smart" detection would lead to inconsistent behavior compared to the raw CLI.
+*   **Cons:** Brittle; conflicts with the CLI's new intent (which allows starting an interactive session with an initial query). We are not responsible for mitigating breaking changes made by the upstream \`gemini-cli\`.
+*   **Reason for Rejection:** The upstream CLI choice is deliberate. Attempting to override it with "smart" detection would lead to inconsistent behavior compared to the raw CLI and introduce maintenance overhead.
 
-### Alternative 3: Command-based Execution (Non-selected)
-*   **Description:** Introduce a new command like `gemini-toolbox run "task"` specifically for non-interactive execution.
+### Alternative 3: Command-based Execution (Rejected)
+*   **Description:** Introduce a new command like \`gemini-toolbox run "task"\` specifically for non-interactive execution.
 *   **Pros:** Clear semantic separation between "chat" and "run".
-*   **Cons:** Diverges from the `gemini` CLI's own flag-based approach, adds more boilerplate to the wrapper.
-*   **Reason for Rejection:** Unnecessary complexity. `gemini-toolbox` is primarily a thin wrapper, and keeping the interface consistent with the underlying tool is more idiomatic.
+*   **Cons:** Diverges from the \`gemini\` CLI's own flag-based approach, adds more boilerplate to the wrapper.
+*   **Reason for Rejection:** Unnecessary complexity.
+
+### Alternative 4: Positional Argument Forwarding (Selected)
+*   **Description:** Leverage the existing positional argument forwarding (\`--\`) to allow users to pass \`-p\` directly to the CLI.
+*   **Pros:** Zero maintenance, strictly follows upstream CLI conventions, keeps the wrapper clean.
+*   **Cons:** Users must learn to use the \`-- -p\` pattern for non-interactive tasks.
+
 
 ## Consequences
 

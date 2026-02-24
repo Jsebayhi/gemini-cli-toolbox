@@ -53,7 +53,6 @@ show_help() {
     echo "  --name <str>         Explicit name for the worktree folder and branch."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
     echo "  --no-tmux            Disable automatic tmux multiplexing (legacy raw TTY mode)"
-    echo "  --prompt <str>       Run in non-interactive mode with the given prompt"
     echo "  --detached           Start the container in background and exit (useful for Hub)"
     echo "  --help               Show this help message"
     echo ""
@@ -65,9 +64,9 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  gemini-toolbox"
-    echo "  gemini-toolbox --prompt \"Summarize the changes in this directory\""
+    echo "  gemini-toolbox -- -p \"Summarize the changes in this directory\""
     echo "  gemini-toolbox --remote tskey-auth-xxxx"
-    echo "  gemini-toolbox --worktree \"Refactor auth\""
+    echo "  gemini-toolbox --worktree -- -p \"Refactor auth\""
 }
 
 # Worktree Setup Function
@@ -305,7 +304,6 @@ main() {
         --project)     project_dir="$2";   shift; shift ;;
         --bash)        use_bash=true;      shift ;;
         --detached)    detached_mode=true; shift ;;
-        -p|--prompt)   args+=("-p" "$2"); shift; shift ;;
         --remote)      
             remote_mode=true
             if [[ -n "${2:-}" && "$2" == tskey-* ]]; then
