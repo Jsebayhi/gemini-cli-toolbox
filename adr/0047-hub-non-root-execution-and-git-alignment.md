@@ -1,7 +1,7 @@
 # ADR 0047: Hub Non-Root Execution and Git Identity Alignment
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-02-23
@@ -17,8 +17,8 @@ Additionally, `gemini-toolbox` attempted to create host-path cache directories (
 We will align the Hub's security and permission model with the CLI (as defined in [ADR-0003](0003-permission-handling-gosu.md)).
 
 1.  **Non-Root Hub:** Install `gosu` in the Hub image and update its entrypoint to dynamically create a user matching the host UID/GID and drop privileges before starting the Flask app.
-2.  **Shared Socket:** Configure Tailscale to use a custom socket path (`/tmp/tailscaled.sock`) and fix its ownership at runtime to allow the non-root Hub user to query VPN status.
-3.  **Guarded CLI Logic:** Update `gemini-toolbox` to skip host-directory initialization (`mkdir`) when running inside a container (detected via `/.dockerenv`), while preserving volume mounts for host-side resolution (DooD).
+2.  **Shared Socket:** Configure Tailscale to use an FHS-compliant socket path (`/run/tailscale/tailscaled.sock`) and fix its ownership at runtime to allow the non-root Hub user to query VPN status.
+3.  **Guarded CLI Logic:** Update `gemini-toolbox` to skip host-directory initialization (`mkdir`) when running inside a container (detected via `/.dockerenv` or `GEMINI_INTERNAL_RUN=true`), while preserving volume mounts for host-side resolution (DooD).
 
 ## Detailed Rationale
 
