@@ -352,7 +352,7 @@ main() {
     # Pre-create host config directory if running on the host
     # This prevents Docker from creating it as 'root' during the mount
     if [ ! -f /.dockerenv ] && [ "${GEMINI_INTERNAL_RUN:-false}" != "true" ]; then
-        if [ ! -d "$HOST_CONF_DIR" ]; then mkdir -p "$HOST_CONF_DIR"; fi
+        mkdir -p "$HOST_CONF_DIR"
     fi
 
     project_dir=$(realpath -m "$project_dir")
