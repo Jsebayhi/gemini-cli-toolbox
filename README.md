@@ -92,14 +92,14 @@ Want to go deeper? Follow these guides to master the Toolbox:
 ### 🛠️ Common Commands
 | Goal | Command |
 | :--- | :--- |
-| **Simple Chat** | `gemini-toolbox` |
-| **Stop Session** | `gemini-toolbox stop [id\|project]` |
-| **One-shot Task** | `gemini-toolbox "Fix the linting errors in src/"` |
-| **Isolated Exploration** | `gemini-toolbox --worktree` |
-| **Named Worktree** | `gemini-toolbox --worktree --name feat/auth` |
-| **Beta Features** | `gemini-toolbox --preview` |
-| **Remote Coding** | `gemini-toolbox --remote` |
-| **Disposable Shell**| `gemini-toolbox --bash` |
+| **Simple Chat** | \`gemini-toolbox\` |
+| **Stop Session** | \`gemini-toolbox stop [id\\|project]\` |
+| **One-shot Task** | \`gemini-toolbox --prompt "Fix the linting errors in src/"\` |
+| **Isolated Exploration** | \`gemini-toolbox --worktree\` |
+| **Named Worktree** | \`gemini-toolbox --worktree --name feat/auth\` |
+| **Beta Features** | \`gemini-toolbox --preview\` |
+| **Remote Coding** | \`gemini-toolbox --remote\` |
+| **Disposable Shell**| \`gemini-toolbox --bash\` |
 
 ### 📂 Multi-Account Management
 Isolate your environments using configuration profiles.
@@ -112,10 +112,10 @@ gemini-toolbox --profile ~/.gemini-profiles/work
 Launch a parallel session without stashing or committing your current work.
 ```bash
 # Create an anonymous, isolated worktree for a quick experiment
-gemini-toolbox --worktree "Try migrating to ESM"
+gemini-toolbox --worktree --prompt "Try migrating to ESM"
 
 # Or create a persistent, named branch for a feature
-gemini-toolbox --worktree --name feat/api "Implement the new REST endpoints"
+gemini-toolbox --worktree --name feat/api --prompt "Implement the new REST endpoints"
 ```
 The agent works in an isolated environment. If the experiment fails, simply exit—the Hub will clean it up later.
 

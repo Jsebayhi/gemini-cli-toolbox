@@ -41,7 +41,7 @@ Uncheck "Interactive" and click Launch. The toolbox spins up a dedicated contain
 
 **The Solution:** Let the agent use Docker.
 ```bash
-gemini-toolbox "Run the tests for this Rust project"
+gemini-toolbox --prompt "Run the tests for this Rust project"
 ```
 Because the toolbox shares your host's Docker socket, the agent can spin up a temporary `rust` container, mount your code, and run `cargo test`. It uses your host's image cache, so it's instant, but your host OS remains clean of SDK clutter.
 
@@ -52,7 +52,7 @@ Because the toolbox shares your host's Docker socket, the agent can spin up a te
 
 **The Solution:** Just ask for it.
 ```bash
-gemini-toolbox "Spin up a Postgres container and a Redis container for testing"
+gemini-toolbox --prompt "Spin up a Postgres container and a Redis container for testing"
 ```
 The agent understands your infrastructure needs and can directly interact with the Docker daemon to start, stop, and manage services for you.
 
@@ -90,7 +90,7 @@ Each profile has its own isolated history, cookies, and configuration. Switching
 
 **The Solution:** Pipe it.
 ```bash
-cat /var/log/syslog | tail -n 50 | gemini-toolbox "Identify the root cause of these errors"
+cat /var/log/syslog | tail -n 50 | gemini-toolbox --prompt "Identify the root cause of these errors"
 ```
 The toolbox accepts standard input, making it a powerful addition to your Unix piping workflows.
 
@@ -101,7 +101,7 @@ The toolbox accepts standard input, making it a powerful addition to your Unix p
 
 **The Solution:** Automate the toil.
 ```bash
-git diff --staged | gemini-toolbox "Write a semantic commit message for these changes"
+git diff --staged | gemini-toolbox --prompt "Write a semantic commit message for these changes"
 ```
 The agent analyzes your actual code changes and generates a precise, professional commit message for you to review.
 
@@ -113,7 +113,7 @@ The agent analyzes your actual code changes and generates a precise, professiona
 **The Solution:** Launch an **Ephemeral Worktree**.
 ```bash
 # Create a named worktree 'refactor-auth' and start working
-gemini-toolbox --worktree --name refactor-auth "Refactor the authentication logic"
+gemini-toolbox --worktree --name refactor-auth --prompt "Refactor the authentication logic"
 ```
 The toolbox automatically:
 1.  Creates a new, isolated folder for this task.
