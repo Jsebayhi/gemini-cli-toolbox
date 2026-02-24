@@ -59,6 +59,22 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 *   **Process:** Create branch -> Implement -> Push -> Open PR -> **STOP**.
 *   **Why:** The user often wants to review the PR diff before merging.
 
+### Developer Workflow & Agent Skills
+*   **Mandate:** When performing development tasks, you **MUST** activate and strictly adhere to the `developing-gemini-toolbox` skill (`activate_skill "developing-gemini-toolbox"`).
+*   **Workflow:** You MUST follow the **Research -> Strategy -> Execution** lifecycle for every task.
+    *   **Research:** Map the codebase, validate assumptions, and reproduce issues before proposing changes.
+    *   **Strategy:** Formulate a grounded plan and share it before execution.
+    *   **Execution:** For each sub-task, follow the **Plan -> Act -> Validate** cycle.
+*   **Documentation Requirement:** Every non-trivial change MUST be accompanied by updates to relevant `GEMINI.md` files (root or component) to reflect new architectural decisions, workflows, or quirks.
+
+### Commit & PR Standards
+*   **PR Title:** Use conventional commits style (e.g., `feat(cli): add new flag`).
+*   **PR/Commit Body:** Detail **WHY** the change was made, not just what was changed. 
+    *   **Link Issues:** Explicitly link related issues (e.g., `Closes #123`).
+    *   **No Filler:** Never use wording like "This PR..." or "I have...". 
+    *   **Standard Compliance:** The body must respect standard commit body guidelines (wrapped at 72 chars, clear technical rationale).
+*   **Squash Mandate:** Since PRs are squashed, the PR title and body BECOME the final commit message. Treat them with the highest level of professional rigor.
+
 ### Testing Strategy
 *   **Bash Scripts:** Use `bats-core`. Tests reside in `tests/bash/`. Use `make test-bash` to execute.
 *   **Python (Hub):** Use `pytest`. Tests reside in `images/gemini-hub/tests/`. Use `make test` to execute.

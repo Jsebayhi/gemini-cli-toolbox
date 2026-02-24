@@ -1,10 +1,11 @@
-# Phase 1: Alignment (Problem Space)
+# Phase 1: Alignment (Problem Space / Research)
 
-**Goal:** Ensure we are solving the right problem.
+**Goal:** Ensure we are solving the right problem through rigorous Research.
 **Output:** A clear GitHub Issue defining the **Problem** and **Goal**.
 
-## 1. The Firewall
+## 1. The Firewall & Research Mandate
 **Rule:** Do not be a "Yes Man". Clarify before acting.
+**Research:** Map the codebase, validate all assumptions, and (for bugs) reproduce the failure state before proposing a fix.
 👉 **See [Core Mandates](../references/mandates.md)** for the strict Ambiguity Handling Protocol.
 
 ## 2. Problem Exploration
