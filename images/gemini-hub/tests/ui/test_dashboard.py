@@ -157,3 +157,28 @@ def test_wizard_worktree_toggle(hub: HubPage):
         expect(hub.wizard.worktree_name_input).to_be_hidden()
         hub.wizard.worktree_check.check()
         expect(hub.wizard.worktree_name_input).to_be_visible()
+
+def test_wizard_launch_id_in_stderr(hub: HubPage, tmp_path, monkeypatch):
+    """Verify that the 'Connect' button appears even if the session ID is in stderr (Robustness check)."""
+    project_root = tmp_path / "projects"
+    project_root.mkdir()
+    app_dir = project_root / "my-app"
+    app_dir.mkdir()
+    
+    from app.config import Config
+    monkeypatch.setattr(Config, "HUB_ROOTS", [str(project_root)])
+    
+    # ID is in stderr, stdout is empty
+    mock_err = """>> Starting container...
+Container started: gem-test-robust"""
+    with patch("app.services.launcher.LauncherService.launch", return_value={"status": "success", "returncode": 0, "stdout": "", "stderr": mock_err, "command": "cmd"}):
+        hub.navigate()
+        hub.open_wizard()
+        hub.wizard.select_root(str(project_root))
+        hub.wizard.select_folder("my-app")
+        
+        hub.wizard.launch(task="Test")
+        
+        expect(hub.page.get_by_text("Session launched!")).to_be_visible()
+        # This button should appear because we now scan both stdout and stderr
+        expect(hub.page.get_by_role("button", name="Connect (VPN) 🚀")).to_be_visible()

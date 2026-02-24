@@ -447,7 +447,8 @@ async function doLaunch() {
         
         results.style.display = "block";
         cmdSpan.innerText = result.command || "???";
-        logPre.innerText = (result.stdout || "") + "\n" + (result.stderr || "");
+        const output = (result.stdout || "") + "\n" + (result.stderr || "");
+        logPre.innerText = output;
         
         if (result.status === 'success') {
             saveRecentPath(currentPath);
@@ -455,7 +456,7 @@ async function doLaunch() {
             status.style.color = "var(--accent)";
             
             // Try to extract hostname to offer direct connect
-            const match = (result.stdout || "").match(/Container started: (gem-[a-zA-Z0-9-]+)/);
+            const match = output.match(/Container started: (gem-[a-zA-Z0-9-]+)/);
             if (match && match[1]) {
                 const hostname = match[1];
                 
