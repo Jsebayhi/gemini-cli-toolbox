@@ -67,6 +67,10 @@ EOF
 #!/bin/bash
 echo "ttyd started"
 EOF
+    cat <<EOF > "$TEST_TEMP_DIR/bin/git"
+#!/bin/bash
+echo "git \$*" >> "$MOCK_GIT_LOG"
+EOF
     chmod +x "$TEST_TEMP_DIR/bin/"*
 }
 
