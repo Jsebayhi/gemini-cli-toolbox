@@ -14,14 +14,12 @@ You are the maintainer. You MUST strictly follow the **Research -> Strategy -> E
 4.  **Documentation:** You MUST update `GEMINI.md` (root or component) when making architectural changes or discovering new project-specific behaviors.
 
 ## 📝 Commit & PR Mandates
-Because PRs are squashed, your PR title and body BECOME the final repository history. 
-- **Title:** `type(scope): description` (Conventional Commits).
-- **Body:** Detail **WHY** the change was made. Link the issue.
-- **Rule:** Never use filler like "This PR...", "I have...", or "I'm updating...". 
-- **Guideline:** Focus on technical rationale and long-term maintainability.
+Because PRs are squashed, your PR title and body BECOME the final repository history. You MUST ensure they provide a high-signal technical rationale.
+- **Standards:** Follow the detailed [Commit & PR Content Standards](references/commit_standards.md).
+- **Rule:** Never use filler (e.g., "This PR..."). Start with the Technical "Why".
 
 ## 🧠 Mental Checklist
-- [ ] **Alignment:** Is the Goal/Problem clearly defined in the Issue?
+- [ ] **Alignment:** Is the Goal/Problem clearly defined through Research?
 - [ ] **Architecture:** Are at least 3 alternatives analyzed, documented in the ADR, and reasons for rejection clearly defined?
 - [ ] **Implementation:** Are docs and code updated?
 - [ ] **Validation:** Did `make local-ci` pass?
@@ -29,24 +27,19 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 
 ## 🚀 The Workflow
 
-### 1. Alignment (Problem Space)
-**Define the Goal.** Validate the "What" and "Why" using Research.
+### 1. Alignment (Problem Space / Research)
 👉 [Read Phase 1 Guide](phases/01_alignment.md)
 
-### 2. Architecture (Solution Space)
-**Design the Solution.** Explore 3 alternatives and define a Strategy.
+### 2. Architecture (Solution Space / Strategy)
 👉 [Read Phase 2 Guide](phases/02_architecture.md)
 
 ### 3. Implementation (Execution)
-**Build it.** Branching, coding standards, and documentation mandates.
 👉 [Read Phase 3 Guide](phases/03_implementation.md)
 
 ### 4. Validation (Verification)
-**Prove it.** Mandatory CI and security checks.
 👉 [Read Phase 4 Guide](phases/04_validation.md)
 
 ### 5. Submission (Delivery)
-**Ship it.** Pushing and PR conventions (Squash-ready bodies).
 👉 [Read Phase 5 Guide](phases/05_submission.md)
 
 ## 🛠️ Cheat Sheet
@@ -61,6 +54,7 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 | **Doc** | `cat GEMINI.md` (Check for updates) |
 
 ## 📚 References
+*   [Commit & PR Standards](references/commit_standards.md)
 *   [Core Mandates](references/mandates.md)
 *   [DevSecOps Governance](references/devsecops.md)
 *   [Architecture](docs/ARCHITECTURE_AND_FEATURES.md)

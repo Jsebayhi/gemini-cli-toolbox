@@ -62,18 +62,12 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 ### Developer Workflow & Agent Skills
 *   **Mandate:** When performing development tasks, you **MUST** activate and strictly adhere to the `developing-gemini-toolbox` skill (`activate_skill "developing-gemini-toolbox"`).
 *   **Workflow:** You MUST follow the **Research -> Strategy -> Execution** lifecycle for every task.
-    *   **Research:** Map the codebase, validate assumptions, and reproduce issues before proposing changes.
-    *   **Strategy:** Formulate a grounded plan and share it before execution.
-    *   **Execution:** For each sub-task, follow the **Plan -> Act -> Validate** cycle.
 *   **Documentation Requirement:** Every non-trivial change MUST be accompanied by updates to relevant `GEMINI.md` files (root or component) to reflect new architectural decisions, workflows, or quirks.
 
 ### Commit & PR Standards
-*   **PR Title:** Use conventional commits style (e.g., `feat(cli): add new flag`).
-*   **PR/Commit Body:** Detail **WHY** the change was made, not just what was changed. 
-    *   **Link Issues:** Explicitly link related issues (e.g., `Closes #123`).
-    *   **No Filler:** Never use wording like "This PR..." or "I have...". 
-    *   **Standard Compliance:** The body must respect standard commit body guidelines (wrapped at 72 chars, clear technical rationale).
-*   **Squash Mandate:** Since PRs are squashed, the PR title and body BECOME the final commit message. Treat them with the highest level of professional rigor.
+*   **Conventional Commits:** Use the `type(scope): description` format for all PR titles and commits.
+*   **High-Signal History:** Because PRs are squashed, the PR title and body BECOME the final repository history. You MUST ensure they provide a high-signal technical rationale.
+*   **Standards:** Follow the detailed [Commit & PR Content Standards](.gemini/skills/developing-gemini-toolbox/references/commit_standards.md) (No filler, Technical "Why", 72-char limit).
 
 ### Testing Strategy
 *   **Bash Scripts:** Use `bats-core`. Tests reside in `tests/bash/`. Use `make test-bash` to execute.
