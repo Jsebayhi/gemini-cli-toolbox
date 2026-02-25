@@ -42,7 +42,12 @@ help:
 # --- Quality Assurance ---
 
 .PHONY: lint
-lint: lint-shell lint-python
+lint: lint-shell lint-python lint-adr
+
+.PHONY: lint-adr
+lint-adr:
+	@echo ">> Validating ADR Uniqueness..."
+	./scripts/validate_adr_uniqueness.sh
 
 .PHONY: lint-shell
 lint-shell:

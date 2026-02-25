@@ -1,4 +1,4 @@
-# 31. Dynamic Branch Tagging and Image Overrides
+# ADR-0031: Dynamic Branch Tagging and Image Overrides
 
 Date: 2026-02-07
 

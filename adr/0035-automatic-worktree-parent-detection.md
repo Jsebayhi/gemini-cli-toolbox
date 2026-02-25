@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-The Gemini Toolbox uses Git Worktrees for task isolation (ADR 0026). These worktrees reside in a centralized cache and depend on the parent repository for their object database and history. 
+The Gemini Toolbox uses Git Worktrees for task isolation (ADR-0026). These worktrees reside in a centralized cache and depend on the parent repository for their object database and history. 
 
 Currently, the "Surgical Mount" strategy (mounting the parent RO and `.git` RW) is only applied when `gemini-toolbox` is used to *create* a worktree via the `--worktree` flag. When a session is resumed from an existing worktree (e.g., via Gemini Hub discovery), the toolbox treats the directory as a standard standalone project. This breaks Git functionality inside the container because the worktree's internal `.git` file points to a host path that is not mounted.
 
@@ -18,7 +18,7 @@ The script will perform the following checks:
 3.  Resolve the parent repository root: `git -C "$PROJECT_DIR" rev-parse --git-common-dir`.
 
 ### Mount Strategy
-If a parent is detected, the script will automatically apply the Surgical Mount strategy defined in ADR 0026:
+If a parent is detected, the script will automatically apply the Surgical Mount strategy defined in ADR-0026:
 - **Parent Root:** Mounted as Read-Only (`:ro`).
 - **Parent .git:** Mounted as Read-Write (`:rw`).
 
@@ -34,7 +34,7 @@ If a parent is detected, the script will automatically apply the Surgical Mount 
 
 ### 3. Full Clones for Isolation
 *   **Idea:** Use full clones instead of worktrees for task isolation.
-*   **Reason for Rejection:** Already rejected in ADR 0026. Full clones are slow, consume significant disk space, and lack the lightweight "shared object database" benefits of worktrees.
+*   **Reason for Rejection:** Already rejected in ADR-0026. Full clones are slow, consume significant disk space, and lack the lightweight "shared object database" benefits of worktrees.
 
 ## Consequences
 - **Robustness:** Resuming sessions from the Hub or manual CLI calls in worktree folders will have full Git support.

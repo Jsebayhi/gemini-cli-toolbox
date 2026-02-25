@@ -46,4 +46,4 @@ To ensure 100% reliability and avoid "The Branch named 'Fix'" bug, we have **REJ
 | **Reliability** | Deterministic | "Explicit is better than implicit." |
 
 ## Related Decisions
-*   **ADR 0030**: Rejection of Automatic Task-Based Naming.
+*   **ADR-0030**: Rejection of Automatic Task-Based Naming.

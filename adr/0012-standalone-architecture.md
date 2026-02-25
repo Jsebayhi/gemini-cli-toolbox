@@ -1,4 +1,4 @@
-# 2. Hub Standalone Architecture
+# ADR-0012: Hub Standalone Architecture
 
 Date: 2026-01-23
 

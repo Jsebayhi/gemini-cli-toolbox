@@ -47,15 +47,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Validate ADR Uniqueness
-        run: |
-          echo "::group::Checking for duplicate ADR numbers"
-          DUPLICATES=$(ls adr/*.md | cut -d/ -f2 | cut -d- -f1 | sort | uniq -d)
-          if [ -n "$DUPLICATES" ]; then
-            echo "::error::Duplicate ADR numbers found: $DUPLICATES"
-            exit 1
-          fi
-          echo "All ADR numbers are unique."
-          echo "::endgroup::"
+        run: make lint-adr
 
   build:
     name: Build & Cache

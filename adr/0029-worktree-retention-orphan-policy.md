@@ -1,4 +1,4 @@
-# ADR-0029: Worktree Retention # ADR 0029: Worktree Retention & Orphan Policy Orphan Policy
+# ADR-0029: Worktree Retention & Orphan Policy
 
 ## Status
 Accepted (Amended by [ADR-0048](0048-hub-non-root-execution-and-git-alignment.md))

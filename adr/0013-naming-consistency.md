@@ -1,4 +1,4 @@
-# 3. Naming Consistency and Session Identity
+# ADR-0013: Naming Consistency and Session Identity
 
 Date: 2026-01-23
 

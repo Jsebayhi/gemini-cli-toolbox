@@ -1,4 +1,4 @@
-# 1. Gemini Hub for Mobile Discovery
+# ADR-0011: Gemini Hub for Mobile Discovery
 
 Date: 2026-01-23
 

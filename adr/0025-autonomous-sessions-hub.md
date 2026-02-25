@@ -1,4 +1,4 @@
-# 25. Autonomous Sessions in Hub
+# ADR-0025: Autonomous Sessions in Hub
 
 Date: 2026-02-01
 Status: Accepted

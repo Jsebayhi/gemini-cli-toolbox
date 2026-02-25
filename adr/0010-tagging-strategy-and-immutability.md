@@ -1,4 +1,4 @@
-# 2. Tagging Strategy and Immutability
+# ADR-0010: Tagging Strategy and Immutability
 
 Date: 2026-01-22
 

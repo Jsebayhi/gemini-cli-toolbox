@@ -69,6 +69,9 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 *   **High-Signal History:** Because PRs are squashed, the PR title and body BECOME the final repository history. You MUST ensure they provide a high-signal technical rationale.
 *   **Standards:** Follow the detailed [Commit & PR Content Standards](.gemini/skills/developing-gemini-toolbox/references/commit_standards.md) (No filler, Technical "Why", 72-char limit).
 
+### Architecture Decision Records (ADRs)
+*   **Rule:** ADRs are **immutable historical logs**. You MUST strictly follow the [ADR Best Practices Guide](.gemini/skills/developing-gemini-toolbox/references/adr_best_practices.md) (Alternative analysis, Supersede pattern, naming) for every architectural change.
+
 ### Testing Strategy
 *   **Bash Scripts:** Use `bats-core`. Tests reside in `tests/bash/`. Use `make test-bash` to execute.
 *   **Python (Hub):** Use `pytest`. Tests reside in `images/gemini-hub/tests/`. Use `make test` to execute.
@@ -142,7 +145,7 @@ To prevent `stdout` corruption and provide consistent granularity, all Bash scri
 | `docs/USER_GUIDE.md` | **Users** | **The Cookbook.** Story-driven scenarios. <br> *Rule:* Focus on "The Scenario" (Problem) and "The Solution". Avoid "QA-style" step-by-step validation. Use natural language. |
 | `docs/ARCHITECTURE_AND_FEATURES.md` | **Power Users** | **The Engine Room.** Deep technical explanation. <br> *Rule:* Explain *how* it works (DooD, IDE protocols, networking). Be accurate about trade-offs. |
 | `docs/internal/MAINTENANCE_JOURNEYS.md` | **Maintainers** | **The QA Matrix.** Exhaustive checklist of edge cases. <br> *Rule:* Keep it comprehensive. Structure by functional area. **Not for end-users.** |
-| `adr/` | **Architects** | **The History.** Decision records. <br> *Rule:* Explain *why* we built it this way. |
+| `adr/` | **Architects** | **The History.** Decision records. <br> *Rule:* See [.gemini/skills/developing-gemini-toolbox/references/adr_best_practices.md](.gemini/skills/developing-gemini-toolbox/references/adr_best_practices.md) |
 
 ### Docker Hub Publishing
 *   **Mechanism:** The `README.md` is the source of truth for both GitHub and Docker Hub.
