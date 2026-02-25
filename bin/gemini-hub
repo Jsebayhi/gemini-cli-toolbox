@@ -274,7 +274,8 @@ main() {
 
     docker run --rm "$mode" \
         --name "$container_name" \
-        --net=host \
+        --network=bridge \
+        -p 127.0.0.1:$port:8888 \
         --cap-add=NET_ADMIN \
         --device /dev/net/tun \
         --volume "/var/run/docker.sock:/var/run/docker.sock" \
