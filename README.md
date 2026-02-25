@@ -13,7 +13,7 @@
 
 ## 🌟 Why Gemini Toolbox?
 
-*   **🚀 Zero Config:** No Node.js, Python, SDK, or `jq` setup required on your host. Just run the script.
+*   **🚀 Zero Config:** No Node.js, Python, SDK, `jq`, or `zip` setup required on your host. Just run the script.
 *   **🛡️ Secure Sandbox:** The agent is trapped in the container. It cannot access files outside your project folder, guaranteeing no side effects on your OS.
 *   **💻 VS Code Companion:** Native integration with your host IDE for context awareness and auto-diffs.
 *   **🐳 Docker-Powered:** Extends the agent to any language. Build and test projects (Rust, PHP) using your host's Docker images, saving bandwidth and setup time.
