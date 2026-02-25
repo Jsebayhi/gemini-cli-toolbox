@@ -1,5 +1,5 @@
 # Base Image for Gemini CLI Toolbox
-# Contains: Python (Latest Stable), Node.js 20, OS Security Updates, Gosu, Git, GH CLI, GLAB CLI
+# Contains: Python (Latest Stable), Node.js 20, OS Security Updates, Gosu, Git, GH CLI, GLAB CLI, jq, zip, unzip
 
 # --- Stage 1: Source Node.js ---
 # We harvest the Node.js binaries from the official image to ensure they are correct
@@ -39,6 +39,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     netcat-openbsd \
     gnupg \
     tmux \
+    jq \
+    zip \
+    unzip \
     && curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null \
     && curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | tee /etc/apt/sources.list.d/tailscale.list \
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
