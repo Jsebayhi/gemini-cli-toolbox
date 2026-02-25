@@ -23,6 +23,24 @@
 
 ---
 
+## 📸 Visual Overview: The Gemini Hub
+
+The Gemini Hub provides a centralized dashboard to discover, manage, and launch your sessions from any device (Desktop, Mobile, or Tablet) via Tailscale VPN.
+
+### 🏠 Dashboard
+Monitor all your active sessions at a glance. Identify projects, connection types (CLI/Bash), and status in real-time.
+![Gemini Hub Dashboard](docs/images/hub/dashboard.png)
+
+### 🚀 Zero-Config Launch Wizard
+Start new sessions effortlessly by browsing your host's workspace roots. No need to remember complex CLI flags.
+![Gemini Hub Launch Wizard](docs/images/hub/wizard.png)
+
+### 🌳 Isolated Worktrees
+Toggle "Launch in Ephemeral Worktree" to experiment in a fully isolated branch without touching your primary codebase.
+![Isolated Worktrees in Hub](docs/images/hub/wizard-worktree.png)
+
+---
+
 ## ⚡ Quick Start (Under 5 Minutes)
 
 ### 1. Install the Wrapper

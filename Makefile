@@ -195,8 +195,11 @@ scan:
 docker-readme:
 	@echo ">> Generating README_DOCKER.md..."
 	cp README.md README_DOCKER.md
+	# Convert documentation links to GitHub blob view
 	sed -i 's|(docs/|(https://github.com/Jsebayhi/gemini-cli-toolbox/blob/main/docs/|g' README_DOCKER.md
 	sed -i 's|(adr/|(https://github.com/Jsebayhi/gemini-cli-toolbox/blob/main/adr/|g' README_DOCKER.md
+	# Convert image links to raw.githubusercontent.com for Docker Hub rendering
+	sed -i 's|https://github.com/Jsebayhi/gemini-cli-toolbox/blob/main/docs/images/|https://raw.githubusercontent.com/Jsebayhi/gemini-cli-toolbox/main/docs/images/|g' README_DOCKER.md
 
 .PHONY: clean-cache
 clean-cache:

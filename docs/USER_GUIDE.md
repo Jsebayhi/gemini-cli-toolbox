@@ -26,6 +26,24 @@ Then, connect from anywhere using the **Gemini Hub** (`http://gemini-hub:8888`) 
 
 ---
 
+## 2b. The Gemini Hub: Your Workspace Control Center
+**The Scenario:** You have multiple sessions running across different projects, some in worktrees, some interactive, and some autonomous. You need a way to see everything at once and quickly jump between them.
+
+**The Solution:** Use the **Gemini Hub Dashboard**.
+
+### 🏠 All Sessions in One Place
+The Hub automatically discovers all your active Gemini sessions and displays them in a clean, filterable list. You can see the project name, session type (CLI/Bash), and connection status.
+![Gemini Hub Dashboard](../docs/images/hub/dashboard.png)
+
+### 🚀 Launch Without the CLI
+The **New Session** wizard lets you browse your project folders and launch sessions with a few clicks. It's the easiest way to start a session from a tablet or phone where typing long CLI commands is tedious.
+![Gemini Hub Launch Wizard](../docs/images/hub/wizard.png)
+
+### 🕒 Remembers Your Workspace
+The wizard remembers your most recently accessed project paths, allowing you to resume work in seconds without navigating deep directory trees every time.
+
+---
+
 ## 3. Autonomous Assistants (Bots)
 **The Scenario:** You have a tedious, long-running task—like finding all "TODO" comments in a legacy codebase and summarizing them in a report—that distracts you from your main work.
 
