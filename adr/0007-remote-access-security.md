@@ -1,4 +1,4 @@
-# 6. Remote Access Security Strategy
+# ADR-0007: Remote Access Security Strategy
 
 Date: 2026-01-08 (Updated: 2026-01-21)
 

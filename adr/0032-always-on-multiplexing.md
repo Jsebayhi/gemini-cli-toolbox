@@ -1,4 +1,4 @@
-# 32. Always-on Multiplexing
+# ADR-0032: Always-on Multiplexing
 
 Date: 2026-02-12
 

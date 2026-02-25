@@ -1,4 +1,4 @@
-# 9. Docker-out-of-Docker (DooD) Strategy
+# ADR-0014: Docker-out-of-Docker (DooD) Strategy
 
 **Date:** 2026-01-23
 **Status:** Accepted

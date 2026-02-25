@@ -1,4 +1,4 @@
-# 8. Tolerance of Unfixable NPM Vulnerabilities
+# ADR-0009: Tolerance of Unfixable NPM Vulnerabilities
 
 Date: 2026-01-08
 

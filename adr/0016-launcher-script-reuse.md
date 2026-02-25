@@ -1,4 +1,4 @@
-# 4. Hub Launcher via Script Reuse
+# ADR-0016: Hub Launcher via Script Reuse
 
 Date: 2026-01-25
 

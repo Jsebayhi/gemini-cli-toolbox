@@ -1,4 +1,4 @@
-# 13. Hub as a Session Launcher (Write Access)
+# ADR-0015: Hub as a Session Launcher (Write Access)
 
 Date: 2026-01-25
 

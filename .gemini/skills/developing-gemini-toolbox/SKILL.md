@@ -55,6 +55,7 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 
 ## 📚 References
 *   [Commit & PR Standards](references/commit_standards.md)
+*   [ADR Best Practices](references/adr_best_practices.md)
 *   [Core Mandates](references/mandates.md)
 *   [DevSecOps Governance](references/devsecops.md)
 *   [Architecture](docs/ARCHITECTURE_AND_FEATURES.md)

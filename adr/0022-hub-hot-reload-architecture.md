@@ -1,4 +1,4 @@
-# ADR-0022: # ADR 0011-DRAFT: Hub 'hot' reload Architecture
+# ADR-0022: Hub 'hot' reload Architecture
 
 ## Status
 **DRAFT** - Open for Discussion

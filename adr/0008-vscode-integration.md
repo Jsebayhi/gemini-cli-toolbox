@@ -1,4 +1,4 @@
-# 7. VS Code Integration Strategy
+# ADR-0008: VS Code Integration Strategy
 
 Date: 2026-01-08
 

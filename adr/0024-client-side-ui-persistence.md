@@ -1,4 +1,4 @@
-# 24. Client-Side UI Persistence
+# ADR-0024: Client-Side UI Persistence
 
 Date: 2026-02-01
 Status: Accepted
