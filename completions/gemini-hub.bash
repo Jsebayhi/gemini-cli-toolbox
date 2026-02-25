@@ -50,4 +50,12 @@ _gemini_hub_completions() {
     COMPREPLY=( $(compgen -W "${commands} ${opts}" -- "${cur}") )
 }
 
-complete -F _gemini_hub_completions gemini-hub
+# Register completion for gemini-hub and its aliases
+if command -v complete >/dev/null 2>&1; then
+    complete -F _gemini_hub_completions gemini-hub
+
+    # Support aliases
+    for alias_name in $(alias | sed -n "s/^alias \([^=]*\)='gemini-hub\( .*\)\?'$/\1/p"); do
+        complete -F _gemini_hub_completions "$alias_name"
+    done
+fi

@@ -96,4 +96,12 @@ _gemini_toolbox_completions() {
     COMPREPLY=( $(compgen -W "${commands} ${opts}" -- "${cur}") )
 }
 
-complete -F _gemini_toolbox_completions gemini-toolbox
+# Register completion for gemini-toolbox and its aliases
+if command -v complete >/dev/null 2>&1; then
+    complete -F _gemini_toolbox_completions gemini-toolbox
+
+    # Support aliases
+    for alias_name in $(alias | sed -n "s/^alias \([^=]*\)='gemini-toolbox\( .*\)\?'$/\1/p"); do
+        complete -F _gemini_toolbox_completions "$alias_name"
+    done
+fi
