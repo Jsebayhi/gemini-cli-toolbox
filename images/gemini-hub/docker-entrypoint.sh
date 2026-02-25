@@ -26,8 +26,7 @@ main() {
     log_info()  { _log 2 "$@"; }
     log_debug() { _log 3 "$@"; }
 
-    # 1. Start Tailscale Daemon (Userspace Networking)
-    # --tun=userspace-networking: Avoids needing /dev/net/tun device
+    # 1. Start Tailscale Daemon (Kernel TUN Mode)
     # --statedir: Using /var/lib/tailscale for persistence (mapped to named volume)
     # --socket: FHS-compliant socket path
     local SOCKET_DIR="/run/tailscale"
@@ -35,7 +34,8 @@ main() {
     log_info "Starting Tailscaled..."
     mkdir -p /var/lib/tailscale
     mkdir -p "$SOCKET_DIR"
-    tailscaled --tun=userspace-networking --statedir=/var/lib/tailscale --socket="$SOCKET_PATH" &
+    # Note: We omit --tun=userspace-networking to enable Kernel TUN mode for stability
+    tailscaled --statedir=/var/lib/tailscale --socket="$SOCKET_PATH" &
     sleep 3
 
     # 2. Authenticate
