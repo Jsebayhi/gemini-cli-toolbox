@@ -48,8 +48,13 @@ main() {
     TARGET_USER=$(getent passwd "$TARGET_UID" | cut -d: -f1)
 
     # Fix permissions
+    # We only run recursive chown if the home directory's root doesn't match the target.
+    # This avoids long hangs on large volumes (e.g. node_modules, caches).
     mkdir -p "$HOME"
-    chown -R "$TARGET_UID:$TARGET_GID" "$HOME" >/dev/null 2>&1
+    if [ "$(stat -c %u:%g "$HOME")" != "$TARGET_UID:$TARGET_GID" ]; then
+        log_info "Fixing permissions on $HOME (this may take a while)..."
+        chown -R "$TARGET_UID:$TARGET_GID" "$HOME" >/dev/null 2>&1
+    fi
 
     # --- Docker-out-of-Docker Setup ---
     local DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"

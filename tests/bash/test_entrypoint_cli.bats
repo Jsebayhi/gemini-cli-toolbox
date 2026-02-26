@@ -100,6 +100,41 @@ EOF
     assert_success
 }
 
+@test "CLI Entrypoint: skip recursive chown if root matches" {
+    mock_system_commands
+    
+    # Mock stat to return 1000:1000 for the home dir
+    cat <<EOF > "$TEST_TEMP_DIR/bin/stat"
+#!/bin/bash
+if [[ "\$*" == *"-c %u:%g"* ]]; then
+    echo "1000:1000"
+    exit 0
+fi
+/usr/bin/stat "\$@"
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/stat"
+
+    cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
+#!/bin/bash
+export PROJECT_ROOT=$PROJECT_ROOT
+export TEST_TEMP_DIR=$TEST_TEMP_DIR
+export GEMINI_TOOLBOX_TMUX=false
+export DEFAULT_UID=1000
+export DEFAULT_GID=1000
+export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
+source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+main bash --version
+EOF
+    chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
+    
+    run "$TEST_TEMP_DIR/run_entrypoint.sh"
+    assert_success
+    
+    # Should NOT call chown -R
+    run grep "chown -R 1000:1000 $TEST_TEMP_DIR/home" "$MOCK_GIT_LOG"
+    assert_failure
+}
+
 @test "CLI Entrypoint: DooD permission setup" {
     mock_system_commands
     

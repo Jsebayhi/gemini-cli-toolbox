@@ -44,6 +44,7 @@ bin/gemini-toolbox --debug
 
 ### Permission Architecture
 *   **Concept:** The container starts as `root`, creates a user matching `DEFAULT_UID` (from host), fixes ownership of `/home/gemini`, and drops privileges via `gosu`.
+*   **Fast-Chown Optimization:** To prevent hangs when mounting large volumes (e.g., `node_modules`, caches), the entrypoint only runs `chown -R` recursively if the home directory's root ownership does not match the target UID/GID.
 *   **Rule:** Never remove `gosu` or the entrypoint logic. It is the backbone of the "write-access" feature.
 
 ### Docker-out-of-Docker (DooD)
