@@ -1,10 +1,10 @@
-# ADR-0053: Enabling Internal CLI Auto-Update via Mount-Proof User-Space Installation
+# ADR-0055: Enabling Internal CLI Auto-Update via Mount-Proof User-Space Installation
 
 Date: 2026-02-25
 
 ## Status
 
-Accepted (Supersedes "Home Directory Prefix" strategy)
+Accepted
 
 ## Context
 
