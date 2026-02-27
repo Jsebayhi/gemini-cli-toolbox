@@ -44,7 +44,7 @@ bin/gemini-toolbox --debug
 
 ### Permission Architecture
 *   **Concept:** The container starts as `root`, creates a user matching `DEFAULT_UID` (from host), and drops privileges via `gosu`.
-*   **Fail-Fast Permission Strategy (ADR-0054):** To ensure safety and performance, the entrypoint **never** performs recursive `chown -R` on the home directory. Instead, it verifies that the home directory ownership matches the target UID/GID and fails immediately with troubleshooting instructions if a mismatch is detected.
+*   **Fail-Fast Permission Strategy (ADR-0053):** To ensure safety and performance, the entrypoint **never** performs recursive `chown -R` on the home directory. Instead, it verifies that the home directory ownership matches the target UID/GID and fails immediately with troubleshooting instructions if a mismatch is detected.
 *   **Rule:** Never remove `gosu` or the entrypoint logic. It is the backbone of the "write-access" feature.
 
 ### Docker-out-of-Docker (DooD)

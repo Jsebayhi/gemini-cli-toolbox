@@ -1,7 +1,7 @@
-# ADR-0054: Fail-Fast Permission Strategy
+# ADR-0053: Fail-Fast Permission Strategy
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-02-26

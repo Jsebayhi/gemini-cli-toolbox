@@ -48,7 +48,7 @@ main() {
     TARGET_USER=$(getent passwd "$TARGET_UID" | cut -d: -f1)
 
     # Fix permissions
-    # We no longer perform recursive chown on the home directory (ADR-0054).
+    # We no longer perform recursive chown on the home directory (ADR-0053).
     # Instead, we verify ownership and fail-fast if a mismatch is detected.
     mkdir -p "$HOME"
     local CURRENT_OWNER
