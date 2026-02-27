@@ -20,9 +20,9 @@ We will patch the `@google/gemini-cli` inside the Docker image during the build 
 We will use `sed` within the `images/gemini-cli/Dockerfile` to modify `dist/src/ui/hooks/useQuotaAndFallback.js`.
 
 To ensure robustness:
-1. We will use `grep` to verify the presence of the "high demand" error message before applying the patch.
+1. We will use `grep` to verify the presence of the unique target string `message = messageLines.join('\n');` before applying the patch.
 2. If `grep` fails (meaning the upstream code has changed), the build will exit with an error, alerting us to update the patch.
-3. The patch will insert `return "retry_always";` at the top of the relevant `else` block and comment out the original UI-related logic.
+3. The patch will replace the target line with `return 'retry_always';`. This effectively skips the subsequent lines that set error flags and open the UI dialog, providing a seamless background retry.
 
 **Rationale for Early Return:** 
 We intentionally bypass the lines that set `quotaErrorOccurred` to `true`. In the original code, these flags are only reset when a user manually clicks "Retry". By skipping them during an automated retry, we prevent the CLI from entering a "sticky" error state (which would disable features like Next Speaker Check) and ensure that when the request finally succeeds, the system is in a clean, non-error state.

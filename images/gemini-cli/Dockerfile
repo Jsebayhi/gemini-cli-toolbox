@@ -41,15 +41,12 @@ RUN CORE_DIR=$(npm root -g)/@google/gemini-cli/node_modules/@google/gemini-cli-c
 RUN TARGET_FILE=$(npm root -g)/@google/gemini-cli/dist/src/ui/hooks/useQuotaAndFallback.js \
     && if [ -f "$TARGET_FILE" ]; then \
         echo "Patching infinite retry in $TARGET_FILE..."; \
-        if grep -q "We are currently experiencing high demand." "$TARGET_FILE"; then \
-            sed -i '/We are currently experiencing high demand./i \                return "retry_always";' "$TARGET_FILE"; \
-            sed -i '/We are currently experiencing high demand./s/^/                \/\/ /' "$TARGET_FILE"; \
-            sed -i "/'We apologize and appreciate your patience.',/s/^/                \/\/ /" "$TARGET_FILE"; \
-            sed -i "/'\/model to switch models.',/s/^/                \/\/ /" "$TARGET_FILE"; \
-            sed -i "/message = messageLines.join('\\\\n');/s/^/                \/\/ /" "$TARGET_FILE"; \
-            sed -i "/const messageLines = \[/s/^/                \/\/ /" "$TARGET_FILE"; \
+        # We replace the line that joins the high-demand message with an early return.
+        # This prevents the state flags from being set and the dialog from opening.
+        if grep -q "message = messageLines.join('\\\\n');" "$TARGET_FILE"; then \
+            sed -i "s/message = messageLines.join('\\\\n');/return 'retry_always';/" "$TARGET_FILE"; \
         else \
-            echo "Error: High demand message not found in $TARGET_FILE. Patch failed." && exit 1; \
+            echo "Error: Target string for patch not found in $TARGET_FILE. Patch failed." && exit 1; \
         fi \
     else \
         echo "Error: Target file $TARGET_FILE not found. Patch failed." && exit 1; \
