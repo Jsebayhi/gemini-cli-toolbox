@@ -7,7 +7,7 @@ Proposed
 2026-02-26
 
 ## Context
-Previous ADRs (ADR-0003, ADR-0053) established a strategy where the container entrypoint would automatically fix ownership of the home directory using `chown -R`. This was intended to provide a "Zero-Config" experience.
+Previous ADR (ADR-0003) established a strategy where the container entrypoint would automatically fix ownership of the home directory using `chown -R`. This was intended to provide a "Zero-Config" experience.
 
 However, automatically modifying host file permissions can be unexpected and intrusive for users. Furthermore, since we already create the container user with a UID/GID matching the host user, permissions should naturally match in most cases unless the host environment is misconfigured or a volume was previously used by a different user.
 
@@ -20,10 +20,10 @@ We will shift from an **Automatic Fix** to a **Fail-Fast** permission strategy.
 
 ## Alternatives Analyzed
 
-### 1. Status Quo (Fast-Chown Optimization - ADR-0053)
-*   **Description:** Automatically fix permissions only if the root of the directory mismatch.
+### 1. Automatic Fix (ADR-0003)
+*   **Description:** Automatically fix permissions on startup.
 *   **Pros:** High UX (automatic fix).
-*   **Cons:** Intrusive; modifies host files without explicit user consent.
+*   **Cons:** Intrusive; modifies host files without explicit user consent. Slow on large volumes.
 *   **Status:** Superseded by this ADR.
 
 ### 2. Warn-only (Non-Blocking)
