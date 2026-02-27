@@ -12,11 +12,12 @@ Previous ADR (ADR-0003) established a strategy where the container entrypoint wo
 However, automatically modifying host file permissions can be unexpected and intrusive for users. Furthermore, since we already create the container user with a UID/GID matching the host user, permissions should naturally match in most cases unless the host environment is misconfigured or a volume was previously used by a different user.
 
 ## Decision
-We will shift from an **Automatic Fix** to a **Fail-Fast** permission strategy.
+We will shift from an **Automatic Fix** to a **Fail-Fast** permission strategy with a **Surgical Exception** for container-side artifacts.
 
 1.  The entrypoint will **no longer** perform recursive `chown -R` on the home directory.
 2.  The entrypoint will **verify** that the home directory (`$HOME`) is owned by the target UID/GID.
-3.  If a mismatch is detected, the entrypoint will **fail clearly** with an error message explaining the situation and providing the exact command the user should run on their host to fix it.
+3.  **Surgical Fix:** If the directory is owned by root (`0:0`) AND it is **not** a mountpoint, the entrypoint will automatically fix the ownership of the directory itself (non-recursively). This handles cases where the directory was created by the `Dockerfile` or the Docker daemon (parent directory creation) rather than a host volume.
+4.  If a mismatch persists (e.g., a root-owned host volume is mounted), the entrypoint will **fail clearly** with an error message explaining the situation and providing the exact command the user should run on their host to fix it.
 
 ## Alternatives Analyzed
 
@@ -39,6 +40,7 @@ We will shift from an **Automatic Fix** to a **Fail-Fast** permission strategy.
 *   **Status:** Selected.
 
 ## Consequences
-*   **Security:** Improved transparency; the container never modifies host file ownership.
-*   **UX:** Users might need to run a manual `chown` command if they move their configuration or change their UID.
-*   **Maintenance:** Simplifies the entrypoint logic by removing the recursive traversal entirely.
+*   **Security:** Improved transparency; the container never modifies host file ownership recursively.
+*   **Robustness:** Correctly handles root-owned parent directories created by the `Dockerfile` or Docker daemon without manual user intervention.
+*   **UX:** High compatibility with default Docker behaviors while still protecting host volumes.
+*   **Maintenance:** Simplifies the entrypoint logic by removing the recursive traversal while adding a surgical, non-intrusive fix for common setup side-effects.

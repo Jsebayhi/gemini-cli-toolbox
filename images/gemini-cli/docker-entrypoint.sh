@@ -51,8 +51,32 @@ main() {
     # We no longer perform recursive chown on the home directory (ADR-0053).
     # Instead, we verify ownership and fail-fast if a mismatch is detected.
     mkdir -p "$HOME"
+
+    is_mountpoint() {
+        local mount_file=${MOCK_MOUNTS:-/proc/self/mounts}
+        if command -v mountpoint >/dev/null 2>&1; then
+            mountpoint -q "$1"
+            return $?
+        fi
+        # Fallback for systems without mountpoint command (e.g. minimal images)
+        # We check for the path surrounded by spaces in the mount list
+        grep -q " $1 " "$mount_file" 2>/dev/null
+    }
+
     local CURRENT_OWNER
     CURRENT_OWNER=$(stat -c %u:%g "$HOME")
+    if [ "$CURRENT_OWNER" != "$TARGET_UID:$TARGET_GID" ]; then
+        # SURGICAL FIX: If the directory is owned by root AND it's NOT a mount point,
+        # it means it was created by the Dockerfile or Docker daemon (parent creation)
+        # and not by the user. In this case, it's safe to fix the ownership of the
+        # directory itself (non-recursively).
+        if [ "$CURRENT_OWNER" = "0:0" ] && ! is_mountpoint "$HOME"; then
+             log_info "Fixing root-owned home directory $HOME (non-recursive)..."
+             chown "$TARGET_UID:$TARGET_GID" "$HOME"
+             CURRENT_OWNER=$(stat -c %u:%g "$HOME")
+        fi
+    fi
+
     if [ "$CURRENT_OWNER" != "$TARGET_UID:$TARGET_GID" ]; then
         log_error "Permission mismatch detected on $HOME."
         log_error "The directory is owned by $CURRENT_OWNER but should be $TARGET_UID:$TARGET_GID."
