@@ -257,9 +257,7 @@ EOF
     run "$TEST_TEMP_DIR/run_entrypoint.sh"
     assert_success
     # Check if debug messages were printed (which means FD 3 was redirected to stdout)
-    run grep "Creating Worktree" <<< "$output" # Wait, that's toolbox. 
-    # Let's check entrypoint specific debug
-    run grep "Setting up Docker Access" <<< "$output" # Needs HOST_DOCKER_GID
+    # run grep "Setting up Docker Access" <<< "$output" # Needs HOST_DOCKER_GID
 }
 
 @test "CLI Entrypoint: existing user and group" {
@@ -345,7 +343,7 @@ EOF
 export PROJECT_ROOT=$PROJECT_ROOT
 export GEMINI_TOOLBOX_TMUX=false
 export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
-source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
 main bash --version
 EOF
     chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
@@ -353,5 +351,93 @@ EOF
     run "$TEST_TEMP_DIR/run_entrypoint.sh"
     assert_success
     run grep "executing: bash --version" <<< "$output"
+    assert_success
+}
+
+@test "CLI Entrypoint: fix ownership if root-owned and not a mountpoint" {
+    mock_system_commands
+    
+    # Mock stat to return 0:0 first, then 1000:1000 after chown
+    cat <<EOF > "$TEST_TEMP_DIR/bin/stat"
+#!/bin/bash
+if [[ "\$*" == *"-c %u:%g"* ]]; then
+    if [ -f "$TEST_TEMP_DIR/chown_called" ]; then
+        echo "1000:1000"
+    else
+        echo "0:0"
+    fi
+    exit 0
+fi
+/usr/bin/stat "\$@"
+EOF
+    # Mock chown to record call
+    cat <<EOF > "$TEST_TEMP_DIR/bin/chown"
+#!/bin/bash
+echo "chown \$*" >> "$MOCK_GIT_LOG"
+touch "$TEST_TEMP_DIR/chown_called"
+EOF
+    # Mock mountpoint to fail (not a mountpoint)
+    cat <<EOF > "$TEST_TEMP_DIR/bin/mountpoint"
+#!/bin/bash
+exit 1
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/"*
+
+    cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
+#!/bin/bash
+export PROJECT_ROOT=$PROJECT_ROOT
+export TEST_TEMP_DIR=$TEST_TEMP_DIR
+export GEMINI_TOOLBOX_TMUX=false
+export DEFAULT_UID=1000
+export DEFAULT_GID=1000
+export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
+source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+main bash --version
+EOF
+    chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
+    
+    run "$TEST_TEMP_DIR/run_entrypoint.sh"
+    [ "$status" -eq 0 ] || echo "$output" >&2
+    assert_success
+    run grep "chown 1000:1000 $TEST_TEMP_DIR/home" "$MOCK_GIT_LOG"
+    assert_success
+}
+
+@test "CLI Entrypoint: fail if root-owned and IS a mountpoint" {
+    mock_system_commands
+    
+    # Mock stat to return 0:0
+    cat <<EOF > "$TEST_TEMP_DIR/bin/stat"
+#!/bin/bash
+if [[ "\$*" == *"-c %u:%g"* ]]; then
+    echo "0:0"
+    exit 0
+fi
+/usr/bin/stat "\$@"
+EOF
+    # Mock mountpoint to succeed (is a mountpoint)
+    cat <<EOF > "$TEST_TEMP_DIR/bin/mountpoint"
+#!/bin/bash
+exit 0
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/stat"
+    chmod +x "$TEST_TEMP_DIR/bin/mountpoint"
+
+    cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
+#!/bin/bash
+export PROJECT_ROOT=$PROJECT_ROOT
+export TEST_TEMP_DIR=$TEST_TEMP_DIR
+export GEMINI_TOOLBOX_TMUX=false
+export DEFAULT_UID=1000
+export DEFAULT_GID=1000
+export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
+source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+main bash --version
+EOF
+    chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
+    
+    run "$TEST_TEMP_DIR/run_entrypoint.sh"
+    assert_failure
+    run grep "Permission mismatch detected" <<< "$output"
     assert_success
 }
