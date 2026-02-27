@@ -2,10 +2,10 @@
 ARG BASE_IMAGE=gemini-cli-toolbox/base:latest
 FROM ${BASE_IMAGE}
 
-# 1. Configure User-Space NPM Prefix
-# This allows the non-root 'gemini' user to install and update global packages
-# without requiring root permissions or changing system directory ownership.
-ENV NPM_CONFIG_PREFIX=/home/gemini/.npm-global
+# 1. Configure Mount-Proof User-Space NPM Prefix
+# We use /opt instead of /home/gemini to ensure the CLI isn't hidden 
+# if a user mounts a volume to their home directory.
+ENV NPM_CONFIG_PREFIX=/opt/npm-global
 ENV PATH=$NPM_CONFIG_PREFIX/bin:$PATH
 
 # 2. Install Gemini CLI
@@ -15,6 +15,7 @@ ENV PATH=$NPM_CONFIG_PREFIX/bin:$PATH
 # Added id=gemini-npm-cache to allow surgical pruning
 RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
     mkdir -p $NPM_CONFIG_PREFIX && \
+    chmod 777 $NPM_CONFIG_PREFIX && \
     npm install -g --verbose --prefix $NPM_CONFIG_PREFIX @google/gemini-cli && \
     chmod -R 777 $NPM_CONFIG_PREFIX
 
