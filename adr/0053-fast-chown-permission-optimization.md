@@ -1,7 +1,7 @@
 # ADR-0053: Fast-Chown Permission Optimization
 
 ## Status
-Accepted
+Superseded by [ADR-0054](0054-fail-fast-permission-strategy.md)
 
 ## Date
 2026-02-26

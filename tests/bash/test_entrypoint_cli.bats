@@ -71,6 +71,15 @@ EOF
 #!/bin/bash
 echo "git \$*" >> "$MOCK_GIT_LOG"
 EOF
+    cat <<EOF > "$TEST_TEMP_DIR/bin/stat"
+#!/bin/bash
+if [[ "\$*" == *"-c %u:%g"* ]]; then
+    # Default to success for all standard tests
+    echo "1000:1000"
+    exit 0
+fi
+/usr/bin/stat "\$@"
+EOF
     chmod +x "$TEST_TEMP_DIR/bin/"*
 }
 
@@ -96,23 +105,11 @@ EOF
     
     run grep "groupadd -g 1000 gemini" "$MOCK_GIT_LOG"
     assert_success
-    run grep "chown -R 1000:1000 $TEST_TEMP_DIR/home" "$MOCK_GIT_LOG"
-    assert_success
 }
 
-@test "CLI Entrypoint: skip recursive chown if root matches" {
+@test "CLI Entrypoint: verify permission check matches target" {
     mock_system_commands
-    
-    # Mock stat to return 1000:1000 for the home dir
-    cat <<EOF > "$TEST_TEMP_DIR/bin/stat"
-#!/bin/bash
-if [[ "\$*" == *"-c %u:%g"* ]]; then
-    echo "1000:1000"
-    exit 0
-fi
-/usr/bin/stat "\$@"
-EOF
-    chmod +x "$TEST_TEMP_DIR/bin/stat"
+    # Uses default 1000:1000 mock from mock_system_commands
 
     cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
 #!/bin/bash
@@ -133,6 +130,39 @@ EOF
     # Should NOT call chown -R
     run grep "chown -R 1000:1000 $TEST_TEMP_DIR/home" "$MOCK_GIT_LOG"
     assert_failure
+}
+
+@test "CLI Entrypoint: fail-fast on permission mismatch" {
+    mock_system_commands
+    
+    # Override stat mock to return 0:0 (root) for the home dir
+    cat <<EOF > "$TEST_TEMP_DIR/bin/stat"
+#!/bin/bash
+if [[ "\$*" == *"-c %u:%g"* ]]; then
+    echo "0:0"
+    exit 0
+fi
+/usr/bin/stat "\$@"
+EOF
+    chmod +x "$TEST_TEMP_DIR/bin/stat"
+
+    cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
+#!/bin/bash
+export PROJECT_ROOT=$PROJECT_ROOT
+export TEST_TEMP_DIR=$TEST_TEMP_DIR
+export GEMINI_TOOLBOX_TMUX=false
+export DEFAULT_UID=1000
+export DEFAULT_GID=1000
+export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
+source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+main bash --version
+EOF
+    chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
+    
+    run "$TEST_TEMP_DIR/run_entrypoint.sh"
+    assert_failure
+    run grep "Permission mismatch detected" <<< "$output"
+    assert_success
 }
 
 @test "CLI Entrypoint: DooD permission setup" {
