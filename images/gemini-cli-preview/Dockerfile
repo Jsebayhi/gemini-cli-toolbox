@@ -44,7 +44,8 @@ RUN TARGET_FILE=$(npm root -g)/@google/gemini-cli/dist/src/ui/hooks/useQuotaAndF
         # We replace the line that joins the high-demand message with an early return.
         # This prevents the state flags from being set and the dialog from opening.
         if grep -q "message = messageLines.join('\\\\n');" "$TARGET_FILE"; then \
-            sed -i "s/message = messageLines.join('\\\\n');/return 'retry_always';/" "$TARGET_FILE"; \
+            sed -i "s/message = messageLines.join('\\\\n');/return 'retry_always';/" "$TARGET_FILE" \
+                && grep -q "return 'retry_always';" "$TARGET_FILE"; \
         else \
             echo "Error: Target string for patch not found in $TARGET_FILE. Patch failed." && exit 1; \
         fi \

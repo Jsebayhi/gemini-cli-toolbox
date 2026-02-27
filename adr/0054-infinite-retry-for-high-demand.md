@@ -17,12 +17,14 @@ We will patch the `@google/gemini-cli` inside the Docker image during the build 
 3. **Patching (Chosen):** Modifying the compiled JS in the Docker image is the most direct and reliable way to change this behavior for our users immediately.
 
 ## Implementation
-We will use `sed` within the `images/gemini-cli/Dockerfile` to modify `dist/src/ui/hooks/useQuotaAndFallback.js`.
+We will use `sed` within the Dockerfiles for both stable (`images/gemini-cli/Dockerfile`) and preview (`images/gemini-cli-preview/Dockerfile`) images to modify `dist/src/ui/hooks/useQuotaAndFallback.js`.
 
 To ensure robustness:
-1. We will use `grep` to verify the presence of the unique target string `message = messageLines.join('\n');` before applying the patch.
-2. If `grep` fails (meaning the upstream code has changed), the build will exit with an error, alerting us to update the patch.
-3. The patch will replace the target line with `return 'retry_always';`. This effectively skips the subsequent lines that set error flags and open the UI dialog, providing a seamless background retry.
+1. **Pre-patch Check:** We use `grep` to verify the presence of the unique target string `message = messageLines.join('\n');` before applying the patch.
+2. **Surgical Patch:** The patch replaces the target line with `return 'retry_always';`. This effectively skips the subsequent lines that set error flags and open the UI dialog, providing a seamless background retry.
+3. **Post-patch Verification (Double Verification):** Immediately following the `sed` command, we use another `grep` to confirm that `return 'retry_always';` actually exists in the file.
+
+If any of these steps fail, the build will exit with an error, alerting us to update the patch logic for that specific image version.
 
 **Rationale for Early Return:** 
 We intentionally bypass the lines that set `quotaErrorOccurred` to `true`. In the original code, these flags are only reset when a user manually clicks "Retry". By skipping them during an automated retry, we prevent the CLI from entering a "sticky" error state (which would disable features like Next Speaker Check) and ensure that when the request finally succeeds, the system is in a clean, non-error state.
