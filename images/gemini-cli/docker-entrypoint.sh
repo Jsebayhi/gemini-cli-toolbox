@@ -53,13 +53,14 @@ main() {
     mkdir -p "$HOME"
 
     is_mountpoint() {
+        local mount_file=${MOCK_MOUNTS:-/proc/self/mounts}
         if command -v mountpoint >/dev/null 2>&1; then
             mountpoint -q "$1"
             return $?
         fi
         # Fallback for systems without mountpoint command (e.g. minimal images)
-        # We check for the path surrounded by spaces in /proc/self/mounts
-        grep -q " $1 " /proc/self/mounts 2>/dev/null
+        # We check for the path surrounded by spaces in the mount list
+        grep -q " $1 " "$mount_file" 2>/dev/null
     }
 
     local CURRENT_OWNER

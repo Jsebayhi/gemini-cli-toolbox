@@ -80,6 +80,8 @@ if [[ "\$*" == *"-c %u:%g"* ]]; then
 fi
 /usr/bin/stat "\$@"
 EOF
+    # Create an empty mounts file for the is_mountpoint fallback
+    touch "$TEST_TEMP_DIR/mounts"
     chmod +x "$TEST_TEMP_DIR/bin/"*
 }
 
@@ -256,8 +258,6 @@ EOF
 
     run "$TEST_TEMP_DIR/run_entrypoint.sh"
     assert_success
-    # Check if debug messages were printed (which means FD 3 was redirected to stdout)
-    # run grep "Setting up Docker Access" <<< "$output" # Needs HOST_DOCKER_GID
 }
 
 @test "CLI Entrypoint: existing user and group" {
@@ -376,11 +376,8 @@ EOF
 echo "chown \$*" >> "$MOCK_GIT_LOG"
 touch "$TEST_TEMP_DIR/chown_called"
 EOF
-    # Mock mountpoint to fail (not a mountpoint)
-    cat <<EOF > "$TEST_TEMP_DIR/bin/mountpoint"
-#!/bin/bash
-exit 1
-EOF
+    # Create empty mounts file (not a mountpoint)
+    echo "" > "$TEST_TEMP_DIR/mounts"
     chmod +x "$TEST_TEMP_DIR/bin/"*
 
     cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
@@ -391,6 +388,8 @@ export GEMINI_TOOLBOX_TMUX=false
 export DEFAULT_UID=1000
 export DEFAULT_GID=1000
 export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
+# Mock /proc/self/mounts for the entrypoint
+export MOCK_MOUNTS="$TEST_TEMP_DIR/mounts"
 source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
 main bash --version
 EOF
@@ -415,13 +414,9 @@ if [[ "\$*" == *"-c %u:%g"* ]]; then
 fi
 /usr/bin/stat "\$@"
 EOF
-    # Mock mountpoint to succeed (is a mountpoint)
-    cat <<EOF > "$TEST_TEMP_DIR/bin/mountpoint"
-#!/bin/bash
-exit 0
-EOF
+    # Mock mounts file (IS a mountpoint)
+    echo "something $TEST_TEMP_DIR/home some-options" > "$TEST_TEMP_DIR/mounts"
     chmod +x "$TEST_TEMP_DIR/bin/stat"
-    chmod +x "$TEST_TEMP_DIR/bin/mountpoint"
 
     cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
 #!/bin/bash
@@ -431,6 +426,8 @@ export GEMINI_TOOLBOX_TMUX=false
 export DEFAULT_UID=1000
 export DEFAULT_GID=1000
 export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
+# Mock /proc/self/mounts for the entrypoint
+export MOCK_MOUNTS="$TEST_TEMP_DIR/mounts"
 source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
 main bash --version
 EOF

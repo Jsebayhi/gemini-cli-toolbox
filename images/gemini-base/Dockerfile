@@ -27,7 +27,6 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     make \
     gosu \
     git \
-    util-linux \
     ca-certificates \
     procps \
     findutils \
