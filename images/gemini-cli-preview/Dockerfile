@@ -33,6 +33,26 @@ RUN CORE_DIR=$(npm root -g)/@google/gemini-cli/node_modules/@google/gemini-cli-c
         echo "Error: Failed to find IDE host detection logic in $CORE_DIR. Upstream code may have changed." && exit 1; \
     fi
 
+# 3. Patch Infinite Retry (Robust)
+# The CLI stops after 3 retries on high-demand, prompting the user via a dialog.
+# We patch it to return "retry_always" automatically for high-demand errors,
+# bypassing the dialog and ensuring automated tasks continue.
+# This patch fails the build if the target file or strings are missing.
+RUN TARGET_FILE=$(npm root -g)/@google/gemini-cli/dist/src/ui/hooks/useQuotaAndFallback.js \
+    && if [ -f "$TARGET_FILE" ]; then \
+        echo "Patching infinite retry in $TARGET_FILE..."; \
+        # We replace the line that joins the high-demand message with an early return.
+        # This prevents the state flags from being set and the dialog from opening.
+        if grep -q "message = messageLines.join('\\\\n');" "$TARGET_FILE"; then \
+            sed -i "s/message = messageLines.join('\\\\n');/return 'retry_always';/" "$TARGET_FILE" \
+                && grep -q "return 'retry_always';" "$TARGET_FILE"; \
+        else \
+            echo "Error: Target string for patch not found in $TARGET_FILE. Patch failed." && exit 1; \
+        fi \
+    else \
+        echo "Error: Target file $TARGET_FILE not found. Patch failed." && exit 1; \
+    fi
+
 # 4. Copy Entrypoint
 COPY --from=scripts docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
