@@ -48,8 +48,18 @@ main() {
     TARGET_USER=$(getent passwd "$TARGET_UID" | cut -d: -f1)
 
     # Fix permissions
+    # We no longer perform recursive chown on the home directory (ADR-0053).
+    # Instead, we verify ownership and fail-fast if a mismatch is detected.
     mkdir -p "$HOME"
-    chown -R "$TARGET_UID:$TARGET_GID" "$HOME" >/dev/null 2>&1
+    local CURRENT_OWNER
+    CURRENT_OWNER=$(stat -c %u:%g "$HOME")
+    if [ "$CURRENT_OWNER" != "$TARGET_UID:$TARGET_GID" ]; then
+        log_error "Permission mismatch detected on $HOME."
+        log_error "The directory is owned by $CURRENT_OWNER but should be $TARGET_UID:$TARGET_GID."
+        log_error "To fix this, run the following on your host machine:"
+        log_error "  sudo chown -R \$(id -u):\$(id -g) ~/.gemini"
+        exit 1
+    fi
 
     # --- Docker-out-of-Docker Setup ---
     local DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"
