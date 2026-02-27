@@ -245,18 +245,27 @@ EOF
 @test "CLI Entrypoint: debug mode enabled" {
     mock_system_commands
     
+    # Simulate existing docker socket
+    python3 -c "import socket, os; s=socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.bind('$TEST_TEMP_DIR/docker.sock')"
+
     cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
 #!/bin/bash
 export PROJECT_ROOT=$PROJECT_ROOT
+export TEST_TEMP_DIR=$TEST_TEMP_DIR
 export DEBUG=true
 export GEMINI_TOOLBOX_TMUX=false
 export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
+export HOST_DOCKER_GID=999
+export DOCKER_SOCK="$TEST_TEMP_DIR/docker.sock"
 source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
 main bash --version
 EOF
     chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
 
     run "$TEST_TEMP_DIR/run_entrypoint.sh"
+    assert_success
+    # Check if debug messages were printed (which means FD 3 was redirected to stdout)
+    run grep "Setting up Docker Access" <<< "$output"
     assert_success
 }
 
@@ -343,7 +352,7 @@ EOF
 export PROJECT_ROOT=$PROJECT_ROOT
 export GEMINI_TOOLBOX_TMUX=false
 export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
-source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
 main bash --version
 EOF
     chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
@@ -390,7 +399,7 @@ export DEFAULT_GID=1000
 export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
 # Mock /proc/self/mounts for the entrypoint
 export MOCK_MOUNTS="$TEST_TEMP_DIR/mounts"
-source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
 main bash --version
 EOF
     chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
@@ -428,7 +437,7 @@ export DEFAULT_GID=1000
 export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
 # Mock /proc/self/mounts for the entrypoint
 export MOCK_MOUNTS="$TEST_TEMP_DIR/mounts"
-source "$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
+source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
 main bash --version
 EOF
     chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
