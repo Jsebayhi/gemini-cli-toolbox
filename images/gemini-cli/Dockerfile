@@ -2,24 +2,27 @@
 ARG BASE_IMAGE=gemini-cli-toolbox/base:latest
 FROM ${BASE_IMAGE}
 
-# 1. Install Gemini CLI
-# Clean cache to save space
-# 1. Install Gemini CLI
+# 1. Configure Mount-Proof User-Space NPM Prefix
+# We use /opt instead of /home/gemini to ensure the CLI isn't hidden 
+# if a user mounts a volume to their home directory.
+ENV NPM_CONFIG_PREFIX=/opt/npm-global
+ENV PATH=$NPM_CONFIG_PREFIX/bin:$PATH
+
+# 2. Install Gemini CLI
 # Clean cache to save space
 # Added --verbose to debug slow install
 # Added --mount=type=cache to speed up rebuilds (persists ~/.npm)
 # Added id=gemini-npm-cache to allow surgical pruning
 RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
-    npm install -g --verbose @google/gemini-cli \
-    && cd $(npm root -g)/@google/gemini-cli \
-    && npm install --package-lock-only \
-    && (npm audit fix --only=prod || true) \
-    && npm cache clean --force
+    mkdir -p $NPM_CONFIG_PREFIX && \
+    chmod 777 $NPM_CONFIG_PREFIX && \
+    npm install -g --verbose --prefix $NPM_CONFIG_PREFIX @google/gemini-cli && \
+    chmod -R 777 $NPM_CONFIG_PREFIX
 
 # Patch IDE Host Detection
 # The CLI forces 'host.docker.internal' in Docker, but the VS Code extension
 # only accepts '127.0.0.1'. We patch it to respect GEMINI_CLI_IDE_SERVER_HOST.
-RUN CORE_DIR=$(npm root -g)/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/ide \
+RUN CORE_DIR=$NPM_CONFIG_PREFIX/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/ide \
     && TARGET_FILE="" \
     && if [ -f "$CORE_DIR/ide-connection-utils.js" ]; then TARGET_FILE="$CORE_DIR/ide-connection-utils.js"; \
        elif [ -f "$CORE_DIR/ide-client.js" ]; then TARGET_FILE="$CORE_DIR/ide-client.js"; fi \
