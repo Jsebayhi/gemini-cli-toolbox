@@ -39,6 +39,26 @@ def test_wizard_full_launch_journey(hub: HubPage, tmp_path, monkeypatch):
         expect(hub.page.get_by_text("Session launched!")).to_be_visible()
         expect(hub.page.get_by_role("button", name="Connect (VPN) 🚀")).to_be_visible()
 
+def test_wizard_create_folder_journey(hub: HubPage, tmp_path, monkeypatch):
+    """Test the folder creation journey in the wizard."""
+    project_root = tmp_path / "projects"
+    project_root.mkdir()
+    
+    from app.config import Config
+    monkeypatch.setattr(Config, "HUB_ROOTS", [str(project_root)])
+    
+    hub.navigate()
+    hub.open_wizard()
+    hub.wizard.select_root(str(project_root))
+    
+    # Create a new folder
+    new_folder_name = "new-project-dir"
+    hub.wizard.create_folder(new_folder_name)
+    
+    # Verify it appears in the list and filesystem
+    expect(hub.wizard.folder_list.get_by_text(f"📁 {new_folder_name}")).to_be_visible()
+    assert (project_root / new_folder_name).is_dir()
+
 def test_wizard_navigation_back_and_up(hub: HubPage, tmp_path, monkeypatch):
     """Test navigation using modular POM components."""
     root = tmp_path / "projects"
