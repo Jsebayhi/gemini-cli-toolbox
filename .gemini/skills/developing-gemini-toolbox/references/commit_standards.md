@@ -24,7 +24,12 @@ The body MUST detail **WHY** the change was made, focusing on technical rational
 - **Line Length:** Wrap lines at 72 characters to ensure readability in git log and terminal UIs.
 - **Structure:** Use bullet points or small paragraphs to separate distinct technical reasons.
 
-## 4. Examples
+## 4. History & Commits
+- **No Amending:** NEVER amend a commit (`git commit --amend`). 
+- **Rationale:** Because this repository uses a squash-on-merge strategy, the final commit will be clean regardless of the intermediate history. Keeping the modification history provides a better audit trail for the reviewer, allowing them to see how the implementation evolved and how feedback was addressed.
+- **Micro-Commits:** Prefer small, atomic commits that correspond to specific steps in your strategy.
+
+## 5. Examples
 
 ### Good (High Signal)
 ```markdown

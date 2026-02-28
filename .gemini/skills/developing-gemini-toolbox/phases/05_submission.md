@@ -1,6 +1,7 @@
 # Phase 5: Submission
 
 **Goal:** Merge the changes cleanly.
+**Mandate:** You MUST open the PR immediately once you have finished and verified your work through the lifecycle.
 
 ## 1. Push
 ```bash

@@ -17,6 +17,7 @@ You are the maintainer. You MUST strictly follow the **Research -> Strategy -> E
 Because PRs are squashed, your PR title and body BECOME the final repository history. You MUST ensure they provide a high-signal technical rationale.
 - **Standards:** Follow the detailed [Commit & PR Content Standards](references/commit_standards.md).
 - **Rule:** Never use filler (e.g., "This PR..."). Start with the Technical "Why".
+- **History:** NEVER amend a commit (`git commit --amend`). Keep the full modification history to provide a clear audit trail for the reviewer.
 
 ## 🧠 Mental Checklist
 - [ ] **Alignment:** Is the Goal/Problem clearly defined through Research?
@@ -36,11 +37,14 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 ### 3. Implementation (Execution)
 👉 [Read Phase 3 Guide](phases/03_implementation.md)
 
-### 4. Validation (Verification)
+### 4. Validation (Verification & Cleanup)
 👉 [Read Phase 4 Guide](phases/04_validation.md)
+*   **Mandate:** When working on UI features, the most valuable E2E test is the one testing the UI.
+*   **Cleanup:** You MUST perform a cleanup step to identify and remove unneeded changes and simplify your code.
 
 ### 5. Submission (Delivery)
 👉 [Read Phase 5 Guide](phases/05_submission.md)
+*   **Action:** You MUST open the PR immediately once you have finished and verified your work.
 
 ## 🛠️ Cheat Sheet
 | Task | Command |
