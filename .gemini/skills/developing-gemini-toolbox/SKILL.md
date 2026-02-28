@@ -26,6 +26,7 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 - [ ] **Implementation:** Are docs and code updated?
 - [ ] **Validation:** Did `make local-ci` pass?
 - [ ] **Submission:** Is the PR body formatted for a squash commit (Why + Issue)?
+- [ ] **Feedback:** Have all review comments been addressed and responded to?
 
 ## 🚀 The Workflow
 
@@ -46,6 +47,7 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 ### 5. Submission (Delivery)
 👉 [Read Phase 5 Guide](phases/05_submission.md)
 *   **Action:** You MUST open the PR immediately once you have finished and verified your work.
+*   **Feedback:** You MUST respond to EVERY review comment, stating if you agree (and have addressed it) or disagree (with technical rationale).
 
 ## 🛠️ Cheat Sheet
 | Task | Command |
