@@ -263,9 +263,17 @@ main() {
         echo "Warning: gemini-toolbox script not found at $toolbox_script. Hub will use embedded version."
     fi
 
-    local host_docker_gid=""
-    if command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
-        host_docker_gid=$(getent group docker | cut -d: -f3)
+    local host_docker_gid="${HOST_DOCKER_GID:-}"
+    if [ -z "$host_docker_gid" ]; then
+        # 1. Try detecting from the socket itself (most robust for DooD)
+        if [ -S "/var/run/docker.sock" ]; then
+            host_docker_gid=$(stat -c %g /var/run/docker.sock 2>/dev/null || echo "")
+        fi
+
+        # 2. Fallback to group lookup if stat failed or socket missing
+        if [ -z "$host_docker_gid" ] && command -v getent >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
+            host_docker_gid=$(getent group docker | cut -d: -f3)
+        fi
     fi
 
     log_info "Starting Gemini Hub on port $port..."
