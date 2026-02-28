@@ -20,6 +20,10 @@ make scan
 *   **Suppression:** If you must suppress a CVE in `.trivyignore`, you MUST follow the [DevSecOps Governance](../references/devsecops.md) (Individual entries + 90-day TTL).
 *   **Ownership:** Verify that any new vulnerabilities aren't introduced by your direct dependencies.
 
+## 3. Manual Verification
+*   Execute the relevant **User Journey** from `docs/internal/MAINTENANCE_JOURNEYS.md`.
+*   If a new feature, add a new Journey (See Phase 2).
+
 ## 4. Cleanup & Simplification (Mandatory)
 Once you have verified your work and ensured all tests pass, you MUST perform a final cleanup of your code.
 - **Identify Unneeded Changes:** Review your git diff and revert any changes that were part of your research or experimentation but are not necessary for the final solution.
