@@ -126,12 +126,14 @@ main() {
     local auto_shutdown=false
     local prune_enabled=true
     local no_vpn=false
+    local localhost_access=true
     while [[ $# -gt 0 ]]; do
       case $1 in
         -d|--detach) mode="-d"; shift ;;
         --image)     override_image="$2"; shift; shift ;;
         --key)       auth_key="$2"; shift; shift ;;
         --no-vpn)    no_vpn=true; shift ;;
+        --no-localhost) localhost_access=false; shift ;;
         --auto-shutdown) auto_shutdown=true; shift ;;
         --no-worktree-prune) prune_enabled=false; shift ;;
         --workspace) workspace_roots+=("$2"); shift; shift ;;
@@ -280,14 +282,21 @@ main() {
         fi
     fi
 
+    local port_mapping=()
+    if [ "$localhost_access" = true ]; then
+        port_mapping=("-p" "127.0.0.1:$port:8888")
+        log_info "Access at http://localhost:$port (Desktop)"
+    else
+        log_info "Host port mapping disabled. Local access via desktop will NOT work."
+    fi
+
     log_info "Starting Gemini Hub on port $port..."
-    log_info "Access at http://localhost:$port (Desktop)"
     log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
 
     docker run --rm "$mode" \
         --name "$container_name" \
         --network=bridge \
-        -p 127.0.0.1:$port:8888 \
+        "${port_mapping[@]}" \
         --cap-add=NET_ADMIN \
         --device /dev/net/tun \
         --volume "/var/run/docker.sock:/var/run/docker.sock" \

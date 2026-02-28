@@ -8,4 +8,5 @@ web = Blueprint('web', __name__)
 def home():
     status = TailscaleService.get_status()
     machines = TailscaleService.parse_peers(status)
-    return render_template('index.html', machines=machines, hub_no_vpn=Config.HUB_NO_VPN)
+    has_vpn_key = bool(Config.TAILSCALE_AUTH_KEY)
+    return render_template('index.html', machines=machines, hub_no_vpn=Config.HUB_NO_VPN, has_vpn_key=has_vpn_key)

@@ -58,12 +58,14 @@ def launch():
     worktree_name = data.get('worktree_name')
     custom_image = data.get('custom_image')
     docker_args = data.get('docker_args')
+    vpn_enabled = data.get('vpn_enabled', False)
+    localhost_access = data.get('localhost_access', True)
     
     if not project_path:
         return jsonify({"error": "Project path required"}), 400
         
     try:
-        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled, worktree_mode, worktree_name, ide_enabled, custom_image, docker_args)
+        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled, worktree_mode, worktree_name, ide_enabled, custom_image, docker_args, vpn_enabled, localhost_access)
         if result["returncode"] == 0:
             result["status"] = "success"
             return jsonify(result)

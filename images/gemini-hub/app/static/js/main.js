@@ -296,6 +296,10 @@ function toggleWorktreeInput() {
     optionsDiv.style.display = isChecked ? 'block' : 'none';
 }
 
+function toggleVpnOptions() {
+    // Placeholder for any dynamic UI changes when VPN is toggled
+}
+
 function toggleCustomImageInput() {
     const variant = document.getElementById('image-variant-select').value;
     const container = document.getElementById('custom-image-container');
@@ -416,6 +420,8 @@ async function doLaunch() {
     const worktreeName = document.getElementById('worktree-name').value;
     const dockerArgs = document.getElementById('docker-args-input').value;
     const task = document.getElementById('task-input').value;
+    const vpnEnabled = document.getElementById('vpn-check').checked;
+    const localhostAccess = document.getElementById('localhost-access-check').checked;
     const interactive = document.getElementById('interactive-check').checked;
     const results = document.getElementById('launch-results');
     const status = document.getElementById('launch-status');
@@ -443,7 +449,9 @@ async function doLaunch() {
                 custom_image: customImage,
                 docker_args: dockerArgs,
                 task: task,
-                interactive: interactive
+                interactive: interactive,
+                vpn_enabled: vpnEnabled,
+                localhost_access: localhostAccess
             })
         });
         const result = await res.json();

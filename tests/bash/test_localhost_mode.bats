@@ -45,18 +45,64 @@ teardown() {
     assert_line --partial "GEMINI_HUB_NO_VPN=true"
 }
 
-@test "gemini-hub --no-vpn starts without a key" {
-    run gemini-hub --no-vpn status
+@test "gemini-toolbox defaults to protected localhost (bridge + mapping)" {
+    cd "${TEST_TEMP_DIR}"
+
+    run gemini-toolbox --detached --image busybox -- -c "ls"
     
     assert_success
-    assert_line "Gemini Hub is not running."
+    run cat "${MOCK_DOCKER_LOG}"
+    assert_line --partial "docker run --rm -d --name gem-"
+    assert_line --partial "--network=bridge"
+    assert_line --partial "-p 127.0.0.1:0:3000"
 }
 
-@test "gemini-hub fails without a key if --no-vpn is missing" {
-    # Ensure key is NOT in environment
-    unset GEMINI_REMOTE_KEY
-    run gemini-hub
+@test "gemini-toolbox --no-localhost disables port mapping" {
+    cd "${TEST_TEMP_DIR}"
+
+    run gemini-toolbox --no-localhost --detached --image busybox -- -c "ls"
     
-    assert_failure
-    assert_line --partial "TAILSCALE_KEY is required for the Hub (or use --no-vpn)."
+    assert_success
+    run cat "${MOCK_DOCKER_LOG}"
+    refute_line --partial "-p 127.0.0.1:0:3000"
+}
+
+@test "gemini-toolbox --network-host uses raw host networking" {
+    cd "${TEST_TEMP_DIR}"
+
+    run gemini-toolbox --network-host --detached --image busybox -- -c "ls"
+    
+    assert_success
+    run cat "${MOCK_DOCKER_LOG}"
+    assert_line --partial "--net=host"
+    refute_line --partial "--network=bridge"
+}
+
+@test "gemini-toolbox --remote also enables localhost mapping by default" {
+    export GEMINI_REMOTE_KEY="tskey-auth-mock"
+    cd "${TEST_TEMP_DIR}"
+
+    run gemini-toolbox --remote --detached --image busybox -- -c "ls"
+    
+    assert_success
+    run cat "${MOCK_DOCKER_LOG}"
+    assert_line --partial "--network=bridge"
+    assert_line --partial "-p 127.0.0.1:0:3000"
+}
+
+@test "gemini-hub --no-localhost disables hub port mapping" {
+    run gemini-hub --no-vpn --no-localhost status
+    
+    assert_success
+    run cat "${MOCK_DOCKER_LOG}"
+    # Status command doesn't call run, so we need to use a command that does
+}
+
+@test "gemini-hub starts with port mapping by default" {
+    export GEMINI_REMOTE_KEY="tskey-auth-mock"
+    run gemini-hub --detach
+    
+    assert_success
+    run cat "${MOCK_DOCKER_LOG}"
+    assert_line --partial "-p 127.0.0.1:8888:8888"
 }

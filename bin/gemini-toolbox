@@ -50,6 +50,8 @@ show_help() {
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"
     echo "  --no-vpn             Disable VPN and bind to localhost strictly (Pure Localhost Mode)"
+    echo "  --no-localhost       Disable host port mapping (remote-only access)"
+    echo "  --network-host       Use raw host networking (Legacy/Unprotected Mode)"
     echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be name or task."
     echo "  --name <str>         Explicit name for the worktree folder and branch."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
@@ -282,6 +284,8 @@ main() {
     local args=()
     local remote_mode=false
     local localhost_mode=false
+    local localhost_access=true
+    local raw_host=false
     local no_tmux_flag=false
     local tailscale_key="${GEMINI_REMOTE_KEY:-}"
     local enable_docker=true
@@ -307,6 +311,8 @@ main() {
         --bash)        use_bash=true;      shift ;;
         --detached)    detached_mode=true; shift ;;
         --no-vpn)      localhost_mode=true; shift ;;
+        --no-localhost) localhost_access=false; shift ;;
+        --network-host) raw_host=true; shift ;;
         --remote)      
             remote_mode=true
             if [[ -n "${2:-}" && "$2" == tskey-* ]]; then
@@ -489,8 +495,13 @@ main() {
         fi
     fi
 
-    local network_mode="--net=host"
-    if [ "$remote_mode" = true ]; then
+    local network_mode="--network=bridge"
+    if [ "$raw_host" = true ]; then
+        network_mode="--net=host"
+        if [ "$localhost_mode" = true ] || [ "$remote_mode" = true ]; then
+            log_warn "--network-host overrides --no-vpn/--remote isolation."
+        fi
+    elif [ "$remote_mode" = true ]; then
         if [ -z "$tailscale_key" ]; then
             log_error "TAILSCALE_KEY is required for --remote mode." >&2
             exit 1
@@ -511,17 +522,19 @@ main() {
                  "$hub_script" "${hub_args[@]}" > /tmp/gemini-hub.log 2>&1 || true
             fi
         fi
-        network_mode="--network=bridge"
         enable_vscode_integration=false
         extra_docker_args+=(
             --env TAILSCALE_AUTH_KEY="$tailscale_key"
-            --cap-add=NET_ADMIN --device /dev/net/tun -p 127.0.0.1:0:3000
+            --cap-add=NET_ADMIN --device /dev/net/tun
         )
+        if [ "$localhost_access" = true ]; then
+            extra_docker_args+=(-p 127.0.0.1:0:3000)
+        fi
     elif [ "$localhost_mode" = true ]; then
         # Pure Localhost Mode
-        # We ensure it's not reachable by another computer by binding to 127.0.0.1
-        network_mode="--network=bridge"
-        extra_docker_args+=(-p 127.0.0.1:0:3000)
+        if [ "$localhost_access" = true ]; then
+            extra_docker_args+=(-p 127.0.0.1:0:3000)
+        fi
         
         # Auto-start Hub in no-vpn mode if needed
         local hub_name="gemini-hub-service"
@@ -539,6 +552,11 @@ main() {
                  fi
                 "$hub_script" "${hub_args[@]}" > /tmp/gemini-hub.log 2>&1 || true
             fi
+        fi
+    else
+        # DEFAULT: Protected Localhost
+        if [ "$localhost_access" = true ]; then
+            extra_docker_args+=(-p 127.0.0.1:0:3000)
         fi
     fi
 

@@ -140,6 +140,23 @@
                     </div>
                 </div>
 
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Networking</label>
+                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;">
+                        <label class="filter-checkbox" style="font-size:0.85rem; display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="vpn-check" {% if not has_vpn_key %}disabled{% endif %} onchange="toggleVpnOptions()"> Enable VPN (Tailscale)
+                        </label>
+                        <label class="filter-checkbox" style="font-size:0.85rem; display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="localhost-access-check" checked> Enable Localhost Access
+                        </label>
+                        {% if not has_vpn_key %}
+                        <div style="font-size: 0.7rem; color: var(--offline); margin-top: -3px;">
+                            ⚠ VPN requires a Tailscale key.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <div id="custom-image-container" style="display:none; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px;">
                     <label style="display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 5px;">Custom Docker Image Name</label>
                     <input type="text" id="custom-image-input" class="filter-input" style="width:100%; font-size: 0.8rem;" placeholder="e.g. jsebayhi/gemini-cli-toolbox:latest">
