@@ -121,10 +121,30 @@ def test_create_directory_security_real_fs(tmp_path):
     forbidden = tmp_path / "forbidden"
     forbidden.mkdir()
     
+    # Partial match test (e.g. /work vs /work_secret)
+    partial = tmp_path / "allowed_secret"
+    partial.mkdir()
+    
     with patch("app.config.Config.HUB_ROOTS", [str(allowed)]):
-        # Access denied
+        # Access denied to forbidden
         with pytest.raises(PermissionError):
             FileSystemService.create_directory(str(forbidden), "some-dir")
+            
+        # Access denied to partial match
+        with pytest.raises(PermissionError):
+            FileSystemService.create_directory(str(partial), "some-dir")
+
+def test_browse_security_partial_match(tmp_path):
+    """Test that partial path matches are correctly denied in browse."""
+    allowed = tmp_path / "work"
+    allowed.mkdir()
+    partial = tmp_path / "work_secret"
+    partial.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(allowed)]):
+        # Access denied to partial match
+        with pytest.raises(PermissionError):
+            FileSystemService.browse(str(partial))
 
 def test_create_directory_sanitization(tmp_path):
     """Test that invalid directory names are rejected."""
