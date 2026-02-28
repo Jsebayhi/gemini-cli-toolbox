@@ -260,6 +260,28 @@ async function loadPath(path) {
 function goBackToRoots() { fetchRoots(); }
 function goToBrowse() { showStep('step-browse'); }
 
+async function createFolder() {
+    const name = prompt("Enter folder name:");
+    if (!name) return;
+    
+    try {
+        const res = await fetch('/api/create-directory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parent_path: currentPath, name: name })
+        });
+        const result = await res.json();
+        
+        if (result.status === 'success') {
+            loadPath(currentPath);
+        } else {
+            alert("Error: " + (result.error || "Failed to create folder"));
+        }
+    } catch (e) {
+        alert("Network Error: " + e.toString());
+    }
+}
+
 async function goToConfig() {
     document.getElementById('config-project-path').innerText = currentPath;
     const res = await fetch('/api/configs');
