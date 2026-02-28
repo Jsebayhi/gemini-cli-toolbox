@@ -3,6 +3,7 @@ import subprocess
 import logging
 from typing import Dict
 from app.config import Config
+from app.services.filesystem import FileSystemService
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,7 @@ class LauncherService:
         
         # Security Check
         abs_path = os.path.abspath(project_path)
-        allowed = any(abs_path.startswith(os.path.abspath(root)) for root in Config.HUB_ROOTS)
-        if not allowed:
+        if not FileSystemService.is_safe_path(abs_path):
             raise PermissionError(f"Access denied to {project_path}")
 
         # Build Args

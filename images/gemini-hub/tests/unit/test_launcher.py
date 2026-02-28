@@ -113,3 +113,17 @@ def test_launch_with_no_ide():
             cmd = args[0]
             assert "--no-ide" in cmd
 
+def test_launch_security_partial_match(tmp_path):
+    """Verify that partial path matches are correctly denied in LauncherService."""
+    allowed = tmp_path / "work"
+    allowed.mkdir()
+    partial = tmp_path / "work_secret"
+    partial.mkdir()
+    
+    from app.config import Config
+    with patch("app.config.Config.HUB_ROOTS", [str(allowed)]):
+        # Access denied to partial match
+        import pytest
+        with pytest.raises(PermissionError):
+            LauncherService.launch(str(partial))
+
