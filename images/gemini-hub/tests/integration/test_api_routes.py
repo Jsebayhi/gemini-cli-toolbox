@@ -1,3 +1,4 @@
+import os
 from unittest.mock import patch
 from jsonschema import validate
 from tests.contracts import ROOTS_SCHEMA, BROWSE_SCHEMA, LAUNCH_SCHEMA
@@ -49,6 +50,50 @@ def test_browse_missing_param(client):
     """Test browsing without path parameter."""
     response = client.get('/api/browse')
     assert response.status_code == 400
+
+def test_create_directory_success(client, tmp_path):
+    """Test successful directory creation."""
+    root = tmp_path / "workspace"
+    root.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        payload = {"parent_path": str(root), "name": "new-project"}
+        response = client.post('/api/create-directory', json=payload)
+        
+        assert response.status_code == 200
+        assert response.json["status"] == "success"
+        assert os.path.isdir(root / "new-project")
+
+def test_create_directory_access_denied(client, tmp_path):
+    """Test directory creation outside allowed roots."""
+    root = tmp_path / "allowed"
+    root.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        payload = {"parent_path": "/etc", "name": "exploit"}
+        response = client.post('/api/create-directory', json=payload)
+        assert response.status_code == 403
+
+def test_create_directory_invalid_name(client, tmp_path):
+    """Test directory creation with invalid name."""
+    root = tmp_path / "workspace"
+    root.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        payload = {"parent_path": str(root), "name": "bad/name"}
+        response = client.post('/api/create-directory', json=payload)
+        assert response.status_code == 400
+
+def test_create_directory_already_exists(client, tmp_path):
+    """Test directory creation when it already exists."""
+    root = tmp_path / "workspace"
+    root.mkdir()
+    (root / "exists").mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        payload = {"parent_path": str(root), "name": "exists"}
+        response = client.post('/api/create-directory', json=payload)
+        assert response.status_code == 409
 
 # --- Config Tests ---
 
