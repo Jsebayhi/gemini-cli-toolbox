@@ -2,6 +2,9 @@
 
 These standards define the architectural approach for testing web and mobile interfaces within the Gemini Toolbox.
 
+## 0. Hierarchy of Value
+For any user-facing UI feature, **the UI test is the most valuable End-to-End (E2E) test**. While unit and integration tests ensure component reliability, only a full UI test verifies that the system correctly fulfills the user's intent. You MUST prioritize comprehensive UI test coverage for all new UI features.
+
 ## 1. Page Object Model (POM) & Composition
 - **Decoupling:** Test files should contain user intent; Page Objects should contain implementation details.
 - **Component Composition:** Avoid "God Objects." Split the POM into modular, nested components for scalability.

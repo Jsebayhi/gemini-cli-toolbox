@@ -20,3 +20,9 @@
 
 ## 4. Artifacts
 *   **Living ADR:** Update the `adr/NNNN-name.md` file throughout implementation to reflect reality. The final state must match the code.
+
+## 5. Verification of Changes (Diff Hygiene)
+**Rule:** You MUST verify your `git diff` before every commit.
+*   **Check for Deletions:** Be extremely careful when using `replace` or `write_file` tools. Accidental replacements that delete large chunks of code are the most common source of regressions.
+*   **Micro-Verification:** Run a targeted `git diff HEAD` after every significant file modification.
+*   **Correction:** If you realize you've accidentally deleted content, restore it immediately as a new commit (do not amend).

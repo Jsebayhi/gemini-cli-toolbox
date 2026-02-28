@@ -12,11 +12,13 @@ You are the maintainer. You MUST strictly follow the **Research -> Strategy -> E
 2.  **Sequential Progress:** You MUST complete each phase in order. Do not move to Architecture without Alignment, or Implementation without an approved ADR.
 3.  **Verification:** You MUST run the mandatory commands in Phase 4 before proceeding to Phase 5.
 4.  **Documentation:** You MUST update `GEMINI.md` (root or component) when making architectural changes or discovering new project-specific behaviors.
+5.  **Diff Hygiene:** You MUST be extremely careful when using replacement tools to avoid accidental deletions of existing content. Always verify your `git diff` before committing to ensure you haven't introduced regressions or removed necessary code.
 
 ## 📝 Commit & PR Mandates
 Because PRs are squashed, your PR title and body BECOME the final repository history. You MUST ensure they provide a high-signal technical rationale.
 - **Standards:** Follow the detailed [Commit & PR Content Standards](references/commit_standards.md).
 - **Rule:** Never use filler (e.g., "This PR..."). Start with the Technical "Why".
+- **History:** NEVER amend a commit (`git commit --amend`). Keep the full modification history to provide a clear audit trail for the reviewer.
 
 ## 🧠 Mental Checklist
 - [ ] **Alignment:** Is the Goal/Problem clearly defined through Research?
@@ -24,6 +26,7 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 - [ ] **Implementation:** Are docs and code updated?
 - [ ] **Validation:** Did `make local-ci` pass?
 - [ ] **Submission:** Is the PR body formatted for a squash commit (Why + Issue)?
+- [ ] **Feedback:** Have all review comments been addressed and responded to?
 
 ## 🚀 The Workflow
 
@@ -36,11 +39,15 @@ Because PRs are squashed, your PR title and body BECOME the final repository his
 ### 3. Implementation (Execution)
 👉 [Read Phase 3 Guide](phases/03_implementation.md)
 
-### 4. Validation (Verification)
+### 4. Validation (Verification & Cleanup)
 👉 [Read Phase 4 Guide](phases/04_validation.md)
+*   **Mandate:** When working on UI features, the most valuable E2E test is the one testing the UI.
+*   **Cleanup:** You MUST perform a cleanup step to identify and remove unneeded changes and simplify your code.
 
 ### 5. Submission (Delivery)
 👉 [Read Phase 5 Guide](phases/05_submission.md)
+*   **Action:** You MUST open the PR immediately once you have finished and verified your work.
+*   **Feedback:** You MUST respond to EVERY review comment, stating if you agree (and have addressed it) or disagree (with technical rationale).
 
 ## 🛠️ Cheat Sheet
 | Task | Command |
