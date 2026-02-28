@@ -120,7 +120,6 @@ def test_launch_security_partial_match(tmp_path):
     partial = tmp_path / "work_secret"
     partial.mkdir()
     
-    from app.config import Config
     with patch("app.config.Config.HUB_ROOTS", [str(allowed)]):
         # Access denied to partial match
         import pytest
