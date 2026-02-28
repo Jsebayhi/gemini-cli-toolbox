@@ -56,8 +56,11 @@ class LauncherService:
         env["GEMINI_REMOTE_KEY"] = Config.TAILSCALE_AUTH_KEY
             
         # Command Construction
-        # We pass --remote without the key value since it's in env
-        cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
+        # We pass --remote only if we have a key and NOT in no-vpn mode
+        if Config.HUB_NO_VPN or not Config.TAILSCALE_AUTH_KEY:
+            cmd = ["gemini-toolbox", "--no-vpn", "--detached"] + config_args
+        else:
+            cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
         
         if task:
             # Autonomous mode logic

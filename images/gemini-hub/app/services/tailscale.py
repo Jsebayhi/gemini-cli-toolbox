@@ -71,18 +71,12 @@ class TailscaleService:
 
     @staticmethod
     def parse_peers(status_json: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extracts and filters Gemini peers from status JSON."""
-        machines = []
+        """Extracts and filters Gemini peers from status JSON and local docker containers."""
+        machines_dict = {} # Use dict to merge Tailscale and Local
         peers = status_json.get("Peer", {})
         local_ports = TailscaleService.get_local_ports()
-        
-        for _, node in peers.items():
-            hostname = node.get("HostName", "")
-            
-            # FILTER: Only show "gem-" instances
-            if not hostname.startswith("gem-"):
-                continue
-                
+
+        def extract_metadata(hostname: str) -> Dict[str, str]:
             # Parse Hostname Metadata: gem-{project}-{type}-{suffix}
             raw_parts = hostname.split('-')
             parts = [p for p in raw_parts if p]
@@ -99,20 +93,45 @@ class TailscaleService:
                 project = parts[1]
                 session_type = "cli"
                 uid = parts[-1]
+            return {"project": project, "type": session_type, "uid": uid}
+        
+        # 1. Process Tailscale Peers
+        for _, node in peers.items():
+            hostname = node.get("HostName", "")
+            
+            # FILTER: Only show "gem-" instances
+            if not hostname.startswith("gem-"):
+                continue
                 
+            metadata = extract_metadata(hostname)
             addrs = node.get("TailscaleIPs", [])
             ip = next((a for a in addrs if "." in a), None)
             
             if ip:
-                machines.append({
+                machines_dict[hostname] = {
                     "name": hostname,
-                    "project": project,
-                    "type": session_type,
-                    "uid": uid,
+                    "project": metadata["project"],
+                    "type": metadata["type"],
+                    "uid": metadata["uid"],
                     "ip": ip,
                     "online": node.get("Online", False),
                     "local_url": local_ports.get(hostname)
-                })
+                }
+
+        # 2. Process Local-Only Containers (those not in Tailscale list)
+        for hostname, local_url in local_ports.items():
+            if hostname not in machines_dict:
+                metadata = extract_metadata(hostname)
+                machines_dict[hostname] = {
+                    "name": hostname,
+                    "project": metadata["project"],
+                    "type": metadata["type"],
+                    "uid": metadata["uid"],
+                    "ip": None, # Local-only
+                    "online": True, # If it's in docker ps, it's online
+                    "local_url": local_url
+                }
                 
+        machines = list(machines_dict.values())
         machines.sort(key=lambda x: x["name"])
         return machines

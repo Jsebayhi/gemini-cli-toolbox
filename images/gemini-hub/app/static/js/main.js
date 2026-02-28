@@ -11,11 +11,11 @@ async function checkConnectivity() {
     for (const card of cards) {
         const localBadge = card.querySelector('.local-badge');
         const mainLink = card.querySelector('.card-main-link');
+        const ipSpan = card.querySelector('.ip');
         
-        if (!localBadge) continue; // Offline or no local port
-        
-        const localUrl = localBadge.getAttribute('data-local-url');
-        const vpnUrl = mainLink.href; // Original VPN URL from template
+        const isLocalOnly = ipSpan && ipSpan.innerText === "LOCAL ONLY";
+        const localUrl = localBadge ? localBadge.getAttribute('data-local-url') : (isLocalOnly ? mainLink.href : null);
+        const vpnUrl = isLocalOnly ? null : mainLink.href;
         
         // 1. Probe Localhost
         let localReachable = false;
@@ -24,28 +24,31 @@ async function checkConnectivity() {
         }
 
         // 2. Probe VPN
-        const vpnReachable = await probeUrl(vpnUrl);
+        const vpnReachable = vpnUrl ? await probeUrl(vpnUrl) : false;
 
         // 3. Apply Logic
         if (localReachable) {
             // Priority: Localhost
             mainLink.href = localUrl;
             
-            if (vpnReachable) {
+            if (vpnReachable && vpnUrl) {
                 // If VPN also works, show it as a badge
                 localBadge.href = vpnUrl;
                 localBadge.innerText = "VPN";
                 localBadge.classList.remove('hidden');
                 localBadge.title = "Connect via Tailscale IP";
-            } else {
-                // VPN unreachable? Hide badge.
+            } else if (localBadge) {
+                // VPN unreachable or local-only? Hide badge.
                 localBadge.classList.add('hidden');
             }
-        } else {
-            // Local unreachable (or remote client)
-            // Main link remains VPN (default)
-            // Local badge remains hidden (default)
-             localBadge.classList.add('hidden');
+        } else if (vpnReachable) {
+            // Local unreachable (or remote client) but VPN works
+            mainLink.href = vpnUrl;
+            if (localBadge) localBadge.classList.add('hidden');
+        } else if (isLocalOnly) {
+            // Local unreachable for a local-only container (probably still starting up)
+            // Keep mainLink as is
+            if (localBadge) localBadge.classList.add('hidden');
         }
     }
 }

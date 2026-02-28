@@ -49,6 +49,7 @@ show_help() {
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"
+    echo "  --no-vpn             Disable VPN and bind to localhost strictly (Pure Localhost Mode)"
     echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be name or task."
     echo "  --name <str>         Explicit name for the worktree folder and branch."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
@@ -280,6 +281,7 @@ main() {
     fi
     local args=()
     local remote_mode=false
+    local localhost_mode=false
     local no_tmux_flag=false
     local tailscale_key="${GEMINI_REMOTE_KEY:-}"
     local enable_docker=true
@@ -304,6 +306,7 @@ main() {
         --project)     project_dir="$2";   shift; shift ;;
         --bash)        use_bash=true;      shift ;;
         --detached)    detached_mode=true; shift ;;
+        --no-vpn)      localhost_mode=true; shift ;;
         --remote)      
             remote_mode=true
             if [[ -n "${2:-}" && "$2" == tskey-* ]]; then
@@ -340,6 +343,11 @@ main() {
 
     if [ "$remote_mode" = true ] && [ "$no_tmux_flag" = true ]; then
         log_error "--remote and --no-tmux are incompatible." >&2
+        exit 1
+    fi
+
+    if [ "$remote_mode" = true ] && [ "$localhost_mode" = true ]; then
+        log_error "--remote and --no-vpn are incompatible." >&2
         exit 1
     fi
 
@@ -509,6 +517,29 @@ main() {
             --env TAILSCALE_AUTH_KEY="$tailscale_key"
             --cap-add=NET_ADMIN --device /dev/net/tun -p 127.0.0.1:0:3000
         )
+    elif [ "$localhost_mode" = true ]; then
+        # Pure Localhost Mode
+        # We ensure it's not reachable by another computer by binding to 127.0.0.1
+        network_mode="--network=bridge"
+        extra_docker_args+=(-p 127.0.0.1:0:3000)
+        
+        # Auto-start Hub in no-vpn mode if needed
+        local hub_name="gemini-hub-service"
+        if [ -z "$(docker ps -q -f name="^/${hub_name}$")" ]; then
+            local hub_script="${script_dir}/gemini-hub"
+            if [ -x "$hub_script" ]; then
+                local hub_args=("-d" "--no-vpn" "--workspace" "$project_dir")
+                 if [ "$enable_profile_mode" = true ] && [ -n "$profile_root" ]; then
+                     local hub_config_root
+                     hub_config_root=$(dirname "$profile_root")
+                     if [ -t 0 ]; then
+                         read -p ">> Allow Hub (No-VPN) to scan parent directory? [y/N] " -n 1 -r REPLY
+                         if [[ ${REPLY:-N} =~ ^[Yy]$ ]]; then hub_args+=("--config-root" "$hub_config_root"); fi
+                     fi
+                 fi
+                "$hub_script" "${hub_args[@]}" > /tmp/gemini-hub.log 2>&1 || true
+            fi
+        fi
     fi
 
     local docker_args=(

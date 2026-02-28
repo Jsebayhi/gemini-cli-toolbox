@@ -8,6 +8,11 @@
 </head>
 <body>
     <h1>Gemini Workspace Hub</h1>
+    {% if hub_no_vpn %}
+    <div style="text-align: center; margin-top: -15px; margin-bottom: 20px;">
+        <span style="background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Pure Localhost Mode</span>
+    </div>
+    {% endif %}
     
     <div class="container">
         <button class="refresh-btn action-btn" onclick="openWizard()">+ New Session</button>
@@ -28,18 +33,22 @@
         {% if machines %}
             {% for m in machines %}
             <div class="card {% if not m.online %}hidden{% endif %}" data-id="{{ m.name }}" data-project="{{ m.project }}" data-type="{{ m.type }}" data-online="{{ 'true' if m.online else 'false' }}">
-                <a href="http://{{ m.ip }}:3000" class="card-main-link" target="_blank">
+                <a href="{% if m.ip %}http://{{ m.ip }}:3000{% else %}{{ m.local_url }}{% endif %}" class="card-main-link" target="_blank">
                     <div class="info">
                         <span class="name">{{ m.project }}</span>
                         <div class="meta">
                             <span class="badge">{{ m.type }}</span>
                             <span class="uid" title="Session UID">#{{ m.uid }}</span>
-                            <span class="ip">{{ m.ip }}</span>
+                            {% if m.ip %}
+                                <span class="ip">{{ m.ip }}</span>
+                            {% else %}
+                                <span class="ip" style="color:var(--accent); font-weight:bold;">LOCAL ONLY</span>
+                            {% endif %}
                         </div>
                     </div>
                 </a>
                 <div class="card-side">
-                    {% if m.local_url %}
+                    {% if m.local_url and m.ip %}
                     <!-- Hidden by default. JS will show if user is on localhost. -->
                     <a href="{{ m.local_url }}" target="_blank" class="local-badge hidden" data-local-url="{{ m.local_url }}" title="Open Localhost">LOCAL</a>
                     {% endif %}
