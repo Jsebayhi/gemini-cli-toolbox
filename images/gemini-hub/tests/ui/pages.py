@@ -8,6 +8,7 @@ class LaunchWizard:
         self.folder_list = page.locator("#folder-list")
         self.current_path = page.locator("#current-path")
         self.use_folder_btn = page.get_by_role("button", name="Use This Folder")
+        self.new_folder_btn = page.get_by_role("button", name="+ New Folder")
         self.launch_btn = page.get_by_role("button", name="Launch Session")
         self.task_input = page.get_by_placeholder("e.g. write a hello world in python...")
         self.variant_select = page.locator("#image-variant-select")
@@ -19,6 +20,10 @@ class LaunchWizard:
 
     def select_folder(self, name: str):
         self.folder_list.get_by_text(f"📁 {name}").click()
+
+    def create_folder(self, name: str):
+        self.page.on("dialog", lambda dialog: dialog.accept(name))
+        self.new_folder_btn.click()
 
     def use_this_folder(self):
         self.use_folder_btn.click()

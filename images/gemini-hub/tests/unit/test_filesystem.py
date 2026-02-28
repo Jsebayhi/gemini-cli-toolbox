@@ -1,4 +1,5 @@
 import pytest
+import os
 from unittest.mock import patch
 from app.services.filesystem import FileSystemService
 
@@ -101,3 +102,57 @@ def test_get_configs_permission_error(tmp_path):
         configs = FileSystemService.get_configs()
         assert configs == []
         assert mock_logger.error.called
+
+def test_create_directory_real_fs(tmp_path):
+    """Test creating a directory."""
+    root = tmp_path / "workspace"
+    root.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        path = FileSystemService.create_directory(str(root), "new-project")
+        
+        assert os.path.isdir(path)
+        assert os.path.basename(path) == "new-project"
+
+def test_create_directory_security_real_fs(tmp_path):
+    """Test that creating directory outside roots is denied."""
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    forbidden = tmp_path / "forbidden"
+    forbidden.mkdir()
+    
+    # Partial match test (e.g. /work vs /work_secret)
+    partial = tmp_path / "allowed_secret"
+    partial.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(allowed)]):
+        # Access denied to forbidden
+        with pytest.raises(PermissionError):
+            FileSystemService.create_directory(str(forbidden), "some-dir")
+            
+        # Access denied to partial match
+        with pytest.raises(PermissionError):
+            FileSystemService.create_directory(str(partial), "some-dir")
+
+def test_browse_security_partial_match(tmp_path):
+    """Test that partial path matches are correctly denied in browse."""
+    allowed = tmp_path / "work"
+    allowed.mkdir()
+    partial = tmp_path / "work_secret"
+    partial.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(allowed)]):
+        # Access denied to partial match
+        with pytest.raises(PermissionError):
+            FileSystemService.browse(str(partial))
+
+def test_create_directory_sanitization(tmp_path):
+    """Test that invalid directory names are rejected."""
+    root = tmp_path / "workspace"
+    root.mkdir()
+    
+    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
+        with pytest.raises(ValueError):
+            FileSystemService.create_directory(str(root), "bad/name")
+        with pytest.raises(ValueError):
+            FileSystemService.create_directory(str(root), "..")
