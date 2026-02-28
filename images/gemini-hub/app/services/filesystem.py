@@ -10,7 +10,7 @@ class FileSystemService:
     """Manages safe filesystem access for discovery."""
 
     @staticmethod
-    def _is_safe_path(path: str) -> bool:
+    def is_safe_path(path: str) -> bool:
         """Centralized security check: Ensure path is within allowed HUB_ROOTS."""
         abs_path = os.path.abspath(path)
         for root in Config.HUB_ROOTS:
@@ -108,7 +108,7 @@ class FileSystemService:
             
         # Security: Ensure path is within one of the HUB_ROOTS
         abs_path = os.path.abspath(path)
-        if not FileSystemService._is_safe_path(abs_path):
+        if not FileSystemService.is_safe_path(abs_path):
             raise PermissionError("Access denied")
             
         if not os.path.isdir(abs_path):
@@ -134,7 +134,7 @@ class FileSystemService:
             
         # Security: Ensure parent path is within one of the HUB_ROOTS
         abs_parent = os.path.abspath(parent_path)
-        if not FileSystemService._is_safe_path(abs_parent):
+        if not FileSystemService.is_safe_path(abs_parent):
             raise PermissionError("Access denied")
             
         if not os.path.isdir(abs_parent):
