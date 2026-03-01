@@ -10,7 +10,7 @@ class LauncherService:
     """Manages the execution of gemini-toolbox sessions."""
 
     @staticmethod
-    def launch(project_path: str, config_profile: str = None, session_type: str = 'cli', task: str = None, interactive: bool = True, image_variant: str = 'standard', docker_enabled: bool = True, worktree_mode: bool = False, worktree_name: str = None, ide_enabled: bool = True, custom_image: str = None, docker_args: str = None) -> Dict[str, str]:
+    def launch(project_path: str, config_profile: str = None, session_type: str = 'cli', task: str = None, interactive: bool = True, image_variant: str = 'standard', docker_enabled: bool = True, worktree_mode: bool = False, worktree_name: str = None, ide_enabled: bool = True, custom_image: str = None, docker_args: str = None, vpn_enabled: bool = False, localhost_access: bool = True) -> Dict[str, str]:
         """Launches gemini-toolbox via subprocess."""
         
         # Security Check
@@ -38,6 +38,9 @@ class LauncherService:
 
         if not ide_enabled:
             config_args.append("--no-ide")
+            
+        if not localhost_access:
+            config_args.append("--no-localhost")
 
         if docker_args:
             config_args.extend(["--docker-args", docker_args])
@@ -56,8 +59,10 @@ class LauncherService:
         env["GEMINI_REMOTE_KEY"] = Config.TAILSCALE_AUTH_KEY
             
         # Command Construction
-        # We pass --remote without the key value since it's in env
-        cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
+        if vpn_enabled and Config.TAILSCALE_AUTH_KEY:
+            cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
+        else:
+            cmd = ["gemini-toolbox", "--no-vpn", "--detached"] + config_args
         
         if task:
             # Autonomous mode logic

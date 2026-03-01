@@ -31,26 +31,33 @@ main() {
     # --socket: FHS-compliant socket path
     local SOCKET_DIR="/run/tailscale"
     local SOCKET_PATH="${SOCKET_DIR}/tailscaled.sock"
-    log_info "Starting Tailscaled..."
-    mkdir -p /var/lib/tailscale
-    mkdir -p "$SOCKET_DIR"
-    # Note: We omit --tun=userspace-networking to enable Kernel TUN mode for stability
-    tailscaled --statedir=/var/lib/tailscale --socket="$SOCKET_PATH" &
-    sleep 3
+    
+    if [ "${GEMINI_HUB_NO_VPN:-false}" = "true" ] && [ -z "${TAILSCALE_AUTH_KEY:-}" ]; then
+        log_info "Pure Localhost Mode: Skipping Tailscale setup."
+        # Ensure directory exists for parsing code to not fail if it checks for the dir
+        mkdir -p "$SOCKET_DIR"
+    else
+        log_info "Starting Tailscaled..."
+        mkdir -p /var/lib/tailscale
+        mkdir -p "$SOCKET_DIR"
+        # Note: We omit --tun=userspace-networking to enable Kernel TUN mode for stability
+        tailscaled --statedir=/var/lib/tailscale --socket="$SOCKET_PATH" &
+        sleep 3
 
-    # 2. Authenticate
-    if [ -z "${TAILSCALE_AUTH_KEY:-}" ]; then
-        log_error "TAILSCALE_AUTH_KEY is missing."
-        exit 1
+        # 2. Authenticate
+        if [ -z "${TAILSCALE_AUTH_KEY:-}" ]; then
+            log_error "TAILSCALE_AUTH_KEY is missing."
+            exit 1
+        fi
+
+        log_info "Authenticating with Tailscale..."
+        # Fixed hostname for consistent DNS (http://gemini-hub:8888)
+        # --force-reauth: Aggressively reclaim the 'gemini-hub' name if state was lost
+        local HOSTNAME="gemini-hub"
+        tailscale --socket="$SOCKET_PATH" up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
+
+        log_info "Gemini Hub Online: http://$HOSTNAME:8888"
     fi
-
-    log_info "Authenticating with Tailscale..."
-    # Fixed hostname for consistent DNS (http://gemini-hub:8888)
-    # --force-reauth: Aggressively reclaim the 'gemini-hub' name if state was lost
-    local HOSTNAME="gemini-hub"
-    tailscale --socket="$SOCKET_PATH" up --authkey="$TAILSCALE_AUTH_KEY" --hostname="$HOSTNAME" --force-reauth
-
-    log_info "Gemini Hub Online: http://$HOSTNAME:8888"
     
     # 2.1 User Creation: Create a non-root user matching the host UID/GID
     # This allows the Flask app to safely operate on host-mounted volumes

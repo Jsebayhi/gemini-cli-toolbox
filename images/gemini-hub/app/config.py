@@ -5,6 +5,7 @@ class Config:
     
     # Required for production runs (fail fast if missing)
     TAILSCALE_AUTH_KEY = os.environ.get("TAILSCALE_AUTH_KEY", "")
+    HUB_NO_VPN = os.environ.get("GEMINI_HUB_NO_VPN", "false").lower() == "true"
     
     # Workspace Roots (Colon separated)
     HUB_ROOTS = [r for r in os.environ.get("HUB_ROOTS", "").split(":") if r]
@@ -34,6 +35,6 @@ class Config:
     @classmethod
     def validate(cls):
         """Validate critical configuration."""
-        if not cls.TAILSCALE_AUTH_KEY and not os.environ.get("FLASK_DEBUG"):
+        if not cls.HUB_NO_VPN and not cls.TAILSCALE_AUTH_KEY and not os.environ.get("FLASK_DEBUG"):
             # In development (FLASK_DEBUG=1), we might skip auth key check if mocking
             print("Warning: TAILSCALE_AUTH_KEY is not set.")
