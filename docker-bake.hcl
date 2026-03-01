@@ -47,7 +47,7 @@ function "get_tag" {
 # --- Groups ---
 
 group "default" {
-  targets = ["base", "hub", "cli", "cli-preview", "hub-test", "bash-test"]
+  targets = ["base", "hub", "cli", "cli-preview", "vpn", "lan", "hub-test", "bash-test"]
 }
 
 # --- Base Templates ---
@@ -117,6 +117,22 @@ target "cli-preview" {
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-preview" : "${REPO_PREFIX}/cli-preview:${get_tag(GITHUB_REF)}",
     RELEASE_TYPE == "suffix" && GEMINI_VERSION != "" ? "${REPO_PREFIX}:${GEMINI_VERSION}-preview" : ""
+  ]
+}
+
+target "vpn" {
+  inherits = ["_release"]
+  context  = "images/gemini-vpn"
+  tags = [
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-vpn" : "${REPO_PREFIX}/vpn:${get_tag(GITHUB_REF)}"
+  ]
+}
+
+target "lan" {
+  inherits = ["_release"]
+  context  = "images/gemini-lan"
+  tags = [
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-lan" : "${REPO_PREFIX}/lan:${get_tag(GITHUB_REF)}"
   ]
 }
 

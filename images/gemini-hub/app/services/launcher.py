@@ -1,7 +1,7 @@
 import os
 import subprocess
 import logging
-from typing import Dict
+from typing import Dict, Any
 from app.config import Config
 
 logger = logging.getLogger(__name__)
@@ -10,9 +10,49 @@ class LauncherService:
     """Manages the execution of gemini-toolbox sessions."""
 
     @staticmethod
-    def launch(project_path: str, config_profile: str = None, session_type: str = 'cli', task: str = None, interactive: bool = True, image_variant: str = 'standard', docker_enabled: bool = True, worktree_mode: bool = False, worktree_name: str = None, ide_enabled: bool = True, custom_image: str = None, docker_args: str = None) -> Dict[str, str]:
+    def _run_toolbox(args: list) -> Dict[str, Any]:
+        """Internal helper to run gemini-toolbox with specific args."""
+        env = os.environ.copy()
+        if Config.HOST_HOME: env["HOME"] = Config.HOST_HOME
+        env["GEMINI_REMOTE_KEY"] = Config.TAILSCALE_AUTH_KEY
+        
+        cmd = ["gemini-toolbox"] + args
+        cmd_str = " ".join(cmd)
+        logger.info(f"Running Toolbox command: {cmd_str}")
+        
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=60
+            )
+            return {
+                "command": cmd_str,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode
+            }
+        except Exception as e:
+            return {
+                "command": cmd_str,
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1
+            }
+
+    @staticmethod
+    def launch(project_path: str, config_profile: str = None, session_type: str = 'cli', task: str = None, interactive: bool = True, image_variant: str = 'standard', docker_enabled: bool = True, worktree_mode: bool = False, worktree_name: str = None, ide_enabled: bool = True, custom_image: str = None, docker_args: str = None, vpn_enabled: bool = False, localhost_access: bool = True, vpn_add: bool = False, vpn_stop: bool = False, lan_add: bool = False, lan_stop: bool = False) -> Dict[str, str]:
         """Launches gemini-toolbox via subprocess."""
         
+        # 0. Handle Dynamic Tier Management
+        # If any of these are true, we ignore all other arguments and run the targeted command
+        if vpn_add: return LauncherService._run_toolbox(["vpn-add", project_path])
+        if vpn_stop: return LauncherService._run_toolbox(["vpn-stop", project_path])
+        if lan_add: return LauncherService._run_toolbox(["lan-add", project_path])
+        if lan_stop: return LauncherService._run_toolbox(["lan-stop", project_path])
+
         # Security Check
         abs_path = os.path.abspath(project_path)
         allowed = any(abs_path.startswith(os.path.abspath(root)) for root in Config.HUB_ROOTS)
@@ -38,6 +78,9 @@ class LauncherService:
 
         if not ide_enabled:
             config_args.append("--no-ide")
+            
+        if not localhost_access:
+            config_args.append("--no-localhost")
 
         if docker_args:
             config_args.extend(["--docker-args", docker_args])
@@ -56,8 +99,10 @@ class LauncherService:
         env["GEMINI_REMOTE_KEY"] = Config.TAILSCALE_AUTH_KEY
             
         # Command Construction
-        # We pass --remote without the key value since it's in env
-        cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
+        if vpn_enabled and Config.TAILSCALE_AUTH_KEY:
+            cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
+        else:
+            cmd = ["gemini-toolbox", "--no-vpn", "--detached"] + config_args
         
         if task:
             # Autonomous mode logic
