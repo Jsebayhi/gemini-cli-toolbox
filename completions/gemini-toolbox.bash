@@ -4,8 +4,8 @@ _gemini_toolbox_completions() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    commands="update stop-hub stop connect"
-    opts="--preview --image --no-ide --no-docker --config --profile --project --remote --docker-args --volume --worktree --name --bash --no-tmux --detached --help -v"
+    commands="update stop-hub stop connect vpn-add vpn-stop lan-add lan-stop"
+    opts="--preview --image --no-ide --no-docker --config --profile --project --remote --no-vpn --no-localhost --network-host --docker-args --volume --worktree --name --bash --no-tmux --detached --help -v"
 
     case "${prev}" in
         --config)
@@ -65,11 +65,11 @@ _gemini_toolbox_completions() {
             fi
             return 0
             ;;
-        connect)
+        connect|vpn-add|vpn-stop|lan-add|lan-stop)
             # Complete running gemini container IDs (full names)
             if command -v docker >/dev/null 2>&1; then
                 local running_containers
-                running_containers=$(docker ps --format "{{.Names}}" --filter "name=gem-" 2>/dev/null)
+                running_containers=$(docker ps --format "{{.Names}}" --filter "name=gem-" 2>/dev/null | grep -vE "\-(vpn|lan)$")
                 COMPREPLY=( $(compgen -W "${running_containers}" -- "${cur}") )
             fi
             return 0
@@ -78,7 +78,7 @@ _gemini_toolbox_completions() {
             # Complete running gemini container IDs AND project names extracted from them
             if command -v docker >/dev/null 2>&1; then
                 local names
-                names=$(docker ps --format "{{.Names}}" --filter "name=gem-" 2>/dev/null)
+                names=$(docker ps --format "{{.Names}}" --filter "name=gem-" 2>/dev/null | grep -vE "\-(vpn|lan)$")
                 # Extract PROJECT from gem-{PROJECT}-{TYPE}-{ID}
                 local projects
                 projects=$(echo "$names" | sed 's/^gem-//; s/-[^-]*-[^-]*$//' | sort -u)

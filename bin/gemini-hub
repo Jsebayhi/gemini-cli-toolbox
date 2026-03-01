@@ -53,6 +53,8 @@ show_help() {
     echo "Commands:"
     echo "  stop                  Stop the running Gemini Hub service"
     echo "  status                Check if the Gemini Hub service is running"
+    echo "  lan-add               Expose the Hub to the local network (Wi-Fi)"
+    echo "  lan-stop              Disable Hub network sharing"
     echo ""
     echo "Examples:"
     echo "  gemini-hub --key tskey-auth-xxxx"
@@ -121,6 +123,44 @@ main() {
         image_name="$remote_tag"
     fi
 
+    # 2.1 Sidecar Upgrade Function
+    sidecar_upgrade() {
+        local type="$1"
+        local action="$2"
+        local sid="$container_name"
+        
+        if [ "$action" = "stop" ]; then
+            log_info "Stopping ${type} sharing for Hub..."
+            docker stop "${sid}-${type}" >/dev/null 2>&1 || log_warn "${type} sidecar was not running."
+            return
+        fi
+
+        log_info "Upgrading Hub connectivity: Adding ${type}..."
+        docker stop "${sid}-${type}" >/dev/null 2>&1 || true
+        
+        if [ "$type" = "vpn" ]; then
+            if [ -z "$auth_key" ]; then log_error "TAILSCALE_KEY is required for VPN."; return 1; fi
+            docker run --rm -d --name "${sid}-vpn" \
+                --network "container:${sid}" --pid "container:${sid}" \
+                --cap-add=NET_ADMIN --device /dev/net/tun \
+                --label "com.gemini.role=sidecar" --label "com.gemini.parent=${sid}" \
+                --label "com.gemini.sidecar.type=vpn" \
+                --env TAILSCALE_AUTH_KEY="$auth_key" \
+                "${docker_hub_user}/gemini-cli-toolbox:latest-vpn" \
+                tailscaled --statedir=/tmp/tailscale --socket=/run/tailscale/tailscaled.sock >/dev/null
+            sleep 2
+            docker exec "${sid}-vpn" tailscale up --authkey="$auth_key" --hostname="$sid" >/dev/null 2>&1 || true
+        else
+            docker run --rm -d --name "${sid}-lan" \
+                --network "container:${sid}" --pid "container:${sid}" \
+                -p 0.0.0.0:8888:8888 \
+                --label "com.gemini.role=sidecar" --label "com.gemini.parent=${sid}" \
+                --label "com.gemini.sidecar.type=lan" \
+                "${docker_hub_user}/gemini-cli-toolbox:latest-lan" >/dev/null
+        fi
+        log_info "${type} upgrade successful."
+    }
+
     # 3. Parse Args
     local mode="-it"
     local auto_shutdown=false
@@ -141,6 +181,7 @@ main() {
         -h|--help)   show_help; exit 0 ;;
         stop)
             log_info "Stopping Gemini Hub..."
+            docker stop "${container_name}-vpn" "${container_name}-lan" >/dev/null 2>&1 || true
             if ! docker stop "$container_name" >/dev/null 2>&1; then
                 if ! docker ps -a --format '{{.Names}}' | grep -q "^${container_name}$"; then
                     log_info "Hub is not running."
@@ -156,11 +197,15 @@ main() {
             container_id=$(docker ps -aq -f name="^/${container_name}$")
             if [ -n "$container_id" ] && [ "$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null)" == "true" ]; then
                 echo "Gemini Hub is running (ID: $container_id)"
+                # Show active sidecars
+                docker ps --format "   - Tier: {{.Label \"com.gemini.sidecar.type\"}}" --filter "label=com.gemini.parent=${container_name}"
             else
                 echo "Gemini Hub is not running."
             fi
             exit 0
             ;;
+        lan-add) sidecar_upgrade "lan" "add"; exit 0 ;;
+        lan-stop) sidecar_upgrade "lan" "stop"; exit 0 ;;
         *)           log_error "Unknown argument '$1'"; show_help; exit 1 ;;
       esac
     done
@@ -299,6 +344,7 @@ main() {
         "${port_mapping[@]}" \
         --cap-add=NET_ADMIN \
         --device /dev/net/tun \
+        --label "com.gemini.role=hub" \
         --volume "/var/run/docker.sock:/var/run/docker.sock" \
         "${extra_mounts[@]}" \
         "${env_vars[@]}" \
@@ -313,6 +359,10 @@ main() {
         --env TERM \
         --env COLORTERM \
         "$image_name"
+
+    if [ "$no_vpn" = false ] && [ -n "$auth_key" ]; then
+        sidecar_upgrade "vpn" "add"
+    fi
 }
 
 # Entry point guard

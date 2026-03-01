@@ -71,6 +71,10 @@ EOF
 #!/bin/bash
 echo "git \$*" >> "$MOCK_GIT_LOG"
 EOF
+    cat <<EOF > "$TEST_TEMP_DIR/bin/pkill"
+#!/bin/bash
+echo "pkill \$*" >> "$MOCK_GIT_LOG"
+EOF
     cat <<EOF > "$TEST_TEMP_DIR/bin/stat"
 #!/bin/bash
 if [[ "\$*" == *"-c %u:%g"* ]]; then
@@ -215,28 +219,7 @@ EOF
     run "$TEST_TEMP_DIR/run_entrypoint.sh"
     [ "$status" -eq 0 ] || echo "$output" >&2
     assert_success
-    run grep "tailscale up --authkey=tskey-123 --hostname=gem-test-chat-abc" "$MOCK_GIT_LOG"
-    assert_success
-}
-
-@test "CLI Entrypoint: debug mode and hostname fallback" {
-    mock_system_commands
-    
-    cat <<EOF > "$TEST_TEMP_DIR/run_entrypoint.sh"
-#!/bin/bash
-export PROJECT_ROOT=$PROJECT_ROOT
-export TAILSCALE_AUTH_KEY=tskey-123
-export GEMINI_PROJECT_NAME="my-proj"
-export GEMINI_SESSION_TYPE="chat"
-export DEFAULT_HOME_DIR="$TEST_TEMP_DIR/home"
-source "\$PROJECT_ROOT/images/gemini-cli/docker-entrypoint.sh"
-main bash --version
-EOF
-    chmod +x "$TEST_TEMP_DIR/run_entrypoint.sh"
-
-    run "$TEST_TEMP_DIR/run_entrypoint.sh"
-    assert_success
-    run grep "tailscale up --authkey=tskey-123 --hostname=gem-my-proj-chat-test" "$MOCK_GIT_LOG"
+    run grep "ttyd" "$MOCK_GIT_LOG"
     assert_success
 }
 

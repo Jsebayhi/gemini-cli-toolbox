@@ -29,10 +29,39 @@ class PruneService:
         while True:
             try:
                 PruneService.prune()
+                PruneService.prune_sidecars()
             except Exception as e:
                 logger.error(f"Pruning error: {e}")
             
             time.sleep(3600)  # Sleep for 1 hour
+
+    @staticmethod
+    def prune_sidecars():
+        """Implementation of ADR-0059: Layer 2 Hub Pruning.
+        Identify and remove sidecars whose parents are no longer running.
+        """
+        try:
+            # 1. Discovery: Scan for sidecars
+            cmd = ["docker", "ps", "-a", "--filter", "label=com.gemini.role=sidecar", "--format", "{{.ID}}|{{.Label \"com.gemini.parent\"}}"]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            
+            for line in result.stdout.strip().split("\n"):
+                if not line or "|" not in line: continue
+                sidecar_id, parent_name = line.split("|")
+                
+                # 2. Verification: Check parent status
+                # If parent doesn't exist or isn't running, kill sidecar
+                inspect_cmd = ["docker", "inspect", "-f", "{{.State.Running}}", parent_name]
+                inspect_res = subprocess.run(inspect_cmd, capture_output=True, text=True)
+                
+                is_parent_running = (inspect_res.returncode == 0 and inspect_res.stdout.strip() == "true")
+                
+                if not is_parent_running:
+                    logger.info(f"Pruning orphaned sidecar: {sidecar_id} (Parent {parent_name} missing or stopped)")
+                    subprocess.run(["docker", "rm", "-f", sidecar_id], capture_output=True)
+                    
+        except Exception as e:
+            logger.error(f"Error pruning sidecars: {e}")
 
     @staticmethod
     def prune():

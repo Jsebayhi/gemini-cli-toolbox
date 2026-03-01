@@ -125,45 +125,11 @@ main() {
         gosu "$TARGET_USER" tmux new-session -d -s gemini "$@"
     fi
 
-    # --- Remote Access (Tailscale) ---
-    if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
-        log_info "Initializing Remote Access Mode (Tailscale)..."
-        # Start tailscaled in the background
-        # We use the standard Kernel TUN device for robust connectivity recovery
-        # --statedir: store state in /tmp to avoid permission issues
-        tailscaled --statedir=/tmp/tailscale &
-        
-        # Wait for daemon to be ready
-        sleep 2
-        
-        # Generate meaningful hostname from project directory
-        local TS_HOSTNAME
-        if [ -n "${GEMINI_SESSION_ID:-}" ]; then
-            TS_HOSTNAME="${GEMINI_SESSION_ID}"
-        else
-            local RAW_PROJ="${GEMINI_PROJECT_NAME:-$(basename "$(pwd)")}"
-            local RAW_TYPE="${GEMINI_SESSION_TYPE:-unknown}"
-            
-            local CLEAN_PROJ
-            CLEAN_PROJ=$(echo "$RAW_PROJ" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
-            local CLEAN_TYPE
-            CLEAN_TYPE=$(echo "$RAW_TYPE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
-            local UNIQUE_SUFFIX
-            UNIQUE_SUFFIX=$(hostname | cut -c1-4)
-            
-            TS_HOSTNAME="gem-${CLEAN_PROJ}-${CLEAN_TYPE}-${UNIQUE_SUFFIX}"
-        fi
-        
-        # Authenticate and bring up the node
-        log_info "Registering VPN Node: ${TS_HOSTNAME}"
-        tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="${TS_HOSTNAME}"
-        log_info "Remote Access Active."
-        
-        # 2. Start Web Terminal (ttyd) in BACKGROUND
-        log_info "Starting ttyd on port 3000..."
-        ttyd -p 3000 -W gosu "$TARGET_USER" tmux attach -t gemini &
-        log_info "Web Terminal active at http://<IP>:3000"
-    fi
+    # --- Web Terminal (ttyd) ---
+    # We always start ttyd to provide web access for all connectivity tiers
+    # (Localhost, VPN, and LAN). It attaches to the shared tmux session.
+    log_info "Starting Web Terminal (ttyd) on port 3000..."
+    ttyd -p 3000 -W gosu "$TARGET_USER" tmux attach -t gemini &
 
     # --- Execution ---
     if [ "$USE_TMUX" = "true" ]; then
@@ -178,11 +144,8 @@ main() {
         fi
         
         # Cleanup on exit
-        if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
-            log_info "Session ended. Stopping remote services..."
-            pkill tailscaled || true
-            pkill ttyd || true
-        fi
+        log_info "Session ended. Stopping services..."
+        pkill ttyd || true
         exit 0
     fi
 

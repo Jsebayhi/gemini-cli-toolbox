@@ -78,7 +78,7 @@ teardown() {
     refute_line --partial "--network=bridge"
 }
 
-@test "gemini-toolbox --remote also enables localhost mapping by default" {
+@test "gemini-toolbox --remote launches vpn sidecar" {
     export GEMINI_REMOTE_KEY="tskey-auth-mock"
     cd "${TEST_TEMP_DIR}"
 
@@ -86,23 +86,66 @@ teardown() {
     
     assert_success
     run cat "${MOCK_DOCKER_LOG}"
-    assert_line --partial "--network=bridge"
-    assert_line --partial "-p 127.0.0.1:0:3000"
+    # 1. Check parent started
+    assert_line --partial "run --rm -d --name gem-"
+    # 2. Check sidecar started with shared namespaces
+    assert_line --partial "run --rm -d --name gem-"
+    assert_line --partial "-vpn"
+    assert_line --partial "--network container:gem-"
+    assert_line --partial "--pid container:gem-"
+    assert_line --partial "com.gemini.role=sidecar"
+    assert_line --partial "TAILSCALE_AUTH_KEY=tskey-auth-mock"
 }
 
-@test "gemini-hub --no-localhost disables hub port mapping" {
-    run gemini-hub --no-vpn --no-localhost status
+@test "gemini-toolbox vpn-add attaches sidecar to existing session" {
+    export GEMINI_REMOTE_KEY="tskey-auth-mock"
+    
+    # Mock a running session
+    cat <<EOF > "${TEST_TEMP_DIR}/docker_ps.out"
+gem-project-cli-123
+EOF
+    function docker() {
+        if [[ "$*" == "ps"* ]]; then cat "${TEST_TEMP_DIR}/docker_ps.out"; return 0; fi
+        echo "DOCKER_CALL: $*" >> "${MOCK_DOCKER_LOG}"
+    }
+    export -f docker
+
+    run gemini-toolbox vpn-add gem-project-cli-123
     
     assert_success
     run cat "${MOCK_DOCKER_LOG}"
-    # Status command doesn't call run, so we need to use a command that does
+    assert_line --partial "run --rm -d --name gem-project-cli-123-vpn"
+    assert_line --partial "--network container:gem-project-cli-123"
 }
 
-@test "gemini-hub starts with port mapping by default" {
+@test "gemini-toolbox lan-add attaches sidecar to existing session" {
+    # Mock a running session
+    cat <<EOF > "${TEST_TEMP_DIR}/docker_ps.out"
+gem-project-cli-123
+EOF
+    function docker() {
+        if [[ "$*" == "ps"* ]]; then cat "${TEST_TEMP_DIR}/docker_ps.out"; return 0; fi
+        echo "DOCKER_CALL: $*" >> "${MOCK_DOCKER_LOG}"
+    }
+    export -f docker
+
+    run gemini-toolbox lan-add gem-project-cli-123
+    
+    assert_success
+    run cat "${MOCK_DOCKER_LOG}"
+    assert_line --partial "run --rm -d --name gem-project-cli-123-lan"
+    assert_line --partial "-p 0.0.0.0:3000:3000"
+}
+
+@test "gemini-hub --detach launches vpn sidecar if key provided" {
     export GEMINI_REMOTE_KEY="tskey-auth-mock"
+    
     run gemini-hub --detach
     
     assert_success
     run cat "${MOCK_DOCKER_LOG}"
-    assert_line --partial "-p 127.0.0.1:8888:8888"
+    # Hub itself
+    assert_line --partial "run --rm -d --name gemini-hub-service"
+    # Hub VPN Sidecar
+    assert_line --partial "run --rm -d --name gemini-hub-service-vpn"
 }

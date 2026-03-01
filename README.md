@@ -18,6 +18,7 @@
 *   **💻 VS Code Companion:** Native integration with your host IDE for context awareness and auto-diffs.
 *   **🐳 Docker-Powered:** Extends the agent to any language. Build and test projects (Rust, PHP) using your host's Docker images, saving bandwidth and setup time.
 *   **📱 Remote Access:** Code from your phone via Tailscale VPN.
+*   **📡 LAN Sharing:** Effortlessly share your session on your local Wi-Fi for multi-device collaboration.
 *   **🌳 Ephemeral Worktrees:** Launch isolated worktrees of your repo for risk-free refactors or parallel tasks without touching your primary working directory.
 *   **🔑 Multi-Profile:** Switch seamlessly between personal, work, and bot accounts using different config dirs.
 
@@ -82,9 +83,13 @@ The Toolbox isn't just a wrapper; it's a bridge between your host and a secure e
 *   **Docker-out-of-Docker (DooD):** The agent can run `docker` commands (build, run, compose) by talking to your host's daemon. It shares your local image cache for instant speed.
 *   **Language Agnostic:** No need to install Node.js, Python, or Rust on your host. Build and test projects using the agent's internal environment or host Docker.
 
-### 📱 3. Remote & Mobile Freedom
-*   **Tailscale VPN:** Start a session with `--remote` to access it from your phone, tablet, or another PC via a secure mesh network.
-*   **The Hub:** A built-in web dashboard (`http://gemini-hub:8888`) to discover and manage multiple active sessions from any device connected to the VPN.
+### 📱 3. Modular Connectivity & Remote Freedom
+The Toolbox uses a decoupled sidecar architecture to provide flexible, on-demand networking without interrupting your session.
+
+*   **Tier 1: Localhost (Secure Anchor):** Every session is bound strictly to `127.0.0.1` by default. It is only reachable from your host desktop.
+*   **Tier 2: Tailscale VPN (Remote):** Add encrypted remote access via `gemini-toolbox vpn-add`. Monitor tasks from your phone or tablet.
+*   **Tier 3: LAN Share (Wi-Fi):** Temporarily expose your session to your local Wi-Fi via `gemini-toolbox lan-add` for quick collaboration.
+*   **The Hub:** A built-in web dashboard to manage these tiers and discover active sessions from any device.
 
 ### 🌳 4. Ephemeral Worktrees
 *   **Zero-Risk Refactors:** Use `--worktree` to launch the agent in a dedicated, isolated worktree of your repository. Your main working directory remains untouched.
@@ -117,6 +122,8 @@ Want to go deeper? Follow these guides to master the Toolbox:
 | **Named Worktree** | `gemini-toolbox --worktree --name feat/auth` |
 | **Beta Features** | `gemini-toolbox --preview` |
 | **Remote Coding** | `gemini-toolbox --remote` |
+| **Share on Wi-Fi** | `gemini-toolbox lan-add` |
+| **Manage VPN** | `gemini-toolbox vpn-[add\|stop]` |
 | **Disposable Shell**| `gemini-toolbox --bash` |
 
 ### 📂 Multi-Account Management

@@ -98,6 +98,60 @@ async function stopSession(sessionId) {
     }
 
     const btn = document.querySelector(`.card[data-id="${sessionId}"] .stop-btn`);
+    if (btn) btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/sessions/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+        });
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            window.location.reload();
+        } else {
+            alert(`Error stopping session: ${result.error}`);
+            if (btn) btn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Error stopping session:', error);
+        alert('Failed to stop session. Check console for details.');
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function toggleTier(type, action, id) {
+    const cmd = `${type}_${action}`; // Note: Backend uses underscore for the flag
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
+    
+    btn.disabled = true;
+    btn.innerText = "⏳ ...";
+
+    try {
+        const res = await fetch('/api/launch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                project_path: id, 
+                [cmd]: true
+            })
+        });
+        const result = await res.json();
+        if (result.status === 'success') {
+            window.location.reload();
+        } else {
+            alert("Error: " + (result.error || "Unknown error"));
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    } catch (e) {
+        alert("Network error: " + e.toString());
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+}
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = "...";

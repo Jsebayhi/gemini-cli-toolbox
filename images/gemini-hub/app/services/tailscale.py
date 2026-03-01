@@ -72,13 +72,21 @@ class TailscaleService:
     @staticmethod
     def parse_peers(status_json: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extracts and filters Gemini peers from status JSON and local docker containers."""
-        machines_dict = {} # Use dict to merge Tailscale and Local
+        machines_dict = {} # Primary session name -> data
         peers = status_json.get("Peer", {})
         local_ports = TailscaleService.get_local_ports()
 
-        def extract_metadata(hostname: str) -> Dict[str, str]:
+        def extract_metadata(hostname: str) -> Dict[str, Any]:
+            # Handle sidecar suffixes first
+            is_vpn = hostname.endswith("-vpn")
+            is_lan = hostname.endswith("-lan")
+            
+            clean_name = hostname
+            if is_vpn: clean_name = hostname[:-4]
+            if is_lan: clean_name = hostname[:-4]
+            
             # Parse Hostname Metadata: gem-{project}-{type}-{suffix}
-            raw_parts = hostname.split('-')
+            raw_parts = clean_name.split('-')
             parts = [p for p in raw_parts if p]
             
             project = "Unknown"
@@ -93,17 +101,23 @@ class TailscaleService:
                 project = parts[1]
                 session_type = "cli"
                 uid = parts[-1]
-            return {"project": project, "type": session_type, "uid": uid}
+            return {
+                "project": project, 
+                "type": session_type, 
+                "uid": uid, 
+                "is_sidecar": is_vpn or is_lan, 
+                "parent": clean_name,
+                "sidecar_type": "vpn" if is_vpn else ("lan" if is_lan else None)
+            }
         
-        # 1. Process Tailscale Peers
+        # 1. Process Tailscale Peers (Tier 2)
         for _, node in peers.items():
             hostname = node.get("HostName", "")
-            
-            # FILTER: Only show "gem-" instances
-            if not hostname.startswith("gem-"):
-                continue
+            if not hostname.startswith("gem-"): continue
                 
             metadata = extract_metadata(hostname)
+            if metadata["is_sidecar"]: continue # We only care about base session entries from TS status for now
+            
             addrs = node.get("TailscaleIPs", [])
             ip = next((a for a in addrs if "." in a), None)
             
@@ -115,22 +129,51 @@ class TailscaleService:
                     "uid": metadata["uid"],
                     "ip": ip,
                     "online": node.get("Online", False),
-                    "local_url": local_ports.get(hostname)
+                    "local_url": local_ports.get(hostname),
+                    "tiers": ["vpn"] if ip else []
                 }
+                if local_ports.get(hostname): machines_dict[hostname]["tiers"].insert(0, "local")
 
-        # 2. Process Local-Only Containers (those not in Tailscale list)
+        # 2. Process Local Containers (Tier 1 & Sidecars)
         for hostname, local_url in local_ports.items():
-            if hostname not in machines_dict:
-                metadata = extract_metadata(hostname)
-                machines_dict[hostname] = {
-                    "name": hostname,
+            metadata = extract_metadata(hostname)
+            parent = metadata["parent"]
+            
+            if metadata["is_sidecar"]:
+                # 1. Ensure parent exists in dict
+                if parent not in machines_dict:
+                    machines_dict[parent] = {
+                        "name": parent,
+                        "project": metadata["project"],
+                        "type": metadata["type"],
+                        "uid": metadata["uid"],
+                        "ip": None,
+                        "online": True, # If we see its sidecar, we assume it's at least trying to be online
+                        "local_url": None,
+                        "tiers": []
+                    }
+                
+                # 2. Enrich parent with sidecar info
+                if metadata["sidecar_type"] not in machines_dict[parent]["tiers"]:
+                    machines_dict[parent]["tiers"].append(metadata["sidecar_type"])
+                continue
+
+            if parent not in machines_dict:
+                machines_dict[parent] = {
+                    "name": parent,
                     "project": metadata["project"],
                     "type": metadata["type"],
                     "uid": metadata["uid"],
-                    "ip": None, # Local-only
-                    "online": True, # If it's in docker ps, it's online
-                    "local_url": local_url
+                    "ip": None,
+                    "online": True,
+                    "local_url": local_url,
+                    "tiers": ["local"] if local_url else []
                 }
+            else:
+                # Parent already exists from Tailscale, ensure local tier is marked
+                if local_url and "local" not in machines_dict[parent]["tiers"]:
+                    machines_dict[parent]["tiers"].insert(0, "local")
+                    machines_dict[parent]["local_url"] = local_url
                 
         machines = list(machines_dict.values())
         machines.sort(key=lambda x: x["name"])

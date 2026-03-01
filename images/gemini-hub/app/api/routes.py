@@ -61,11 +61,22 @@ def launch():
     vpn_enabled = data.get('vpn_enabled', False)
     localhost_access = data.get('localhost_access', True)
     
+    # Tier Management (Dynamic)
+    vpn_add = data.get('vpn_add', False)
+    vpn_stop = data.get('vpn_stop', False)
+    lan_add = data.get('lan_add', False)
+    lan_stop = data.get('lan_stop', False)
+    
     if not project_path:
         return jsonify({"error": "Project path required"}), 400
         
     try:
-        result = LauncherService.launch(project_path, config_profile, session_type, task, interactive, image_variant, docker_enabled, worktree_mode, worktree_name, ide_enabled, custom_image, docker_args, vpn_enabled, localhost_access)
+        result = LauncherService.launch(
+            project_path, config_profile, session_type, task, interactive, 
+            image_variant, docker_enabled, worktree_mode, worktree_name, 
+            ide_enabled, custom_image, docker_args, vpn_enabled, localhost_access,
+            vpn_add, vpn_stop, lan_add, lan_stop
+        )
         if result["returncode"] == 0:
             result["status"] = "success"
             return jsonify(result)

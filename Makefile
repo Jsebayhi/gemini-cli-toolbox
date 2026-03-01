@@ -178,6 +178,16 @@ build-cli-preview: setup-builder
 	@echo ">> Building gemini-cli-preview..."
 	$(BAKE_CMD) cli-preview
 
+.PHONY: build-vpn
+build-vpn: setup-builder
+	@echo ">> Building gemini-vpn..."
+	$(BAKE_CMD) vpn
+
+.PHONY: build-lan
+build-lan: setup-builder
+	@echo ">> Building gemini-lan..."
+	$(BAKE_CMD) lan
+
 .PHONY: build-test-images
 build-test-images: setup-builder
 	@echo ">> Building test runner images..."
@@ -187,9 +197,9 @@ build-test-images: setup-builder
 
 .PHONY: scan
 scan:
-	@echo ">> Scanning images (base, hub, cli, cli-preview) for Ref: ${GITHUB_REF}..."
+	@echo ">> Scanning images (base, hub, cli, cli-preview, vpn, lan) for Ref: ${GITHUB_REF}..."
 	@TAG=$$(docker buildx bake base --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['base']['tags'][0].split(':')[-1])"); \
-	for img in "gemini-cli-toolbox/base:$$TAG" "gemini-cli-toolbox/hub:$$TAG" "gemini-cli-toolbox/cli:$$TAG" "gemini-cli-toolbox/cli-preview:$$TAG"; do \
+	for img in "gemini-cli-toolbox/base:$$TAG" "gemini-cli-toolbox/hub:$$TAG" "gemini-cli-toolbox/cli:$$TAG" "gemini-cli-toolbox/cli-preview:$$TAG" "gemini-cli-toolbox/vpn:$$TAG" "gemini-cli-toolbox/lan:$$TAG"; do \
 		echo ">> Scanning $$img..."; \
 		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \

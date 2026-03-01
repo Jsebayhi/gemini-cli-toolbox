@@ -42,16 +42,36 @@
                             {% if m.ip %}
                                 <span class="ip">{{ m.ip }}</span>
                             {% else %}
-                                <span class="ip" style="color:var(--accent); font-weight:bold;">LOCAL ONLY</span>
+                                <span class="ip" style="color:var(--accent); font-size: 0.7rem;">PROT LOCAL</span>
                             {% endif %}
+                        </div>
+                        <div style="margin-top: 5px; display: flex; gap: 4px;">
+                            {% if 'local' in m.tiers %}<span style="background: rgba(76, 175, 80, 0.2); color: #4caf50; padding: 1px 5px; border-radius: 3px; font-size: 0.6rem; font-weight: bold; border: 1px solid rgba(76, 175, 80, 0.3);">LOCAL</span>{% endif %}
+                            {% if 'vpn' in m.tiers %}<span style="background: rgba(33, 150, 243, 0.2); color: #2196f3; padding: 1px 5px; border-radius: 3px; font-size: 0.6rem; font-weight: bold; border: 1px solid rgba(33, 150, 243, 0.3);">VPN</span>{% endif %}
+                            {% if 'lan' in m.tiers %}<span style="background: rgba(255, 152, 0, 0.2); color: #ff9800; padding: 1px 5px; border-radius: 3px; font-size: 0.6rem; font-weight: bold; border: 1px solid rgba(255, 152, 0, 0.3);">LAN</span>{% endif %}
                         </div>
                     </div>
                 </a>
                 <div class="card-side">
-                    {% if m.local_url and m.ip %}
+                    {% if m.local_url %}
                     <!-- Hidden by default. JS will show if user is on localhost. -->
                     <a href="{{ m.local_url }}" target="_blank" class="local-badge hidden" data-local-url="{{ m.local_url }}" title="Open Localhost">LOCAL</a>
                     {% endif %}
+                    
+                    <div class="tier-controls">
+                        {% if 'vpn' not in m.tiers and has_vpn_key %}
+                        <button class="tier-btn" onclick="toggleTier('vpn', 'add', '{{ m.name }}')" title="Add VPN access">🌐 +VPN</button>
+                        {% elif 'vpn' in m.tiers %}
+                        <button class="tier-btn active" onclick="toggleTier('vpn', 'stop', '{{ m.name }}')" title="Stop VPN access">🌐 VPN</button>
+                        {% endif %}
+
+                        {% if 'lan' not in m.tiers %}
+                        <button class="tier-btn" onclick="toggleTier('lan', 'add', '{{ m.name }}')" title="Share on LAN (Wi-Fi)">📡 +LAN</button>
+                        {% else %}
+                        <button class="tier-btn active" onclick="toggleTier('lan', 'stop', '{{ m.name }}')" title="Stop LAN Sharing">📡 LAN</button>
+                        {% endif %}
+                    </div>
+
                     {% if m.online %}
                     <button class="stop-btn" onclick="stopSession('{{ m.name }}')" title="Stop Session">Stop</button>
                     {% endif %}
