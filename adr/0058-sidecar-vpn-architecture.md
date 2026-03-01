@@ -62,14 +62,16 @@ To prevent orphaned sidecars, we implement a "Double-Grip" strategy using shared
 
 ### 7. Naming, Labels & Discovery
 *   **Naming:** `gem-{PROJECT}-{TYPE}-{ID}-[vpn|lan]`
+*   **Consistency Mandate:** We maintain the strict **1:1 naming scheme** (Docker Name == Tailscale Hostname). Sidecars extend this by appending the tier suffix to the parent name.
 *   **Labels:**
     *   `com.gemini.role=sidecar`
-    *   `com.gemini.parent={SESSION_NAME}` (e.g., `gem-myproj-cli-123`)
+    *   `com.gemini.parent={SESSION_NAME}`
     *   `com.gemini.sidecar.type=[vpn|lan]`
-*   **Parsing Impact:** Since our standard parsing logic extracts metadata by splitting the hostname by `-` from the right (expecting index -1 to be the UID), the addition of `-vpn` or `-lan` suffixes would break this logic. Therefore, the Hub and CLI scripts must explicitly filter out or handle sidecar containers *before* attempting to parse their names for project/type metadata.
+*   **Parsing Impact:** Since our standard parsing logic extracts metadata by splitting hostnames by `-` from the right (expecting index -1 to be the UID), the addition of `-vpn` or `-lan` suffixes would break this logic. Therefore, the Hub and CLI scripts must explicitly filter out or handle sidecar containers *before* attempting to parse their names for project/type metadata.
 *   **Unified Discovery:** The Hub logic will merge `docker ps` (filtering for sidecar suffixes) with `tailscale status`.
     *   **First-Class Local Citizens:** Local containers found via `docker ps` are displayed as active sessions even if they lack a Tailscale IP (labeled as `[LOCAL ONLY]`).
     *   **Hybrid Discovery:** A Hub in localhost mode can still detect and launch VPN-enabled sessions if a key is provided, provided they are running on the local Docker daemon.
+    *   **Activity Monitoring:** The Hub's "Auto-Shutdown" monitor (which kills the Hub after 60s of inactivity) must be updated to count unique parent sessions only, ignoring sidecars to avoid double-counting or false-positives.
 
 ### 8. User Experience (UX) & Hub Launch Wizard
 *   **Filtering:** `connect`, `stop`, and autocompletion scripts will explicitly ignore containers ending in `-vpn` or `-lan`.
