@@ -53,6 +53,8 @@ show_help() {
     echo "Commands:"
     echo "  stop                  Stop the running Gemini Hub service"
     echo "  status                Check if the Gemini Hub service is running"
+    echo "  vpn-add               Attach a VPN sidecar to the Hub"
+    echo "  vpn-stop              Remove the VPN sidecar from the Hub"
     echo "  lan-add               Expose the Hub to the local network (Wi-Fi)"
     echo "  lan-stop              Disable Hub network sharing"
     echo ""
@@ -204,7 +206,9 @@ main() {
             fi
             exit 0
             ;;
-        lan-add) sidecar_upgrade "lan" "add"; exit 0 ;;
+        vpn-add)  sidecar_upgrade "vpn" "add"; exit 0 ;;
+        vpn-stop) sidecar_upgrade "vpn" "stop"; exit 0 ;;
+        lan-add)  sidecar_upgrade "lan" "add"; exit 0 ;;
         lan-stop) sidecar_upgrade "lan" "stop"; exit 0 ;;
         *)           log_error "Unknown argument '$1'"; show_help; exit 1 ;;
       esac

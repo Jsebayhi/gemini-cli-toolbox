@@ -4,8 +4,8 @@ _gemini_hub_completions() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    commands="stop"
-    opts="--detach -d --image --key --auto-shutdown --no-worktree-prune --workspace --config-root --help -h"
+    commands="stop status vpn-add vpn-stop lan-add lan-stop"
+    opts="--detach -d --image --key --no-vpn --no-localhost --auto-shutdown --no-worktree-prune --workspace --config-root --help -h"
 
     case "${prev}" in
         --workspace)

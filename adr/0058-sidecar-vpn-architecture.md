@@ -91,7 +91,8 @@ The `net=host` (Raw Host Mode) is **deprecated and removed**.
 *   **Replacement:** Users wanting LAN reachability must now use the Tier 3 LAN Sidecar, which provides the same reachability with better isolation and a dynamic lifecycle.
 
 ## Consequences
+*   **Robustness:** Connectivity failures are isolated from the application logic.
 *   **Flexibility:** Precise, zero-downtime control over session visibility.
-*   **Robustness:** Isolation of networking failures from application state.
+*   **Instant Startup:** Primary session containers (CLI/Bash) start nearly instantly because they no longer perform VPN initialization or wait for network convergence. Sidecars handle their own startup latency in the background.
 *   **Security:** Removal of `iptables`, `iproute2`, and `tailscale` from the main CLI container.
-*   **Complexity:** The `gemini-toolbox` script and Hub `LauncherService` must now orchestrate multiple containers.
+*   **Complexity:** The `gemini-toolbox` script and Hub `LauncherService` must now orchestrate multiple containers per session.
