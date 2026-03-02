@@ -68,8 +68,29 @@ main() {
 
     local TARGET_USER
     TARGET_USER=$(getent passwd "$TARGET_UID" | cut -d: -f1)
+    local HOME_DIR="/home/$TARGET_USER"
 
-    # 2.2 Tailscale Socket Permissions
+    # 2.2 Home Directory Permissions (Surgical Fix)
+    is_mountpoint() {
+        if command -v mountpoint >/dev/null 2>&1; then
+            mountpoint -q "$1"
+            return $?
+        fi
+        grep -q " $1 " /proc/self/mounts 2>/dev/null
+    }
+
+    # Fix any root-owned sub-items in the home directory (e.g., parents of mount points)
+    # Use -xdev to avoid traversing into mount points.
+    if [ -d "$HOME_DIR" ] && find "$HOME_DIR" -xdev -user root -print -quit | grep -q .; then
+        log_info "Fixing root-owned home sub-items (non-recursive)..."
+        find "$HOME_DIR" -xdev -user root | while read -r item; do
+            if ! is_mountpoint "$item"; then
+                chown -h "$TARGET_UID:$TARGET_GID" "$item"
+            fi
+        done
+    fi
+
+    # 2.3 Tailscale Socket Permissions
     # Allow the non-root user to talk to the Tailscale daemon
     chown "$TARGET_USER" "$SOCKET_DIR" "$SOCKET_PATH"
 
