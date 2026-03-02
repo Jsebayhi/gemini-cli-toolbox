@@ -77,6 +77,19 @@ main() {
         fi
     fi
 
+    # Fix any other root-owned sub-items in the home directory (e.g., parents of mount points)
+    # Use -xdev to avoid traversing into mount points (where ownership should be preserved).
+    # This is non-recursive because we only target items owned by root, which are usually
+    # created by Docker or the Dockerfile during initialization.
+    if find "$HOME" -xdev -user root -print -quit | grep -q .; then
+        log_info "Fixing root-owned home sub-items (non-recursive)..."
+        find "$HOME" -xdev -user root | while read -r item; do
+            if ! is_mountpoint "$item"; then
+                chown -h "$TARGET_UID:$TARGET_GID" "$item"
+            fi
+        done
+    fi
+
     if [ "$CURRENT_OWNER" != "$TARGET_UID:$TARGET_GID" ]; then
         log_error "Permission mismatch detected on $HOME."
         log_error "The directory is owned by $CURRENT_OWNER but should be $TARGET_UID:$TARGET_GID."
