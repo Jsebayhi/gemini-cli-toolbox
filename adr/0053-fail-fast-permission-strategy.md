@@ -1,7 +1,7 @@
 # ADR-0053: Fail-Fast Permission Strategy
 
 ## Status
-Accepted
+Accepted (Amended by [ADR-0057](0057-surgical-fix-for-docker-created-root-owned-subdirectories-in-home.md))
 
 ## Date
 2026-02-26
