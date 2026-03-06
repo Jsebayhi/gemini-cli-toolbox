@@ -19,42 +19,10 @@ RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
     npm install -g --verbose --prefix $NPM_CONFIG_PREFIX @google/gemini-cli && \
     chmod -R 777 $NPM_CONFIG_PREFIX
 
-# Patch IDE Host Detection
-# The CLI forces 'host.docker.internal' in Docker, but the VS Code extension
-# only accepts '127.0.0.1'. We patch it to respect GEMINI_CLI_IDE_SERVER_HOST.
-RUN CORE_DIR=$NPM_CONFIG_PREFIX/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/ide \
-    && TARGET_FILE="" \
-    && if [ -f "$CORE_DIR/ide-connection-utils.js" ]; then TARGET_FILE="$CORE_DIR/ide-connection-utils.js"; \
-       elif [ -f "$CORE_DIR/ide-client.js" ]; then TARGET_FILE="$CORE_DIR/ide-client.js"; fi \
-    && if [ -n "$TARGET_FILE" ] && grep -q "export function getIdeServerHost() {" "$TARGET_FILE"; then \
-        echo "Applying function-level patch for new CLI version to $TARGET_FILE..."; \
-        sed -i "s/export function getIdeServerHost() {/export function getIdeServerHost() { if (process.env.GEMINI_CLI_IDE_SERVER_HOST) return process.env.GEMINI_CLI_IDE_SERVER_HOST;/" "$TARGET_FILE"; \
-    elif [ -n "$TARGET_FILE" ] && grep -q "return isInContainer ? 'host.docker.internal' : '127.0.0.1'" "$TARGET_FILE"; then \
-        echo "Applying line-level patch for legacy CLI version to $TARGET_FILE..."; \
-        sed -i "s/return isInContainer ? 'host.docker.internal' : '127.0.0.1'/return process.env.GEMINI_CLI_IDE_SERVER_HOST || (isInContainer ? 'host.docker.internal' : '127.0.0.1')/" "$TARGET_FILE"; \
-    else \
-        echo "Error: Failed to find IDE host detection logic in $CORE_DIR. Upstream code may have changed." && exit 1; \
-    fi
-
-# 3. Patch Infinite Retry (Robust)
-# The CLI stops after 3 retries on high-demand, prompting the user via a dialog.
-# We patch it to return "retry_always" automatically for high-demand errors,
-# bypassing the dialog and ensuring automated tasks continue.
-# This patch fails the build if the target file or strings are missing.
-RUN TARGET_FILE=$(npm root -g)/@google/gemini-cli/dist/src/ui/hooks/useQuotaAndFallback.js \
-    && if [ -f "$TARGET_FILE" ]; then \
-        echo "Patching infinite retry in $TARGET_FILE..."; \
-        # We replace the line that joins the high-demand message with an early return.
-        # This prevents the state flags from being set and the dialog from opening.
-        if grep -q "message = messageLines.join('\\\\n');" "$TARGET_FILE"; then \
-            sed -i "s/message = messageLines.join('\\\\n');/return 'retry_always';/" "$TARGET_FILE" \
-                && grep -q "return 'retry_always';" "$TARGET_FILE"; \
-        else \
-            echo "Error: Target string for patch not found in $TARGET_FILE. Patch failed." && exit 1; \
-        fi \
-    else \
-        echo "Error: Target file $TARGET_FILE not found. Patch failed." && exit 1; \
-    fi
+# Patch Gemini CLI (IDE Host Detection and Infinite Retry)
+# We delegate to a robust shared script that handles both bundled and multi-file structures.
+COPY --from=scripts patch-cli.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/patch-cli.sh && /usr/local/bin/patch-cli.sh $NPM_CONFIG_PREFIX
 
 # 4. Copy Entrypoint
 COPY --from=scripts docker-entrypoint.sh /usr/local/bin/
