@@ -20,9 +20,11 @@ RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
     chmod -R 777 $NPM_CONFIG_PREFIX
 
 # Patch Gemini CLI (IDE Host Detection and Infinite Retry)
-# We delegate to a robust shared script that handles both bundled and multi-file structures.
-COPY --from=scripts patch-cli.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/patch-cli.sh && /usr/local/bin/patch-cli.sh $NPM_CONFIG_PREFIX
+# We delegate to robust shared scripts that handle both bundled and multi-file structures.
+COPY --from=scripts patch-ide.sh patch-retry.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/patch-*.sh && \
+    /usr/local/bin/patch-ide.sh $NPM_CONFIG_PREFIX && \
+    /usr/local/bin/patch-retry.sh $NPM_CONFIG_PREFIX
 
 # 4. Copy Entrypoint
 COPY --from=scripts docker-entrypoint.sh /usr/local/bin/
