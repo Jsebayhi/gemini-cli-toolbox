@@ -17,7 +17,9 @@ RUN --mount=type=cache,target=/root/.npm,id=gemini-npm-cache \
     mkdir -p $NPM_CONFIG_PREFIX && \
     chmod 777 $NPM_CONFIG_PREFIX && \
     npm install -g --verbose --prefix $NPM_CONFIG_PREFIX @google/gemini-cli@preview && \
-    chmod -R 777 $NPM_CONFIG_PREFIX
+    # Set to read-only for non-root users (755) to prevent inconsistent internal updates
+    # ADR-0058: Auto-updates are now handled externally via the toolbox script.
+    chmod -R 755 $NPM_CONFIG_PREFIX
 
 # Patch Gemini CLI (IDE Host Detection and Infinite Retry)
 # We delegate to robust shared scripts that handle both bundled and multi-file structures.

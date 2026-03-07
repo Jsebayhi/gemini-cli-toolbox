@@ -134,20 +134,15 @@ EOF
     assert_success
 }
 
-@test "main: age-based refresh tip" {
+@test "main: auto-update image check" {
     source_toolbox
-    # Force usage of remote tag by failing local inspect
-    # And mock age to be old
+    mock_git
+    
+    # Mock docker: image inspect for local fails, so it uses remote.
+    # No last-check file exists, so it should trigger auto-update.
     cat <<EOF > "$TEST_TEMP_DIR/bin/docker"
 #!/bin/bash
-if [[ "\$1" == "inspect" && "\$2" == "--format"* ]]; then
-    echo "2020-01-01T00:00:00Z"
-    exit 0
-fi
-if [[ "\$1" == "image" && "\$2" == "inspect" ]]; then 
-    if [[ "\$3" == "gemini-cli-toolbox/cli:latest"* ]]; then exit 1; fi
-    exit 0 
-fi
+if [[ "\$1" == "image" && "\$2" == "inspect" ]]; then exit 1; fi
 echo "docker \$*" >> "$MOCK_DOCKER_LOG"
 exit 0
 EOF
@@ -155,7 +150,9 @@ EOF
 
     run main --bash
     assert_success
-    assert_output --partial "Tip: Your Gemini image is"
+    assert_output --partial "Auto-updating image"
+    run grep "docker pull" "$MOCK_DOCKER_LOG"
+    assert_success
 }
 
 @test "main: connect command bash session" {
