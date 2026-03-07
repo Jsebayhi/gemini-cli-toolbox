@@ -11,6 +11,12 @@
 *   **Zero-Debt Suppressions:** Never suppress a vulnerability to simply "get it done". Every suppression must be justified and time-bound directly within `.trivyignore`.
 *   **Single Source of Truth:** Document all risk acceptances and justifications exclusively in `.trivyignore`. Do not duplicate technical vulnerability details in architectural documentation.
 
+## 📝 Documentation Integrity
+**ADRs are Immutable History.**
+*   **Diff Verification:** You MUST run `git diff` after every single modification to an ADR file.
+*   **Zero-Loss Policy:** You are strictly forbidden from removing sections like "Title", "Status", or "Alternatives Considered" unless explicitly instructed. If a `replace` call accidentally truncates a file, you MUST immediately use `git restore` and try a more targeted replacement.
+*   **Context Preservation:** When updating implementation details in an ADR, ensure the surrounding historical context (the "Why") remains intact.
+
 ## 🔍 Mandate for Clarity (Proportional to Ambiguity)
 **Primary Objective:** Avoid error due to unspoken assumptions.
 
