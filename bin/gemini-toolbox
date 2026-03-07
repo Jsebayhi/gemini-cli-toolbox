@@ -387,12 +387,41 @@ main() {
     local gemini_session_id="gem-${project_name}-${session_type}-${gen_uuid}"
     local container_name_arg=("--name" "${gemini_session_id}")
 
+    local cache_root="${GEMINI_CACHE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox}"
+    local last_update_file="${cache_root}/last-update-check"
+
     local original_project_dir="$project_dir"
     if [ "$enable_worktree" = true ]; then
         # Capture output separately to honor set -e
         local new_wt
         new_wt=$(setup_worktree "$base_project_name" "$worktree_name" "$project_dir")
         project_dir="$new_wt"
+    fi
+
+    # Auto-update logic: Attempt to pull remote 'latest' images at most once per hour
+    if [ "$force_update" = false ] && [[ "$image_name" == *"$remote_tag"* ]] && [[ "$image_name" == *"latest"* ]]; then
+        local now
+        now=$(date +%s)
+        local last_check=0
+        if [ -f "$last_update_file" ]; then
+            # Read and sanitize (numbers only) to prevent arithmetic errors
+            last_check=$(tr -cd '0-9' < "$last_update_file" 2>/dev/null || echo 0)
+        fi
+
+        if (( now - ${last_check:-0} > 3600 )); then
+            log_info "Auto-updating image '$image_name' (hourly check)..."
+            # Ensure the cache directory exists before pulling
+            mkdir -p "$(dirname "$last_update_file")"
+            
+            # We don't exit on failure here to allow offline use if image exists locally
+            if ! docker pull "$image_name"; then
+                log_warn "Failed to check for updates for '$image_name'. Using local version."
+            fi
+            
+            # Always update the timestamp (atomically) to avoid retrying on every run during outages
+            # or immediately after a successful pull.
+            echo "$now" > "${last_update_file}.tmp" && mv "${last_update_file}.tmp" "$last_update_file"
+        fi
     fi
 
     if [ "$force_update" = true ]; then
@@ -405,6 +434,11 @@ main() {
             log_error "Failed to pull image '$image_name' from registry."
             exit 1
         fi
+        
+        # Manually refresh the auto-update timestamp to prevent a redundant check on the next run
+        mkdir -p "$(dirname "$last_update_file")"
+        date +%s > "${last_update_file}.tmp" && mv "${last_update_file}.tmp" "$last_update_file"
+        
         exit 0
     fi
 
@@ -454,17 +488,6 @@ main() {
                  log_error "Reconnecting to this session is not supported." >&2
                  exit 1
              fi
-        fi
-    fi
-
-    if [[ "$image_name" == *"$remote_tag"* ]] && [[ "$image_name" == *"latest"* ]] && docker image inspect "$image_name" >/dev/null 2>&1; then
-        local created
-        created=$(docker inspect --format='{{.Created}}' "$image_name")
-        local created_sec
-        created_sec=$(date -d "$created" +%s 2>/dev/null || echo "0")
-        local age=$(( ($(date +%s) - created_sec) / 86400 ))
-        if [ "$age" -ge 7 ]; then
-             log_info "Tip: Your Gemini image is $age days old. Run 'gemini-toolbox update' to refresh."
         fi
     fi
 
