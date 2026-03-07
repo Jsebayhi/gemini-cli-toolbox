@@ -22,7 +22,8 @@ The integration faced three major blocking issues:
 We have implemented a robust solution involving a **Source Code Patch** during the Docker build.
 
 ### 1. Build-Time Patching (The Core Fix)
-*   **Action:** We modify the installed `@google/gemini-cli-core` source code using `sed` in the `Dockerfile`.
+*   **Action:** We modify the installed `@google/gemini-cli-core` or `@google/gemini-cli` source code using a robust modular shell script (`patch-ide.sh`) invoked during the Docker build.
+*   **Discovery:** The script uses a robust `find` command to locate the target logic in either the traditional multi-file structure (`dist/src/ide/ide-connection-utils.js`) or the modern bundled structure (`bundle/gemini.js`).
 *   **The Change:** We use a resilient "Smart Patch" that detects the code pattern (legacy line-based or new function-based) and injects a check for `GEMINI_CLI_IDE_SERVER_HOST`.
 *   **Logic (Legacy):**
     ```javascript
@@ -35,12 +36,12 @@ We have implemented a robust solution involving a **Source Code Patch** during t
 *   **Logic (Modern):**
     ```javascript
     // Original
-    export function getIdeServerHost() {
+    [export] function getIdeServerHost() {
 
     // Patched
-    export function getIdeServerHost() { if (process.env.GEMINI_CLI_IDE_SERVER_HOST) return process.env.GEMINI_CLI_IDE_SERVER_HOST;
+    [export] function getIdeServerHost() { if (process.env.GEMINI_CLI_IDE_SERVER_HOST) return process.env.GEMINI_CLI_IDE_SERVER_HOST;
     ```
-*   **Result:** This allows us to override the hardcoded behavior across different CLI versions without forking the entire project.
+*   **Result:** This allows us to override the hardcoded behavior across different CLI versions and packaging formats without forking the entire project.
 
 ### 2. Wrapper Configuration (`bin/gemini-toolbox`)
 *   **Network:** Uses `--net=host`.

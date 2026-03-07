@@ -13,6 +13,7 @@ You are the maintainer. You MUST strictly follow the **Research -> Strategy -> E
 3.  **Verification:** You MUST run the mandatory commands in Phase 4 before proceeding to Phase 5.
 4.  **Documentation:** You MUST update `GEMINI.md` (root or component) when making architectural changes or discovering new project-specific behaviors.
 5.  **Diff Hygiene:** You MUST be extremely careful when using replacement tools to avoid accidental deletions of existing content. Always verify your `git diff` before committing to ensure you haven't introduced regressions or removed necessary code.
+6.  **ADR Integrity:** ADRs are the project's memory. You MUST execute `git diff <adr-path>` immediately after every ADR modification to verify that no valuable context (e.g., Titles, Alternatives, Status) was accidentally destroyed.
 
 ## 📝 Commit & PR Mandates
 Because PRs are squashed, your PR title and body BECOME the final repository history. You MUST ensure they provide a high-signal technical rationale.

@@ -48,6 +48,13 @@ bin/gemini-toolbox --debug
 *   **Surgical Parent Fix (ADR-0057):** When Docker creates missing parent directories for volume mounts (e.g., `/home/gemini/.config`), they are owned by `root`. The entrypoint automatically performs a surgical, non-recursive `chown` on any root-owned sub-items in `/home/gemini` that are NOT mount points. It uses `find -xdev` to ensure it never traverses into large host-mounted volumes, preserving performance.
 *   **Rule:** Never remove `gosu` or the entrypoint logic. It is the backbone of the "write-access" feature.
 
+### Source Code Patching
+*   **Purpose:** To overcome hardcoded limitations in the official CLI (IDE host detection and infinite retry).
+*   **Mechanism:** A robust shell script (`patch-cli.sh`) invoked during the Docker build.
+*   **Target Files:** The script uses `find` to discover target files in both traditional (`dist/src/`) and bundled (`bundle/gemini.js`) structures.
+*   **Rule:** If building fails at the patching stage, it means the upstream structure or code patterns have changed. Re-investigate the CLI's source in a temporary container before updating `patch-cli.sh`.
+*   **References:** See ADR-0008 (IDE) and ADR-0054 (Infinite Retry).
+
 ### Docker-out-of-Docker (DooD)
 *   **Concept:** The container mounts `/var/run/docker.sock` from the host and installs the Docker CLI.
 *   **Benefit:** You can run `docker build`, `docker run`, or `docker-compose up` from within the agent.
