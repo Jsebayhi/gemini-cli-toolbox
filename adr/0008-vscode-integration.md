@@ -22,7 +22,7 @@ The integration faced three major blocking issues:
 We have implemented a robust solution involving a **Source Code Patch** during the Docker build.
 
 ### 1. Build-Time Patching (The Core Fix)
-*   **Action:** We modify the installed `@google/gemini-cli-core` or `@google/gemini-cli` source code using a robust shell script (`patch-cli.sh`) invoked during the Docker build.
+*   **Action:** We modify the installed `@google/gemini-cli-core` or `@google/gemini-cli` source code using a robust modular shell script (`patch-ide.sh`) invoked during the Docker build.
 *   **Discovery:** The script uses a robust `find` command to locate the target logic in either the traditional multi-file structure (`dist/src/ide/ide-connection-utils.js`) or the modern bundled structure (`bundle/gemini.js`).
 *   **The Change:** We use a resilient "Smart Patch" that detects the code pattern (legacy line-based or new function-based) and injects a check for `GEMINI_CLI_IDE_SERVER_HOST`.
 *   **Logic (Legacy):**
