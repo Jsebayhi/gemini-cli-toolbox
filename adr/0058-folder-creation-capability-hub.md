@@ -1,4 +1,4 @@
-# ADR-0057: Folder Creation Capability in Gemini Hub
+# ADR-0058: Folder Creation Capability in Gemini Hub
 
 ## Status
 Proposed
