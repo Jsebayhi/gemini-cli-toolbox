@@ -11,11 +11,11 @@ async function checkConnectivity() {
     for (const card of cards) {
         const localBadge = card.querySelector('.local-badge');
         const mainLink = card.querySelector('.card-main-link');
+        const ipSpan = card.querySelector('.ip');
         
-        if (!localBadge) continue; // Offline or no local port
-        
-        const localUrl = localBadge.getAttribute('data-local-url');
-        const vpnUrl = mainLink.href; // Original VPN URL from template
+        const isLocalOnly = ipSpan && ipSpan.innerText === "LOCAL ONLY";
+        const localUrl = localBadge ? localBadge.getAttribute('data-local-url') : (isLocalOnly ? mainLink.href : null);
+        const vpnUrl = isLocalOnly ? null : mainLink.href;
         
         // 1. Probe Localhost
         let localReachable = false;
@@ -24,28 +24,31 @@ async function checkConnectivity() {
         }
 
         // 2. Probe VPN
-        const vpnReachable = await probeUrl(vpnUrl);
+        const vpnReachable = vpnUrl ? await probeUrl(vpnUrl) : false;
 
         // 3. Apply Logic
         if (localReachable) {
             // Priority: Localhost
             mainLink.href = localUrl;
             
-            if (vpnReachable) {
+            if (vpnReachable && vpnUrl) {
                 // If VPN also works, show it as a badge
                 localBadge.href = vpnUrl;
                 localBadge.innerText = "VPN";
                 localBadge.classList.remove('hidden');
                 localBadge.title = "Connect via Tailscale IP";
-            } else {
-                // VPN unreachable? Hide badge.
+            } else if (localBadge) {
+                // VPN unreachable or local-only? Hide badge.
                 localBadge.classList.add('hidden');
             }
-        } else {
-            // Local unreachable (or remote client)
-            // Main link remains VPN (default)
-            // Local badge remains hidden (default)
-             localBadge.classList.add('hidden');
+        } else if (vpnReachable) {
+            // Local unreachable (or remote client) but VPN works
+            mainLink.href = vpnUrl;
+            if (localBadge) localBadge.classList.add('hidden');
+        } else if (isLocalOnly) {
+            // Local unreachable for a local-only container (probably still starting up)
+            // Keep mainLink as is
+            if (localBadge) localBadge.classList.add('hidden');
         }
     }
 }
@@ -95,6 +98,60 @@ async function stopSession(sessionId) {
     }
 
     const btn = document.querySelector(`.card[data-id="${sessionId}"] .stop-btn`);
+    if (btn) btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/sessions/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+        });
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            window.location.reload();
+        } else {
+            alert(`Error stopping session: ${result.error}`);
+            if (btn) btn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Error stopping session:', error);
+        alert('Failed to stop session. Check console for details.');
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function toggleTier(type, action, id) {
+    const cmd = `${type}_${action}`; // Note: Backend uses underscore for the flag
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
+    
+    btn.disabled = true;
+    btn.innerText = "⏳ ...";
+
+    try {
+        const res = await fetch('/api/launch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                project_path: id, 
+                [cmd]: true
+            })
+        });
+        const result = await res.json();
+        if (result.status === 'success') {
+            window.location.reload();
+        } else {
+            alert("Error: " + (result.error || "Unknown error"));
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    } catch (e) {
+        alert("Network error: " + e.toString());
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+}
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = "...";
@@ -293,6 +350,10 @@ function toggleWorktreeInput() {
     optionsDiv.style.display = isChecked ? 'block' : 'none';
 }
 
+function toggleVpnOptions() {
+    // Placeholder for any dynamic UI changes when VPN is toggled
+}
+
 function toggleCustomImageInput() {
     const variant = document.getElementById('image-variant-select').value;
     const container = document.getElementById('custom-image-container');
@@ -413,6 +474,8 @@ async function doLaunch() {
     const worktreeName = document.getElementById('worktree-name').value;
     const dockerArgs = document.getElementById('docker-args-input').value;
     const task = document.getElementById('task-input').value;
+    const vpnEnabled = document.getElementById('vpn-check').checked;
+    const localhostAccess = document.getElementById('localhost-access-check').checked;
     const interactive = document.getElementById('interactive-check').checked;
     const results = document.getElementById('launch-results');
     const status = document.getElementById('launch-status');
@@ -440,7 +503,9 @@ async function doLaunch() {
                 custom_image: customImage,
                 docker_args: dockerArgs,
                 task: task,
-                interactive: interactive
+                interactive: interactive,
+                vpn_enabled: vpnEnabled,
+                localhost_access: localhostAccess
             })
         });
         const result = await res.json();

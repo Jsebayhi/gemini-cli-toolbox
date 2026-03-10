@@ -215,7 +215,7 @@ EOF
     
     run main stop "myproject"
     assert_failure
-    assert_output --partial "Error: Multiple sessions found for project 'myproject'"
+    assert_output --partial "Error: Multiple sessions found for 'myproject':"
 }
 
 @test "main: update command success" {
@@ -251,8 +251,8 @@ EOF
 #!/bin/bash
 case "\$1" in
     ps) 
-        if [[ "\$*" == *"gem-proj-bash-123"* ]]; then echo "gem-proj-bash-123"; fi
-        if [[ "\$*" == *"gem-proj-geminicli-123"* ]]; then echo "gem-proj-geminicli-123"; fi
+        echo "gem-proj-bash-123"
+        echo "gem-proj-geminicli-123"
         exit 0 ;;
     inspect) echo "true"; exit 0 ;;
     exec)
@@ -525,7 +525,7 @@ EOF
     
     run main connect "non-existent"
     assert_failure
-    assert_output --partial "Error: Session 'non-existent' not found"
+    assert_output --partial "Error: No active sessions found matching 'non-existent'."
 }
 
 @test "main: profile without extra-args" {
