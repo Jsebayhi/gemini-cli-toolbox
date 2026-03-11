@@ -52,14 +52,14 @@ source_toolbox() {
     # Ensure no .git folder exists in parents by using a completely fresh temp dir
     local isolated_dir
     isolated_dir="$(mktemp -d)"
+    # Ensure cleanup even on failure
+    trap 'rm -rf "$isolated_dir"' EXIT
     cd "$isolated_dir"
-    
+
     run setup_worktree "proj" "branch" "."
     assert_failure
     assert_output --partial "Error: --worktree can only be used within a Git repository"
-    rm -rf "$isolated_dir"
 }
-
 @test "setup_worktree Error: git not found" {
     source_toolbox
     # Mock git to not found

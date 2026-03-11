@@ -75,6 +75,7 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 ### Testing Strategy
 *   **Bash Scripts:** Use `bats-core`. Tests reside in `tests/bash/`. Use `make test-bash` to execute.
 *   **Python (Hub):** Use `pytest`. Tests reside in `images/gemini-hub/tests/`. Use `make test` to execute.
+*   **Idempotency & Isolation:** Follow the strict mandates in [.gemini/skills/developing-gemini-toolbox/references/general_testing.md](.gemini/skills/developing-gemini-toolbox/references/general_testing.md) to ensure all tests are isolated and do not leak state (Config, Filesystem, or Docker).
 *   **Mandatory:** Always run `make local-ci` before submitting a PR.
 
 ## 5. Naming Strategy
