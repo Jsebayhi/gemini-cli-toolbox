@@ -43,6 +43,26 @@ def browse():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@api.route('/create-directory', methods=['POST'])
+def create_directory():
+    data = request.json or {}
+    parent_path = data.get('parent_path')
+    name = data.get('name')
+    
+    try:
+        path = FileSystemService.create_directory(parent_path, name)
+        return jsonify({"status": "success", "path": path})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except PermissionError as e:
+        return jsonify({"error": str(e)}), 403
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except FileExistsError as e:
+        return jsonify({"error": str(e)}), 409
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @api.route('/launch', methods=['POST'])
 def launch():
     data = request.json or {}
