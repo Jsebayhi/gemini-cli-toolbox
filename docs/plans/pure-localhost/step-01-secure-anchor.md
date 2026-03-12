@@ -1,29 +1,35 @@
 # Step 1: Secure Anchor (Networking Refactor)
 
-## Goal
-Shift from insecure `--net=host` to bridge isolation by default.
+## 🎯 The Goal
+Shift the entire toolbox from "Open by Default" (host networking) to "Protected by Default" (bridge isolation).
 
-## Files to Modify
-- `bin/gemini-toolbox`
-- `bin/gemini-hub`
-- `completions/gemini-toolbox.bash`
-- `completions/gemini-hub.bash`
+## 💡 The "Why" (Technical Rationale)
+Currently, using `--net=host` exposes all internal container ports to all network interfaces on the host machine. If a user is on a public Wi-Fi or a permissive corporate LAN, their Gemini session (port 3000) could be reachable by anyone on the same network. By switching to `bridge` mode and binding strictly to `127.0.0.1`, we create a "Secure Anchor" that is only reachable from the user's desktop, regardless of their network environment.
 
-## Technical Specification
-1.  **Defaults:** Change `network_mode` default from `--net=host` to `--network=bridge`.
-2.  **Port Mapping:**
-    - `bin/gemini-toolbox`: Append `-p 127.0.0.1:0:3000` to `extra_docker_args` by default.
-    - `bin/gemini-hub`: Append `-p 127.0.0.1:8888:8888` to `docker_run_args` by default.
-3.  **New Flags:**
-    - `--no-vpn`: Sets `localhost_mode=true`. Disables VPN startup logic.
-    - `--no-localhost`: Sets `localhost_access=false`. Suppresses `-p` flag mapping.
-    - `--network-host`: Sets `raw_host=true`. Reverts to `--net=host` and logs a warning: `"--network-host overrides --no-vpn/--remote isolation."`
-4.  **Conflicts:**
-    - If `--remote` AND `--no-vpn` are passed, exit with error: `"--remote and --no-vpn are incompatible."`
-    - If `--remote` AND `--no-tmux` are passed, exit with error: `"--remote and --no-tmux are incompatible."`
+## 📝 The "What" (Action Plan)
+You must modify the primary wrapper scripts to enforce bridge networking and loopback port mapping.
 
-## Validation
-- **BATS Test:** `tests/bash/test_localhost_mode.bats`
-- **Case 1:** `gemini-toolbox --no-vpn` -> Verify `docker run` contains `--network=bridge` and `-p 127.0.0.1:0:3000`.
-- **Case 2:** `gemini-toolbox --network-host` -> Verify `docker run` contains `--net=host`.
-- **Case 3:** `gemini-hub --no-vpn` -> Verify `docker run` contains `--network=bridge` and `-p 127.0.0.1:8888:8888`.
+## 🛠️ The "How" (Technical Specification)
+
+### 1. `bin/gemini-toolbox` Changes:
+- **Variable Update:** Change the default value of `network_mode` from `--net=host` to `--network=bridge`.
+- **Default Port Mapping:** 
+    - Always append `-p 127.0.0.1:0:3000` to the `extra_docker_args` array.
+    - **Note:** The `0` in `127.0.0.1:0:3000` tells Docker to pick a random available port on the host. This prevents collisions between multiple sessions.
+- **New Flags:**
+    - `--no-vpn`: A semantic flag that confirms the user wants to run without Tailscale. It sets `localhost_mode=true` and prevents any VPN-related warnings.
+    - `--no-localhost`: Disables the default port mapping. Set `localhost_access=false` and skip the `-p` argument.
+    - `--network-host`: A "legacy" escape hatch. Sets `raw_host=true`, reverts to `--net=host`, and MUST log a warning: `">> Warning: --network-host overrides --no-vpn/--remote isolation."`
+
+### 2. `bin/gemini-hub` Changes:
+- **Default Port Mapping:** Enforce `-p 127.0.0.1:8888:8888` for the Hub.
+- **New Flag:**
+    - `--no-vpn`: Makes the `TAILSCALE_KEY` requirement optional.
+
+### 3. Conflict Resolution:
+- If a user passes `--remote` (which implies VPN) AND `--no-vpn`, the script MUST exit with an error: `"Error: --remote and --no-vpn are incompatible."`
+
+## ✅ Validation
+- **Test:** Run `gemini-toolbox --no-vpn --detached`. 
+- **Verify:** Run `docker ps` and ensure the container shows `127.0.0.1:XXXXX->3000/tcp`.
+- **Verify:** Attempt to reach port 3000 via the host's LAN IP; it should be refused.

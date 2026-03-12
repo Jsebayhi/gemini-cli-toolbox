@@ -1,26 +1,40 @@
 # Step 5: Toolbox Sidecar Orchestration
 
-## Goal
-Add manual sidecar management to the gemini-toolbox CLI.
+## 🎯 The Goal
+Provide a command-line interface for dynamic, zero-downtime connectivity management.
 
-## Files to Modify
-- `bin/gemini-toolbox`
-- `completions/gemini-toolbox.bash`
+## 💡 The "Why" (Technical Rationale)
+Standard Docker port mappings cannot be modified after a container starts. This means that if a user starts a session locally but later wants to share it on a VPN, they would normally have to restart the session, losing their state and context. By using sidecar orchestration, we can "attach" or "detach" network tiers (like VPN) to a running container without touching its main process. This makes the Gemini CLI "always-on" and globally available on-demand.
 
-## Technical Specification
-1.  **Commands:**
-    - `vpn-add <id>`: Starts a `gemini-vpn` sidecar attached to `<id>`.
-    - `vpn-stop <id>`: Stops and removes the `${id}-vpn` sidecar.
-    - `vpn-prune`: Removes all sidecar containers with label `com.gemini.role=sidecar` whose parent is no longer running.
-2.  **Naming Convention:**
-    - Sidecar name MUST be `${PARENT_NAME}-vpn`.
-3.  **Docker Arguments:**
-    - Sidecars MUST use: `--network container:${PARENT_NAME}`, `--pid container:${PARENT_NAME}`, and `--cap-add=NET_ADMIN`.
-    - Sidecars MUST have labels: `com.gemini.role=sidecar`, `com.gemini.parent=${PARENT_NAME}`, `com.gemini.sidecar.type=vpn`.
-4.  **Auto-Auth:**
-    - `vpn-add` MUST pass `TAILSCALE_AUTH_KEY` to the sidecar.
-    - Immediately after `docker run`, it MUST execute `docker exec ${sid}-vpn tailscale up --authkey=${key} --hostname=${sid}`.
+## 📝 The "What" (Action Plan)
+You must implement a suite of new subcommands in the `gemini-toolbox` wrapper script.
 
-## Validation
-- **BATS Test:** `tests/bash/test_toolbox_sidecar.bats`
-- Verify `vpn-add` attaches a functional VPN sidecar to a running bridge-mode container.
+## 🛠️ The "How" (Technical Specification)
+
+### 1. New Commands in `bin/gemini-toolbox`:
+- **`vpn-add [id|--all]`:** 
+    - Scans for the target session's container ID.
+    - Launches a `gemini-vpn` sidecar with:
+        - `--network container:${PARENT_NAME}`
+        - `--pid container:${PARENT_NAME}`
+        - `--cap-add=NET_ADMIN`
+        - Labels: `com.gemini.role=sidecar`, `com.gemini.parent=${PARENT_NAME}`, `com.gemini.sidecar.type=vpn`
+    - **Authentication:** Must pass `TAILSCALE_AUTH_KEY` as an environment variable to the sidecar.
+    - **Bootstrap:** Immediately after `docker run`, it MUST execute `docker exec ${sid}-vpn tailscale up --authkey=${key} --hostname=${sid}`.
+- **`vpn-stop [id|--all]`:** 
+    - Identifies and kills the sidecar: `docker stop ${sid}-vpn`.
+- **`vpn-restart [id|--all]`:** 
+    - Simple wrapper: `vpn-stop` followed by `vpn-add`.
+- **`vpn-prune`:** 
+    - A cleanup command that finds all containers with the `com.gemini.role=sidecar` label and removes any whose "parent" container is no longer in a `running` state.
+
+### 2. Autocompletion:
+- Update `completions/gemini-toolbox.bash` to include the new commands.
+- **Filtering:** The `connect` and `stop` autocompletions MUST explicitly hide containers ending in `-vpn` or `-lan` to prevent users from accidentally connecting to a network sidecar.
+
+## ✅ Validation
+- **Test:** Start a session with `gemini-toolbox --no-vpn --detached`.
+- **Action:** Run `gemini-toolbox vpn-add`. 
+- **Verify:** Use `tailscale status` to confirm the session has joined the Tailnet.
+- **Action:** Run `gemini-toolbox vpn-stop`.
+- **Verify:** Confirm the session is gone from the Tailnet but STILL running locally.
