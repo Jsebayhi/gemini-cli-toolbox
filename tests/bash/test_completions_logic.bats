@@ -64,3 +64,51 @@ setup() {
     done
     [ "$found" == "true" ]
 }
+
+@test "gemini-toolbox: --name respects --project flag" {
+    # Mock COMP_WORDS and COMP_CWORD
+    # gemini-toolbox --project /other/path --name 
+    COMP_WORDS=(gemini-toolbox --project "/other/path" --name "")
+    COMP_CWORD=4
+    COMPREPLY=()
+    
+    # Cache for "/other/path"
+    local project_name="path"
+    local worktree_base="$HOME/.cache/gemini-toolbox/worktrees/${project_name}"
+    mkdir -p "$worktree_base/other-project-wt"
+    
+    _gemini_toolbox_completions
+    
+    # Check if other-project-wt is in COMPREPLY
+    local found=false
+    for reply in "${COMPREPLY[@]}"; do
+        if [ "$reply" == "other-project-wt" ]; then
+            found=true
+        fi
+    done
+    [ "$found" == "true" ]
+}
+
+@test "gemini-toolbox: --name correctly sanitizes project name" {
+    # Mock COMP_WORDS and COMP_CWORD
+    # gemini-toolbox --project "/path/My Project!" --name 
+    COMP_WORDS=(gemini-toolbox --project "/path/My Project!" --name "")
+    COMP_CWORD=4
+    COMPREPLY=()
+    
+    # Expected sanitized project name: "my-project-"
+    local sanitized_name="my-project-"
+    local worktree_base="$HOME/.cache/gemini-toolbox/worktrees/${sanitized_name}"
+    mkdir -p "$worktree_base/sanitized-project-wt"
+    
+    _gemini_toolbox_completions
+    
+    # Check if sanitized-project-wt is in COMPREPLY
+    local found=false
+    for reply in "${COMPREPLY[@]}"; do
+        if [ "$reply" == "sanitized-project-wt" ]; then
+            found=true
+        fi
+    done
+    [ "$found" == "true" ]
+}
