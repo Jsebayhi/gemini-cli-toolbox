@@ -25,7 +25,7 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 5.  Register the tool in the root `README.md`.
 
 ### Building & Testing
-1.  **Local Development:** Use `make build-<tool>` or `make test-<component>` (bash, hub) from the root.
+1.  **Local Development:** Use `make build-<tool>` or `make test-<comp>` (bash, hub, hub-ui) from the root.
 2.  **Rapid Validation:** Use `make check-build` to verify Dockerfile syntax and compilation without exporting images to the local daemon (near-instant).
 3.  **Local CI:** Run `make local-ci` to execute linting, building, and testing in parity with the remote CI.
 4.  **Targeted Builds (Groups):**

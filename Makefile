@@ -31,16 +31,17 @@ help:
 	@echo "====================="
 	@echo "  make build         : Build ALL images (Parallel via Docker Bake)"
 	@echo "  make check-build   : Fast validation (Build to cache, NO image export)"
-	@echo "  make rebuild       : Force rebuild ALL images from scratch"
-	@echo "  make build-toolbox : Build core images (Hub, CLI, CLI-Preview)"
+	@echo "  make rebuild        : Force rebuild ALL images from scratch"
+	@echo "  make build-toolbox  : Build core images (Hub, CLI, CLI-Preview)"
 	@echo "  make rebuild-toolbox: Force rebuild core images from scratch"
-	@echo "  make build-clis    : Build only CLI images (Stable, Preview)"
-	@echo "  make rebuild-clis  : Force rebuild only the CLI images from scratch"
-	@echo "  make build-<tool>  : Build a specific tool (hub, cli, cli-preview, base)"
-	@echo "  make rebuild-<tool>: Force rebuild a specific tool from scratch"
-	@echo "  make lint          : Run all linters (ShellCheck, Ruff)"
-	@echo "  make test          : Run all tests (Bash, Hub)"
-	@echo "  make local-ci      : Run everything (Lint + Build + Test)"
+	@echo "  make build-clis     : Build only CLI images (Stable, Preview)"
+	@echo "  make rebuild-clis   : Force rebuild only the CLI images from scratch"
+	@echo "  make build-<tool>   : Build a specific tool (hub, cli, cli-preview, base)"
+	@echo "  make rebuild-<tool> : Force rebuild a specific tool from scratch"
+	@echo "  make lint           : Run all linters (ShellCheck, Ruff)"
+	@echo "  make test           : Run all tests (Bash, Hub)"
+	@echo "  make test-<comp>    : Run a specific test suite (bash, hub, hub-ui)"
+	@echo "  make local-ci       : Run everything (Lint + Build + Test)"
 	@echo "  make scan          : Run security scan (Trivy)"
 	@echo "  make docker-readme : Generate README_DOCKER.md"
 	@echo "  make clean-cache   : Prune npm build cache"
@@ -116,7 +117,7 @@ test-hub: setup-builder
 		tests/unit tests/integration
 
 .PHONY: test-hub-ui
-test-hub-ui:
+test-hub-ui: setup-builder
 	@echo ">> Running Gemini Hub UI Tests (Playwright)..."
 	$(BAKE_CMD) hub-test
 	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
