@@ -186,17 +186,20 @@ We love contributors! If you add or modify CLI flags, please remember to update 
 If you're contributing to the Toolbox, you can run the full suite of automated tests and linters:
 
 ```bash
-# Run all tests (Bash & Python), linters, and security scans
+# Run all tests (Bash & Hub), linters, and security scans
 make local-ci
+
+# Build specific image groups
+make build-toolbox # Hub, CLI, CLI-Preview
+make build-clis    # CLI Stable and Preview only
 
 # Run security vulnerability scan (Trivy)
 make scan
 
-# Run only Bash automated tests (Bats)
-make test-bash
-
-# Run only Python tests (Pytest)
-make test
+# Run specific automated test suites
+make test-bash     # Bash core scripts (Bats)
+make test-hub      # Gemini Hub unit/integration (Pytest)
+make test-hub-ui   # Gemini Hub UI (Playwright)
 ```
 
 We use [Bats-core](https://github.com/bats-core/bats-core) for testing our core bash scripts. New tests should be added to `tests/bash/`.

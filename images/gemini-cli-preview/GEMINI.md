@@ -18,6 +18,8 @@ A bleeding-edge version of the Gemini CLI image, installing `@google/gemini-cli@
 Run from project root:
 ```bash
 make build-cli-preview
+# or
+make rebuild-cli-preview
 ```
 
 ## 4. Known Peculiarities & Gotchas

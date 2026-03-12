@@ -11,17 +11,16 @@ A Debian-based Docker image wrapping the `@google/gemini-cli`. It focuses on sea
 | :--- | :--- |
 | `Dockerfile` | **The Environment.** Node.js 20 (Bookworm), `gosu`, and the CLI tool. |
 | `docker-entrypoint.sh` | **The Logic.** Runtime script that fixes permissions and switches user via `gosu`. |
-| `Makefile` | **The Builder.** Local build commands (`build`, `rebuild`) for this image. |
 | `adr/` | **The Decisions.** Records explaining Debian vs Alpine, `gosu` usage, etc. |
 
 ## 3. Operational Workflows
 
 ### Building (Local)
-Run from `images/gemini-cli/`:
+Run from project root:
 ```bash
-make build
+make build-cli
 # or
-make rebuild
+make rebuild-cli
 ```
 
 ### Debugging

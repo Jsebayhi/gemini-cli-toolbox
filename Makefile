@@ -31,10 +31,17 @@ help:
 	@echo "====================="
 	@echo "  make build         : Build ALL images (Parallel via Docker Bake)"
 	@echo "  make check-build   : Fast validation (Build to cache, NO image export)"
-	@echo "  make rebuild       : Force rebuild ALL images from scratch"
-	@echo "  make lint          : Run all linters (ShellCheck, Ruff)"
-	@echo "  make test          : Run all tests (Bash, Hub)"
-	@echo "  make local-ci      : Run everything (Lint + Build + Test)"
+	@echo "  make rebuild        : Force rebuild ALL images from scratch"
+	@echo "  make build-toolbox  : Build core images (Hub, CLI, CLI-Preview)"
+	@echo "  make rebuild-toolbox: Force rebuild core images from scratch"
+	@echo "  make build-clis     : Build only CLI images (Stable, Preview)"
+	@echo "  make rebuild-clis   : Force rebuild only the CLI images from scratch"
+	@echo "  make build-<tool>   : Build a specific tool (hub, cli, cli-preview, base)"
+	@echo "  make rebuild-<tool> : Force rebuild a specific tool from scratch"
+	@echo "  make lint           : Run all linters (ShellCheck, Ruff)"
+	@echo "  make test           : Run all tests (Bash, Hub)"
+	@echo "  make test-<comp>    : Run a specific test suite (bash, hub, hub-ui)"
+	@echo "  make local-ci       : Run everything (Lint + Build + Test)"
 	@echo "  make scan          : Run security scan (Trivy)"
 	@echo "  make docker-readme : Generate README_DOCKER.md"
 	@echo "  make clean-cache   : Prune npm build cache"
@@ -110,7 +117,7 @@ test-hub: setup-builder
 		tests/unit tests/integration
 
 .PHONY: test-hub-ui
-test-hub-ui:
+test-hub-ui: setup-builder
 	@echo ">> Running Gemini Hub UI Tests (Playwright)..."
 	$(BAKE_CMD) hub-test
 	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
@@ -158,25 +165,65 @@ rebuild: setup-builder
 	@echo ">> Rebuilding all images from scratch (no cache, Builder: $(BAKE_BUILDER))..."
 	$(BAKE_CMD) --no-cache
 
+.PHONY: build-toolbox
+build-toolbox: setup-builder
+	@echo ">> Building core images (hub, cli, cli-preview)..."
+	$(BAKE_CMD) toolbox
+
+.PHONY: rebuild-toolbox
+rebuild-toolbox: setup-builder
+	@echo ">> Rebuilding core images (hub, cli, cli-preview) from scratch..."
+	$(BAKE_CMD) --no-cache toolbox
+
+.PHONY: build-clis
+build-clis: setup-builder
+	@echo ">> Building only CLI images (cli, cli-preview)..."
+	$(BAKE_CMD) clis
+
+.PHONY: rebuild-clis
+rebuild-clis: setup-builder
+	@echo ">> Rebuilding only CLI images (cli, cli-preview) from scratch..."
+	$(BAKE_CMD) --no-cache clis
+
 .PHONY: build-base
 build-base: setup-builder
 	@echo ">> Building gemini-base..."
 	$(BAKE_CMD) base
+
+.PHONY: rebuild-base
+rebuild-base: setup-builder
+	@echo ">> Rebuilding gemini-base from scratch..."
+	$(BAKE_CMD) --no-cache base
 
 .PHONY: build-hub
 build-hub: setup-builder
 	@echo ">> Building gemini-hub..."
 	$(BAKE_CMD) hub
 
+.PHONY: rebuild-hub
+rebuild-hub: setup-builder
+	@echo ">> Rebuilding gemini-hub from scratch..."
+	$(BAKE_CMD) --no-cache hub
+
 .PHONY: build-cli
 build-cli: setup-builder
 	@echo ">> Building gemini-cli..."
 	$(BAKE_CMD) cli
 
+.PHONY: rebuild-cli
+rebuild-cli: setup-builder
+	@echo ">> Rebuilding gemini-cli from scratch..."
+	$(BAKE_CMD) --no-cache cli
+
 .PHONY: build-cli-preview
 build-cli-preview: setup-builder
 	@echo ">> Building gemini-cli-preview..."
 	$(BAKE_CMD) cli-preview
+
+.PHONY: rebuild-cli-preview
+rebuild-cli-preview: setup-builder
+	@echo ">> Rebuilding gemini-cli-preview from scratch..."
+	$(BAKE_CMD) --no-cache cli-preview
 
 .PHONY: build-test-images
 build-test-images: setup-builder
