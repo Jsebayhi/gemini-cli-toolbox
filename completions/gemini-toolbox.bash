@@ -56,12 +56,31 @@ _gemini_toolbox_completions() {
             return 0
             ;;
         --name)
-            # Suggest existing worktrees for the current project
+            # Suggest existing worktrees for the current project from the centralized cache
+            local project_dir
+            project_dir="$(pwd)"
+            
+            # Check if --project is present in the command line and use its value
+            for ((i=0; i<${#COMP_WORDS[@]}; i++)); do
+                if [[ "${COMP_WORDS[i]}" == "--project" && -n "${COMP_WORDS[i+1]}" ]]; then
+                    project_dir="${COMP_WORDS[i+1]}"
+                    break
+                fi
+            done
+            
+            # Sanitize project name matching the CLI logic
             local project_name
-            project_name=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
-            local worktree_base="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${project_name}}"
+            project_name=$(basename "${project_dir}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+            
+            # Resolve the worktree root (respecting custom GEMINI_WORKTREE_ROOT)
+            local worktree_root="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees}"
+            local worktree_base="${worktree_root}/${project_name}"
+            
             if [ -d "$worktree_base" ]; then
-                COMPREPLY=( $(compgen -W "$(ls "${worktree_base}")" -- "${cur}") )
+                # Defensive ls to avoid noise and handle missing directories gracefully
+                local existing_wts
+                existing_wts=$(ls -1 "${worktree_base}" 2>/dev/null)
+                COMPREPLY=( $(compgen -W "${existing_wts}" -- "${cur}") )
             fi
             return 0
             ;;
