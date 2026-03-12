@@ -174,15 +174,30 @@ build-hub: setup-builder
 	@echo ">> Building gemini-hub..."
 	$(BAKE_CMD) hub
 
+.PHONY: rebuild-hub
+rebuild-hub: setup-builder
+	@echo ">> Rebuilding gemini-hub from scratch..."
+	$(BAKE_CMD) --no-cache hub
+
 .PHONY: build-cli
 build-cli: setup-builder
 	@echo ">> Building gemini-cli..."
 	$(BAKE_CMD) cli
 
+.PHONY: rebuild-cli
+rebuild-cli: setup-builder
+	@echo ">> Rebuilding gemini-cli from scratch..."
+	$(BAKE_CMD) --no-cache cli
+
 .PHONY: build-cli-preview
 build-cli-preview: setup-builder
 	@echo ">> Building gemini-cli-preview..."
 	$(BAKE_CMD) cli-preview
+
+.PHONY: rebuild-cli-preview
+rebuild-cli-preview: setup-builder
+	@echo ">> Rebuilding gemini-cli-preview from scratch..."
+	$(BAKE_CMD) --no-cache cli-preview
 
 .PHONY: build-test-images
 build-test-images: setup-builder
