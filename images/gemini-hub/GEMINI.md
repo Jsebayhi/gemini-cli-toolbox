@@ -13,7 +13,6 @@ A standalone Tailscale node running a Flask-based dashboard for discovering and 
 | `docker-entrypoint.sh` | **The Logic.** Starts `tailscaled`, authenticates with `TAILSCALE_AUTH_KEY`, and launches the Flask app. |
 | `app.py` | **The Application.** Queries Tailscale status, parses hostnames, and serves the UI with search/filters. Includes the auto-shutdown monitor. |
 | `docs/ENGINEERING_STANDARDS.md` | **The Law.** Mandatory coding standards and architectural patterns for this component. |
-| `Makefile` | **The Builder.** Local build commands (`build`, `rebuild`) for this image. |
 | `adr/` | **The Decisions.** Records explaining the shift to standalone architecture and mobile discovery goals. |
 
 ## 3. Core Mandates
@@ -25,22 +24,24 @@ A standalone Tailscale node running a Flask-based dashboard for discovering and 
 ## 4. Operational Workflows
 
 ### Building (Local)
-Run from `images/gemini-hub/`:
+Run from project root:
 ```bash
-make build
+make build-hub
 # or
-make rebuild
+make rebuild-hub
 ```
 
 ### Testing
 We use `pytest` for unit and integration tests, and **Playwright** for UI tests.
 *   **Idempotency Mandate:** Follow the standards in [.gemini/skills/developing-gemini-toolbox/references/general_testing.md](../../.gemini/skills/developing-gemini-toolbox/references/general_testing.md). Never modify `Config` attributes directly; always use `monkeypatch` or `mocker`.
 *   **Filesystem:** Use `tmp_path` fixture for all filesystem operations.
-*   **Run Commands:**
+*   **Run Commands (from root):**
 ```bash
 # Run unit and integration tests
-make test
-...
+make test-hub
+
+# Run UI tests (Playwright)
+make test-hub-ui
 ```
 
 ### Manual Run
