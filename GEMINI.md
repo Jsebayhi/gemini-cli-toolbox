@@ -25,12 +25,14 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 5.  Register the tool in the root `README.md`.
 
 ### Building & Testing
-1.  **Local Development:** Use `make build-<tool>` or `make test-<tool>` from the root.
+1.  **Local Development:** Use `make build-<tool>` or `make test-<component>` (bash, hub) from the root.
 2.  **Rapid Validation:** Use `make check-build` to verify Dockerfile syntax and compilation without exporting images to the local daemon (near-instant).
 3.  **Local CI:** Run `make local-ci` to execute linting, building, and testing in parity with the remote CI.
-4.  **Targeted Rebuilds:**
-    - `make rebuild-toolbox`: Force rebuild of core images (Hub, CLI, CLI-Preview) from scratch.
-    - `make rebuild-clis`: Force rebuild only of CLI images (Stable, Preview).
+4.  **Targeted Builds (Groups):**
+    - `make build-toolbox`: Build core images (Hub, CLI, CLI-Preview).
+    - `make rebuild-toolbox`: Force rebuild of core images from scratch.
+    - `make build-clis`: Build only CLI images (Stable, Preview).
+    - `make rebuild-clis`: Force rebuild only of CLI images from scratch.
 5.  **Human-First Defaults:** SLSA attestations (SBOM/Provenance) are disabled by default locally to ensure maximum speed. Use `ENABLE_ATTESTATIONS=true` only when simulating official releases.
 6.  **Bake:** All Docker builds are orchestrated via `docker buildx bake`. Do not use `docker build` directly in scripts.
 
