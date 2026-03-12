@@ -43,3 +43,22 @@ setup() {
         [ "$reply" != "subdir2" ]
     done
 }
+
+@test "gemini-toolbox: --name suggests existing worktrees from cache" {
+    # Mock COMP_WORDS and COMP_CWORD
+    # gemini-toolbox --name 
+    COMP_WORDS=(gemini-toolbox --name "")
+    COMP_CWORD=2
+    COMPREPLY=()
+    
+    # setup_test_env sets HOME to TEST_TEMP_DIR
+    local project_name
+    project_name=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+    local worktree_base="$HOME/.cache/gemini-toolbox/worktrees/${project_name}"
+    mkdir -p "$worktree_base/existing-wt"
+    
+    _gemini_toolbox_completions
+    
+    # Check if existing-wt is in COMPREPLY
+    echo "${COMPREPLY[@]}" | grep -q "existing-wt"
+}
