@@ -8,48 +8,15 @@ setup() {
     source "$PROJECT_ROOT/completions/gemini-toolbox.bash"
 }
 
-@test "gemini-toolbox: --name suggests directories when --worktree is present" {
-    # Mock COMP_WORDS and COMP_CWORD
-    # gemini-toolbox --worktree --name 
-    COMP_WORDS=(gemini-toolbox --worktree --name "")
-    COMP_CWORD=3
-    COMPREPLY=()
-    
-    # We need to be in a directory with some subdirectories
-    mkdir -p subdir1 subdir2
-    
-    _gemini_toolbox_completions
-    
-    # Check if subdir1 and subdir2 are in COMPREPLY
-    # Use grep to find them since COMPREPLY might have other things
-    echo "${COMPREPLY[@]}" | grep -q "subdir1"
-    echo "${COMPREPLY[@]}" | grep -q "subdir2"
-}
-
-@test "gemini-toolbox: --name does not suggest directories when --worktree is absent" {
+@test "gemini-toolbox: --name only suggests from worktree cache" {
     # Mock COMP_WORDS and COMP_CWORD
     # gemini-toolbox --name 
     COMP_WORDS=(gemini-toolbox --name "")
     COMP_CWORD=2
     COMPREPLY=()
     
-    mkdir -p subdir1 subdir2
-    
-    _gemini_toolbox_completions
-    
-    # COMPREPLY should NOT contain subdir1/subdir2 (unless they are existing worktrees, which they aren't here)
-    for reply in "${COMPREPLY[@]}"; do
-        [ "$reply" != "subdir1" ]
-        [ "$reply" != "subdir2" ]
-    done
-}
-
-@test "gemini-toolbox: --name suggests existing worktrees from cache" {
-    # Mock COMP_WORDS and COMP_CWORD
-    # gemini-toolbox --name 
-    COMP_WORDS=(gemini-toolbox --name "")
-    COMP_CWORD=2
-    COMPREPLY=()
+    # We create some local project directories that should NOT be suggested
+    mkdir -p local_subdir1 local_subdir2
     
     # setup_test_env sets HOME to TEST_TEMP_DIR
     local project_name
@@ -60,5 +27,40 @@ setup() {
     _gemini_toolbox_completions
     
     # Check if existing-wt is in COMPREPLY
-    echo "${COMPREPLY[@]}" | grep -q "existing-wt"
+    local found=false
+    for reply in "${COMPREPLY[@]}"; do
+        if [ "$reply" == "existing-wt" ]; then
+            found=true
+        fi
+        # COMPREPLY should NOT contain local subdirs
+        [ "$reply" != "local_subdir1" ]
+        [ "$reply" != "local_subdir2" ]
+    done
+    [ "$found" == "true" ]
+}
+
+@test "gemini-toolbox: --name respects custom GEMINI_WORKTREE_ROOT" {
+    # Mock COMP_WORDS and COMP_CWORD
+    # gemini-toolbox --name 
+    COMP_WORDS=(gemini-toolbox --name "")
+    COMP_CWORD=2
+    COMPREPLY=()
+    
+    # Set a custom worktree root
+    export GEMINI_WORKTREE_ROOT="$TEST_TEMP_DIR/custom-wt-root"
+    local project_name
+    project_name=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+    local worktree_base="${GEMINI_WORKTREE_ROOT}/${project_name}"
+    mkdir -p "$worktree_base/custom-root-wt"
+    
+    _gemini_toolbox_completions
+    
+    # Check if custom-root-wt is in COMPREPLY
+    local found=false
+    for reply in "${COMPREPLY[@]}"; do
+        if [ "$reply" == "custom-root-wt" ]; then
+            found=true
+        fi
+    done
+    [ "$found" == "true" ]
 }
