@@ -27,11 +27,11 @@ def test_prune_prune(tmp_path, mocker):
     stale_headless_path = project_dir / "exploration-stale"
     stale_headless_path.mkdir()
     
-    # Mock config
-    Config.WORKTREE_ROOT = str(worktree_root)
-    Config.WORKTREE_EXPIRY_HEADLESS = 30
-    Config.WORKTREE_EXPIRY_BRANCH = 90
-    Config.WORKTREE_EXPIRY_ORPHAN = 90
+    # Mock config using mocker for idempotency
+    mocker.patch.object(Config, "WORKTREE_ROOT", str(worktree_root))
+    mocker.patch.object(Config, "WORKTREE_EXPIRY_HEADLESS", 30)
+    mocker.patch.object(Config, "WORKTREE_EXPIRY_BRANCH", 90)
+    mocker.patch.object(Config, "WORKTREE_EXPIRY_ORPHAN", 90)
     
     # Mock Git responses
     def mock_git_run(cmd, **kwargs):
@@ -68,14 +68,14 @@ def test_prune_prune(tmp_path, mocker):
 
 
 
-def test_prune_skip_non_dir(tmp_path):
+def test_prune_skip_non_dir(tmp_path, mocker):
     worktree_root = tmp_path / "worktrees"
     worktree_root.mkdir()
     
     dummy_file = worktree_root / "not-a-dir.txt"
     dummy_file.write_text("hello")
     
-    Config.WORKTREE_ROOT = str(worktree_root)
+    mocker.patch.object(Config, "WORKTREE_ROOT", str(worktree_root))
     
     # Should not crash
     PruneService.prune()
@@ -83,7 +83,7 @@ def test_prune_skip_non_dir(tmp_path):
 
 def test_prune_disabled(mocker):
     # Setup
-    Config.HUB_WORKTREE_PRUNE_ENABLED = False
+    mocker.patch.object(Config, "HUB_WORKTREE_PRUNE_ENABLED", False)
     mock_thread = mocker.patch("threading.Thread")
     
     # Run

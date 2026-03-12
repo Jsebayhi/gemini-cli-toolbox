@@ -34,12 +34,13 @@ make rebuild
 
 ### Testing
 We use `pytest` for unit and integration tests, and **Playwright** for UI tests.
+*   **Idempotency Mandate:** Follow the standards in [.gemini/skills/developing-gemini-toolbox/references/general_testing.md](../../.gemini/skills/developing-gemini-toolbox/references/general_testing.md). Never modify `Config` attributes directly; always use `monkeypatch` or `mocker`.
+*   **Filesystem:** Use `tmp_path` fixture for all filesystem operations.
+*   **Run Commands:**
 ```bash
 # Run unit and integration tests
 make test
-
-# Run UI tests (requires building the test image with browsers)
-make test-ui
+...
 ```
 
 ### Manual Run
