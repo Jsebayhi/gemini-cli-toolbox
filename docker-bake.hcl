@@ -50,8 +50,12 @@ group "default" {
   targets = ["base", "hub", "cli", "cli-preview", "hub-test", "bash-test"]
 }
 
-group "images" {
+group "toolbox" {
   targets = ["hub", "cli", "cli-preview"]
+}
+
+group "clis" {
+  targets = ["cli", "cli-preview"]
 }
 
 # --- Base Templates ---

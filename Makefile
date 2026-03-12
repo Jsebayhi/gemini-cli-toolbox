@@ -32,7 +32,8 @@ help:
 	@echo "  make build         : Build ALL images (Parallel via Docker Bake)"
 	@echo "  make check-build   : Fast validation (Build to cache, NO image export)"
 	@echo "  make rebuild       : Force rebuild ALL images from scratch"
-	@echo "  make rebuild-images: Force rebuild end images (hub, cli, cli-preview) from scratch"
+	@echo "  make rebuild-toolbox: Force rebuild core images (Hub, CLI, CLI-Preview)"
+	@echo "  make rebuild-clis  : Force rebuild only the CLI images (Stable, Preview)"
 	@echo "  make lint          : Run all linters (ShellCheck, Ruff)"
 	@echo "  make test          : Run all tests (Bash, Hub)"
 	@echo "  make local-ci      : Run everything (Lint + Build + Test)"
@@ -159,10 +160,15 @@ rebuild: setup-builder
 	@echo ">> Rebuilding all images from scratch (no cache, Builder: $(BAKE_BUILDER))..."
 	$(BAKE_CMD) --no-cache
 
-.PHONY: rebuild-images
-rebuild-images: setup-builder
-	@echo ">> Rebuilding end images (hub, cli, cli-preview) from scratch (no cache, Builder: $(BAKE_BUILDER))..."
-	$(BAKE_CMD) --no-cache images
+.PHONY: rebuild-toolbox
+rebuild-toolbox: setup-builder
+	@echo ">> Rebuilding core images (hub, cli, cli-preview) from scratch (no cache, Builder: $(BAKE_BUILDER))..."
+	$(BAKE_CMD) --no-cache toolbox
+
+.PHONY: rebuild-clis
+rebuild-clis: setup-builder
+	@echo ">> Rebuilding only CLI images (cli, cli-preview) from scratch (no cache, Builder: $(BAKE_BUILDER))..."
+	$(BAKE_CMD) --no-cache clis
 
 .PHONY: build-base
 build-base: setup-builder
