@@ -56,12 +56,26 @@ _gemini_toolbox_completions() {
             return 0
             ;;
         --name)
+            # Check if --worktree is present in the command line
+            local has_worktree=false
+            for word in "${COMP_WORDS[@]}"; do
+                if [[ "$word" == "--worktree" ]]; then
+                    has_worktree=true
+                    break
+                fi
+            done
+
+            if [ "$has_worktree" = true ]; then
+                # Suggest directories
+                COMPREPLY=( $(compgen -d -- "${cur}") )
+            fi
+
             # Suggest existing worktrees for the current project
             local project_name
             project_name=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
             local worktree_base="${GEMINI_WORKTREE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox/worktrees/${project_name}}"
             if [ -d "$worktree_base" ]; then
-                COMPREPLY=( $(compgen -W "$(ls "${worktree_base}")" -- "${cur}") )
+                COMPREPLY+=( $(compgen -W "$(ls "${worktree_base}")" -- "${cur}") )
             fi
             return 0
             ;;
