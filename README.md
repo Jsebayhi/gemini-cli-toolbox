@@ -75,7 +75,8 @@ The Toolbox isn't just a wrapper; it's a bridge between your host and a secure e
 
 ### 🛡️ 1. Security & Sandbox
 *   **Isolation:** The agent runs inside a Debian container. It **cannot** see or modify files outside the project directory you mount.
-*   **Ephemeral:** Every session is clean. Use the container as a disposable playground for running experimental scripts or refactors.
+*   **Protected Networking:** All sessions are private by default. They use bridge isolation and bind strictly to `127.0.0.1` on your host, making them invisible to your local network (LAN).
+*   **Ephemeral:** Every session is clean. Use the container as a disposable playground.
 
 ### 💻 2. Developer Integration
 *   **VS Code Companion:** Native support for the [Gemini CLI Companion](https://github.com/google/gemini-cli) extension. It reads your IDE context and applies diffs automatically.
@@ -114,7 +115,8 @@ Want to go deeper? Follow these guides to master the Toolbox:
 | **Stop Session** | `gemini-toolbox stop [id\|project]` |
 | **One-shot Task** | `gemini-toolbox -- -p "Fix the linting errors in src/"` |
 | **Isolated Exploration** | `gemini-toolbox --worktree` |
-| **Named Worktree** | `gemini-toolbox --worktree --name feat/auth` |
+| **Named Worktree** | `gemini-toolbox --worktree --name feat/auth` | 
+| **Pure Localhost** | `gemini-toolbox --no-vpn` |
 | **Beta Features** | `gemini-toolbox --preview` |
 | **Remote Coding** | `gemini-toolbox --remote` |
 | **Disposable Shell**| `gemini-toolbox --bash` |
