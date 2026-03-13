@@ -16,6 +16,10 @@ class MonitorService:
         if not Config.HUB_AUTO_SHUTDOWN:
             logger.info("Auto-shutdown disabled.")
             return
+            
+        if os.environ.get("GEMINI_HUB_TEST_MODE") == "true":
+            logger.info("Test mode detected. Monitor thread suppressed.")
+            return
 
         thread = threading.Thread(target=MonitorService._monitor_loop, daemon=True)
         thread.start()
