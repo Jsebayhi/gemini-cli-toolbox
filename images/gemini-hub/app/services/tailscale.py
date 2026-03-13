@@ -71,48 +71,70 @@ class TailscaleService:
 
     @staticmethod
     def parse_peers(status_json: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extracts and filters Gemini peers from status JSON."""
-        machines = []
-        peers = status_json.get("Peer", {})
+        """
+        Unifies Tailscale peers and Docker containers into a single session list.
+        Allows the Hub to discover local sessions even without VPN connectivity.
+        """
+        machines_dict = {}
+        
+        # 1. Fetch Local Sessions from Docker (Standalone Scan)
         local_ports = TailscaleService.get_local_ports()
         
+        for name, url in local_ports.items():
+            # Parse Metadata: gem-{project}-{type}-{suffix}
+            parts = name.split('-')
+            if len(parts) < 4: continue
+            
+            project = "-".join(parts[1:-2])
+            session_type = parts[-2]
+            uid = parts[-1]
+
+            machines_dict[name] = {
+                "name": name,
+                "project": project,
+                "type": session_type,
+                "uid": uid,
+                "ip": None,
+                "online": True,
+                "local_url": url
+            }
+
+        # 2. Merge with Tailscale Peers
+        peers = status_json.get("Peer", {})
         for _, node in peers.items():
             hostname = node.get("HostName", "")
             
-            # FILTER: Only show "gem-" instances
             if not hostname.startswith("gem-"):
                 continue
-                
-            # Parse Hostname Metadata: gem-{project}-{type}-{suffix}
-            raw_parts = hostname.split('-')
-            parts = [p for p in raw_parts if p]
-            
-            project = "Unknown"
-            session_type = "Unknown"
-            uid = "Unknown"
-            
-            if len(parts) >= 4:
-                session_type = parts[-2]
-                project = "-".join(parts[1:-2])
-                uid = parts[-1]
-            elif len(parts) == 3:
-                project = parts[1]
-                session_type = "cli"
-                uid = parts[-1]
-                
+
             addrs = node.get("TailscaleIPs", [])
             ip = next((a for a in addrs if "." in a), None)
             
-            if ip:
-                machines.append({
-                    "name": hostname,
-                    "project": project,
-                    "type": session_type,
-                    "uid": uid,
-                    "ip": ip,
-                    "online": node.get("Online", False),
-                    "local_url": local_ports.get(hostname)
-                })
+            if not ip:
+                continue
+
+            if hostname in machines_dict:
+                # Local session found in VPN: Enrichment
+                machines_dict[hostname]["ip"] = ip
+                machines_dict[hostname]["online"] = machines_dict[hostname]["online"] or node.get("Online", False)
+            else:
+                # Remote session or local session not currently exposing port 3000
+                parts = hostname.split('-')
+                if len(parts) >= 4:
+                    project = "-".join(parts[1:-2])
+                    session_type = parts[-2]
+                    uid = parts[-1]
+                    
+                    machines_dict[hostname] = {
+                        "name": hostname,
+                        "project": project,
+                        "type": session_type,
+                        "uid": uid,
+                        "ip": ip,
+                        "online": node.get("Online", False),
+                        "local_url": None
+                    }
                 
+        machines = list(machines_dict.values())
         machines.sort(key=lambda x: x["name"])
         return machines
