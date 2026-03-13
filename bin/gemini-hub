@@ -293,10 +293,19 @@ main() {
     log_info "Starting Gemini Hub on port $port..."
     log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
 
+    local resource_limits=()
+    if [ -n "${GEMINI_HUB_MEMORY:-}" ]; then
+        resource_limits+=("--memory" "${GEMINI_HUB_MEMORY}")
+    fi
+    if [ -n "${GEMINI_HUB_CPUS:-}" ]; then
+        resource_limits+=("--cpus" "${GEMINI_HUB_CPUS}")
+    fi
+
     docker run --rm "$mode" \
         --name "$container_name" \
         --network=bridge \
         "${port_mapping[@]}" \
+        "${resource_limits[@]}" \
         --cap-add=NET_ADMIN \
         --device /dev/net/tun \
         --volume "/var/run/docker.sock:/var/run/docker.sock" \

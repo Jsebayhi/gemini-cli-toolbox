@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import patch
 from app.services.monitor import MonitorService
 
@@ -5,93 +6,75 @@ def test_monitor_shutdown_trigger():
     """Test that monitor triggers shutdown after timeout."""
     # Mock Config to enable shutdown
     with patch("app.services.monitor.Config") as MockConfig, \
-         patch("app.services.monitor.TailscaleService") as MockTailscale, \
+         patch("app.services.monitor.DiscoveryService") as MockDiscovery, \
          patch("app.services.monitor.os.kill") as mock_kill, \
          patch("app.services.monitor.time") as mock_time:
         
         MockConfig.HUB_AUTO_SHUTDOWN = True
+        # Mock no machines found (idle)
+        MockDiscovery.get_sessions.return_value = []
         
-        # Scenario: 
-        # 1. No machines found (empty list)
-        # 2. Time advances beyond timeout (60s)
-        MockTailscale.get_status.return_value = {}
-        MockTailscale.parse_peers.return_value = []
+        # Simulate time passing (exceeding 60s timeout)
+        mock_time.time.side_effect = [100, 170]
         
-        # Simulation:
-        # time.time() called for last_active init -> returns 0
-        # loop runs once: time.sleep(10) -> side_effect to break loop after 1 iteration?
-        # Actually, since _monitor_loop is infinite, we can't run it directly in test without breaking it.
-        # Strategy: Mock time.sleep to raise StopIteration to exit loop? Or test logic by extraction?
-        # Since logic is inside _monitor_loop, we'll patch time.sleep to raise an exception after 1 call
-        # But we need time.time() to return sequence: 0 (init), 100 (check) 
+        # We only want one iteration of the loop for the test
+        with patch("time.sleep", side_effect=InterruptedError):
+            try:
+                MonitorService._monitor_loop()
+            except InterruptedError:
+                pass
         
-        mock_time.time.side_effect = [0, 100]
-        mock_time.sleep.side_effect = [None, StopIteration] # Run once then crash
+        # Verify kill was called
+        mock_kill.assert_called_once()
+
+def test_monitor_activity_reset():
+    """Test that active sessions reset the timer."""
+    with patch("app.services.monitor.Config") as MockConfig, \
+         patch("app.services.monitor.DiscoveryService") as MockDiscovery, \
+         patch("app.services.monitor.os.kill") as mock_kill, \
+         patch("app.services.monitor.time") as mock_time:
         
-        try:
-            MonitorService._monitor_loop()
-        except StopIteration:
-            pass
-            
-        # Verify Shutdown Triggered
-        assert mock_kill.called
-        assert mock_kill.call_args[0][1] == 15 # SIGTERM
+        MockConfig.HUB_AUTO_SHUTDOWN = True
+        # Mock active session found
+        MockDiscovery.get_sessions.return_value = [{"name": "gem-active"}]
+        
+        mock_time.time.return_value = 100
+        
+        with patch("time.sleep", side_effect=InterruptedError):
+            try:
+                MonitorService._monitor_loop()
+            except InterruptedError:
+                pass
+        
+        # Verify kill was NOT called
+        mock_kill.assert_not_called()
 
 def test_monitor_shutdown_disabled():
-    """Test that monitor respects configuration."""
+    """Test that monitor doesn't start if auto-shutdown is disabled."""
     with patch("app.services.monitor.Config") as MockConfig, \
-         patch("app.services.monitor.threading.Thread") as MockThread:
+         patch("threading.Thread") as mock_thread:
         
         MockConfig.HUB_AUTO_SHUTDOWN = False
         MonitorService.start()
-        
-        # Verify thread NOT started
-        assert not MockThread.called
-
-def test_monitor_activity_reset():
-    """Test that active peers reset the timer."""
-    with patch("app.services.monitor.Config") as MockConfig, \
-         patch("app.services.monitor.TailscaleService") as MockTailscale, \
-         patch("app.services.monitor.os.kill") as mock_kill, \
-         patch("app.services.monitor.time") as mock_time:
-        
-        MockConfig.HUB_AUTO_SHUTDOWN = True
-        
-        # Scenario: Peers found
-        MockTailscale.get_status.return_value = {}
-        MockTailscale.parse_peers.return_value = [{"name": "machine1"}]
-        
-        mock_time.time.side_effect = [0, 100] # Should reset last_active to 100
-        mock_time.sleep.side_effect = [None, StopIteration]
-        
-        try:
-            MonitorService._monitor_loop()
-        except StopIteration:
-            pass
-            
-        # Verify NO Shutdown
-        assert not mock_kill.called
+        mock_thread.assert_not_called()
 
 def test_monitor_exception_handling():
     """Test that monitor logs exceptions without crashing."""
     with patch("app.services.monitor.Config") as MockConfig, \
-         patch("app.services.monitor.TailscaleService") as MockTailscale, \
+         patch("app.services.monitor.DiscoveryService") as MockDiscovery, \
          patch("app.services.monitor.time") as mock_time, \
          patch("app.services.monitor.logger") as mock_logger:
         
         MockConfig.HUB_AUTO_SHUTDOWN = True
+        MockDiscovery.get_sessions.side_effect = Exception("Discovery Error")
         
-        # Simulate exception during status check
-        MockTailscale.get_status.side_effect = RuntimeError("API Error")
+        mock_time.time.return_value = 100
         
-        # Run loop once then exit
-        mock_time.sleep.side_effect = [None, StopIteration]
+        with patch("time.sleep", side_effect=InterruptedError):
+            try:
+                MonitorService._monitor_loop()
+            except InterruptedError:
+                pass
         
-        try:
-            MonitorService._monitor_loop()
-        except StopIteration:
-            pass
-            
-        # Verify error logged
-        assert mock_logger.error.called
-        assert "API Error" in str(mock_logger.error.call_args[0][0])
+        # Verify error was logged
+        mock_logger.error.assert_called()

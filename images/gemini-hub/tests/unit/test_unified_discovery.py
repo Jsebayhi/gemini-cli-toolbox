@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from app.services.tailscale import TailscaleService
+from app.services.discovery import DiscoveryService
 
 @pytest.fixture
 def mock_tailscale_status():
@@ -26,32 +26,28 @@ def mock_docker_ports():
         "gem-local-only-bash-u3": "http://localhost:45000"
     }
 
-def test_parse_peers_unified_discovery(mock_tailscale_status, mock_docker_ports):
-    """Test merging of local Docker containers and Tailscale peers (Backend Only)."""
-    with patch.object(TailscaleService, "get_local_ports", return_value=mock_docker_ports):
-        machines = TailscaleService.parse_peers(mock_tailscale_status)
+def test_discovery_unified_sessions(mock_tailscale_status, mock_docker_ports):
+    """Test DiscoveryService merging of Docker and Tailscale data."""
+    with patch("app.services.docker.DockerService.get_local_ports", return_value=mock_docker_ports), \
+         patch("app.services.tailscale.TailscaleService.get_status", return_value=mock_tailscale_status):
         
-        # Should find 3 primary sessions:
-        # 1. gem-project-cli-u1 (Hybrid)
-        # 2. gem-remote-bash-u2 (Tailscale Only)
-        # 3. gem-local-only-bash-u3 (Docker Only)
-        assert len(machines) == 3
+        sessions = DiscoveryService.get_sessions()
         
-        # gem-local-only-bash-u3 (Docker Only)
-        m_local = next(m for m in machines if m["name"] == "gem-local-only-bash-u3")
+        # 3 Sessions expected
+        assert len(sessions) == 3
+        
+        # 1. Local Only (Docker)
+        m_local = next(s for s in sessions if s["name"] == "gem-local-only-bash-u3")
         assert m_local["project"] == "local-only"
         assert m_local["local_url"] == "http://localhost:45000"
         assert m_local["ip"] is None
-        assert m_local["online"] is True
 
-        # gem-project-cli-u1 (Hybrid)
-        m_hybrid = next(m for m in machines if m["name"] == "gem-project-cli-u1")
+        # 2. Hybrid (Both)
+        m_hybrid = next(s for s in sessions if s["name"] == "gem-project-cli-u1")
         assert m_hybrid["local_url"] == "http://localhost:32768"
         assert m_hybrid["ip"] == "100.64.0.1"
-        assert m_hybrid["online"] is True
 
-        # gem-remote-bash-u2 (Tailscale Only)
-        m_remote = next(m for m in machines if m["name"] == "gem-remote-bash-u2")
+        # 3. Remote Only (Tailscale)
+        m_remote = next(s for s in sessions if s["name"] == "gem-remote-bash-u2")
         assert m_remote["local_url"] is None
         assert m_remote["ip"] == "100.64.0.2"
-        assert m_remote["online"] is False

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from app.services.filesystem import FileSystemService
 from app.services.launcher import LauncherService
-from app.services.tailscale import TailscaleService
+from app.services.docker import DockerService
 from app.services.session import SessionService
 
 api = Blueprint('api', __name__)
@@ -12,7 +12,7 @@ def resolve_local_url():
     if not hostname:
         return jsonify({"url": None})
     
-    ports = TailscaleService.get_local_ports()
+    ports = DockerService.get_local_ports()
     return jsonify({"url": ports.get(hostname)})
 
 @api.route('/roots')

@@ -582,6 +582,14 @@ main() {
         )
     fi
 
+    # Resource Limits (Optional)
+    if [ -n "${GEMINI_TOOLBOX_MEMORY:-}" ]; then
+        docker_args+=("--memory" "${GEMINI_TOOLBOX_MEMORY}")
+    fi
+    if [ -n "${GEMINI_TOOLBOX_CPUS:-}" ]; then
+        docker_args+=("--cpus" "${GEMINI_TOOLBOX_CPUS}")
+    fi
+
     local exec_args=()
     if [ "$use_bash" = true ]; then
         log_info "Mode: BASH"

@@ -4,7 +4,7 @@ import signal
 import logging
 import threading
 from app.config import Config
-from app.services.tailscale import TailscaleService
+from app.services.discovery import DiscoveryService
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +30,8 @@ class MonitorService:
         while True:
             time.sleep(10)
             try:
-                # Check for peers
-                status = TailscaleService.get_status()
-                machines = TailscaleService.parse_peers(status)
+                # Check for active sessions using Unified Discovery
+                machines = DiscoveryService.get_sessions()
                 
                 if machines:
                     last_active = time.time()

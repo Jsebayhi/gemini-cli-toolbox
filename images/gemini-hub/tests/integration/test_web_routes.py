@@ -7,15 +7,13 @@ def test_home_route(client):
         {"name": "gem-machine-2", "project": "proj2", "type": "bash", "ip": "100.1.1.2", "online": False},
     ]
 
-    # Patch the service class directly
-    with patch("app.services.tailscale.TailscaleService.get_status", return_value={}) as mock_status, \
-         patch("app.services.tailscale.TailscaleService.parse_peers", return_value=mock_machines) as mock_parse:
+    # Patch the discovery service
+    with patch("app.web.routes.DiscoveryService.get_sessions", return_value=mock_machines) as mock_get:
     
         response = client.get('/')
         
-        # Verify mocks were called
-        assert mock_status.called
-        assert mock_parse.called
+        # Verify mock was called
+        assert mock_get.called
         
         assert response.status_code == 200
         content = response.data.decode()
