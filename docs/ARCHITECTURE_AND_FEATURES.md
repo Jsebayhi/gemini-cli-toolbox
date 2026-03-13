@@ -10,7 +10,10 @@ This document provides a technical breakdown of how the Gemini CLI Toolbox works
 The core philosophy of this toolbox is **Host Protection**. By running the agent in a container, we ensure:
 *   **File System:** The agent sees *only* the project directory you explicitly mounted (`--project` or default `$PWD`). It cannot access `~/.ssh`, `/etc`, or other projects.
 *   **Process Isolation:** If the agent runs `rm -rf /`, it destroys the container's filesystem, not yours.
-*   **Network (Local):** The container shares the host network stack (`--net=host`). This is **required** to support the Google OAuth browser flow (which spins up a local server on varying ports to capture your login token). Strict network isolation (bridge mode) is currently only enabled when using `--remote`.
+*   **Protected Networking:** Every session is "Protected by Default." 
+    *   **Isolation:** The container uses bridge mode (`--network=bridge`), isolating its network stack from the host.
+    *   **Loopback Binding:** Port 3000 is strictly bound to `127.0.0.1` on the host. This ensures your session is invisible to the local network (LAN) but remains accessible from your desktop browser.
+    *   **Legacy Mode:** If you explicitly require raw host networking (e.g., for complex OAuth flows), you can use `--network-host` (logs a security warning).
 
 ### Security Scanning (Trivy)
 To maintain a high security posture, all images undergo automated security scans using [Trivy](https://github.com/aquasec/trivy).
@@ -92,19 +95,18 @@ When you use `--remote [key]` (or simply `--remote` if the `GEMINI_REMOTE_KEY` e
 3.  **Registration:** It registers a transient node on your Tailnet using the **Session ID** (see Section 2) as its hostname.
 
 ### The Gemini Hub
-The Hub is a standalone container (`gemini-hub-service`) that acts as a discovery server and remote manager. While it usually auto-starts with `--remote`, you can also run it manually as a central dashboard.
+The Hub is a standalone container (`gemini-hub-service`) that acts as a discovery server and remote manager. It uses a **Unified Discovery** mechanism to track active sessions:
+1.  **Independent Docker Scan:** The Hub queries the local Docker daemon to find all containers starting with `gem-`. This allows it to discover "Local Only" sessions even when offline.
+2.  **Tailscale Integration:** It merges the Docker list with data from `tailscale status`. This identifies which sessions are reachable via VPN and enriches them with Tailscale IPs.
+3.  **Tier Identification:** Every discovered session is assigned "Network Tiers" (Local, VPN, or Hybrid) based on its reachability.
 
 #### 1. Discovery & Connection
-*   **Mesh Discovery:** It queries the local Tailscale socket to find any active `gem-` peers on your network.
-*   **Web Proxy:** It provides a Web UI to launch `ttyd` (Web Terminal) sessions connecting to those peers.
-*   **Access:**
-    *   **Mobile/Remote:** `http://gemini-hub:8888` (via MagicDNS)
-    *   **Local Desktop:** `http://localhost:8888`
+The dashboard performs a background refresh every 10 seconds. It parses session metadata (Project, Type, UID) directly from container names using regex to ensure a consistent UI even for local-only sessions.
 
 #### 2. Hybrid Mode (Localhost Optimization)
 The Hub is smart enough to know where it is running.
 *   **Scenario:** You are browsing the Hub from the same computer running the containers.
-*   **Optimization:** Instead of routing traffic through the VPN (which adds latency), the Hub attempts to reach the container via `localhost`.
+*   **Optimization:** Instead of routing traffic through the VPN (which adds latency), the Hub prioritizes the local `127.0.0.1` endpoint.
 *   **Behavior:**
     *   **Priority:** If reachable, the **primary link** on the session card automatically switches to `localhost`.
     *   **Fallback:** A **"VPN"** badge appears alongside the status indicator. This allows you to explicitly choose the Tailscale IP even if local access is available.

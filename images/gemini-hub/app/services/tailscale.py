@@ -1,6 +1,7 @@
 import json
 import subprocess
 import logging
+import re
 from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -71,48 +72,88 @@ class TailscaleService:
 
     @staticmethod
     def parse_peers(status_json: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extracts and filters Gemini peers from status JSON."""
-        machines = []
-        peers = status_json.get("Peer", {})
+        """
+        Unifies Tailscale peers and Docker containers into a single session list.
+        Allows the Hub to discover local sessions even without VPN connectivity.
+        """
+        machines_dict = {}
+        sidecars = set()
+        
+        # 1. Standalone Docker Scan (Tier 1)
         local_ports = TailscaleService.get_local_ports()
         
+        # Regex for metadata parsing: gem-{project}-{type}-{uid}
+        # Supports project names with hyphens
+        metadata_regex = re.compile(r'^gem-(?P<project>.+)-(?P<type>[^-]+)-(?P<uid>[^-]+)$')
+
+        # First pass: Identify primary local sessions
+        for name, url in local_ports.items():
+            if name.endswith("-vpn"):
+                sidecars.add(name)
+                continue
+                
+            match = metadata_regex.match(name)
+            if match:
+                machines_dict[name] = {
+                    "name": name,
+                    "project": match.group("project"),
+                    "type": match.group("type"),
+                    "uid": match.group("uid"),
+                    "ip": None,
+                    "online": True,
+                    "local_url": url,
+                    "tiers": ["local"],
+                    "vpn_active": False
+                }
+
+        # 2. Merge with Tailscale Peers (Tier 2)
+        peers = status_json.get("Peer", {})
         for _, node in peers.items():
             hostname = node.get("HostName", "")
             
-            # FILTER: Only show "gem-" instances
             if not hostname.startswith("gem-"):
                 continue
-                
-            # Parse Hostname Metadata: gem-{project}-{type}-{suffix}
-            raw_parts = hostname.split('-')
-            parts = [p for p in raw_parts if p]
             
-            project = "Unknown"
-            session_type = "Unknown"
-            uid = "Unknown"
-            
-            if len(parts) >= 4:
-                session_type = parts[-2]
-                project = "-".join(parts[1:-2])
-                uid = parts[-1]
-            elif len(parts) == 3:
-                project = parts[1]
-                session_type = "cli"
-                uid = parts[-1]
-                
+            if hostname.endswith("-vpn"):
+                sidecars.add(hostname)
+                continue
+
             addrs = node.get("TailscaleIPs", [])
             ip = next((a for a in addrs if "." in a), None)
             
-            if ip:
-                machines.append({
-                    "name": hostname,
-                    "project": project,
-                    "type": session_type,
-                    "uid": uid,
-                    "ip": ip,
-                    "online": node.get("Online", False),
-                    "local_url": local_ports.get(hostname)
-                })
+            if not ip:
+                continue
+
+            if hostname in machines_dict:
+                # Hybrid session: Update local session with VPN info
+                machines_dict[hostname]["ip"] = ip
+                machines_dict[hostname]["online"] = machines_dict[hostname]["online"] or node.get("Online", False)
+                if "vpn" not in machines_dict[hostname]["tiers"]:
+                    machines_dict[hostname]["tiers"].append("vpn")
+            else:
+                # Remote session or local session not currently exposing port 3000
+                match = metadata_regex.match(hostname)
+                if match:
+                    machines_dict[hostname] = {
+                        "name": hostname,
+                        "project": match.group("project"),
+                        "type": match.group("type"),
+                        "uid": match.group("uid"),
+                        "ip": ip,
+                        "online": node.get("Online", False),
+                        "local_url": None,
+                        "tiers": ["vpn"],
+                        "vpn_active": False
+                    }
+
+        # 3. Attribute sidecars to parents
+        for sid in sidecars:
+            parent = sid.replace("-vpn", "")
+            if parent in machines_dict:
+                machines_dict[parent]["vpn_active"] = True
+                if "vpn" not in machines_dict[parent]["tiers"]:
+                    machines_dict[parent]["tiers"].append("vpn")
                 
+        machines = list(machines_dict.values())
         machines.sort(key=lambda x: x["name"])
         return machines
