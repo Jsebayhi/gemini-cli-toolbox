@@ -66,11 +66,6 @@ lint-python:
 	@echo ">> Linting Python Code (Ruff)..."
 	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
 
-.PHONY: lint-fix
-lint-fix:
-	@echo ">> Fixing Python Linting Errors (Ruff)..."
-	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check --fix images/gemini-hub
-
 .PHONY: test
 test: test-bash test-hub
 
@@ -117,7 +112,6 @@ test-hub: setup-builder
 		gemini-cli-toolbox/hub-test:$$TAG \
 		python3 -m pytest -n auto -vv \
 		--cov=app \
-		--cov-append \
 		--cov-report=json:/coverage/coverage.json \
 		--cov-fail-under=90 \
 		tests/unit tests/integration

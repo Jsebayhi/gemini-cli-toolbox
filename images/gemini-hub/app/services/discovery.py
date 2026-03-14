@@ -3,7 +3,6 @@ from typing import List, Dict, Any, Optional
 from app.services.docker import DockerService
 from app.services.tailscale import TailscaleService
 from app.models.session import GeminiSession
-from app.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -15,15 +14,14 @@ class DiscoveryService:
         if not cls._instance:
             cls._instance = super(DiscoveryService, cls).__new__(cls)
             
-            # Dynamic provider selection based on Pure Localhost mode
             if providers is not None:
                 cls._instance.providers = providers
             else:
-                cls._instance.providers = [DockerService()]
-                if not Config.HUB_NO_VPN:
-                    cls._instance.providers.append(TailscaleService())
-                else:
-                    logger.info("Pure Localhost mode active: Tailscale discovery disabled.")
+                # Always attempt both Docker and Tailscale for Unified Discovery
+                cls._instance.providers = [
+                    DockerService(),
+                    TailscaleService()
+                ]
                     
         return cls._instance
 
@@ -46,8 +44,7 @@ class DiscoveryService:
         
         for provider in self.providers:
             try:
-                # 1. Skip if provider not available (e.g. docker daemon down)
-                # We check for existence of method because of diverse mocks in legacy tests
+                # Skip if provider not available (e.g. docker daemon down)
                 if hasattr(provider, "is_available") and not provider.is_available():
                     continue
 
@@ -57,7 +54,7 @@ class DiscoveryService:
                     if name not in master_map:
                         master_map[name] = session
                     else:
-                        # 2. Strategic Merging (Priority & Aggregation)
+                        # Strategic Merging (Priority & Aggregation)
                         existing = master_map[name]
                         
                         # Booleans are additive (OR)
@@ -68,7 +65,6 @@ class DiscoveryService:
                             
                         # Metadata Enrichment (Priority Logic)
                         # LOCAL info (Docker) always takes precedence over REMOTE info (Tailscale)
-                        # We only overwrite if existing value is empty/None
                         if session.local_url and not existing.local_url:
                             existing.local_url = session.local_url
                         

@@ -41,6 +41,7 @@ show_help() {
     echo "  -d, --detach          Start the Hub in the background"
     echo "  --image <name>        Override the Docker image to use"
     echo "  --key <key>           Tailscale Auth Key (Required if GEMINI_REMOTE_KEY is not set)"
+    echo "  --no-vpn              Start Hub in Pure Localhost mode (No Tailscale/VPN)"
     echo "  --auto-shutdown       Enable 60s inactivity timeout (Default: Disabled)"
     echo "  --no-worktree-prune   Disable background worktree cleanup service"
     echo "  --workspace <path>    Add a host directory to the list of scannable project roots"
@@ -120,24 +121,21 @@ main() {
         image_name="$remote_tag"
     fi
 
+    # 3. Parse Args
     local mode="-it"
     local auto_shutdown=false
     local prune_enabled=true
-    
     local no_vpn=false
-    local localhost_enabled=true
-    local network_host=false
-
+    local localhost_access=true
     while [[ $# -gt 0 ]]; do
       case $1 in
         -d|--detach) mode="-d"; shift ;;
         --image)     override_image="$2"; shift; shift ;;
         --key)       auth_key="$2"; shift; shift ;;
+        --no-vpn)    no_vpn=true; shift ;;
+        --no-localhost) localhost_access=false; shift ;;
         --auto-shutdown) auto_shutdown=true; shift ;;
         --no-worktree-prune) prune_enabled=false; shift ;;
-        --no-vpn)      no_vpn=true; shift ;;
-        --no-localhost) localhost_enabled=false; shift ;;
-        --network-host) network_host=true; shift ;;
         --workspace) workspace_roots+=("$2"); shift; shift ;;
         --config-root) config_root="$2"; shift; shift ;;
         -h|--help)   show_help; exit 0 ;;
@@ -167,6 +165,12 @@ main() {
       esac
     done
 
+    if [ "$no_vpn" = false ] && [ -z "$auth_key" ]; then
+        log_error "TAILSCALE_KEY is required for the Hub (or use --no-vpn)."
+        echo "Run 'gemini-hub --help' for usage instructions."
+        exit 1
+    fi
+
     # 4. Prepare Docker Args
     local extra_mounts=()
     local root_paths_list=""
@@ -174,6 +178,7 @@ main() {
 
     if [ "$auto_shutdown" = true ]; then env_vars+=("--env" "HUB_AUTO_SHUTDOWN=1"); fi
     if [ "$prune_enabled" = false ]; then env_vars+=("--env" "HUB_WORKTREE_PRUNE_ENABLED=false"); fi
+    if [ "$no_vpn" = true ]; then env_vars+=("--env" "GEMINI_HUB_NO_VPN=true"); fi
 
     # --- SMART RESTART LOGIC ---
     if [ -n "$(docker ps -q -f name="^/${container_name}$")" ]; then
@@ -277,37 +282,23 @@ main() {
         fi
     fi
 
-    if [ -z "$auth_key" ] && [ "$no_vpn" = false ]; then
-        log_error "TAILSCALE_KEY is required for the Hub. Use --key or --no-vpn." >&2
-        exit 1
-    fi
-
-    local network_mode="--network=bridge"
-    if [ "$network_host" = true ]; then
-        network_mode="--net=host"
-    fi
-
-    local docker_args=(
-        "--rm" "$mode"
-        "--name" "$container_name"
-        "$network_mode"
-    )
-
-    if [ "$localhost_enabled" = true ] && [ "$network_host" = false ]; then
-        docker_args+=("-p" "127.0.0.1:${port}:8888")
-    fi
-
-    if [ "$no_vpn" = false ]; then
-        docker_args+=("--cap-add=NET_ADMIN" "--device" "/dev/net/tun")
+    local port_mapping=()
+    if [ "$localhost_access" = true ]; then
+        port_mapping=("-p" "127.0.0.1:$port:8888")
+        log_info "Access at http://localhost:$port (Desktop)"
+    else
+        log_info "Host port mapping disabled. Local access via desktop will NOT work."
     fi
 
     log_info "Starting Gemini Hub on port $port..."
-    log_info "Access at http://localhost:$port (Desktop)"
-    if [ "$no_vpn" = false ]; then
-        log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
-    fi
+    log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
 
-    docker run "${docker_args[@]}" \
+    docker run --rm "$mode" \
+        --name "$container_name" \
+        --network=bridge \
+        "${port_mapping[@]}" \
+        --cap-add=NET_ADMIN \
+        --device /dev/net/tun \
         --volume "/var/run/docker.sock:/var/run/docker.sock" \
         "${extra_mounts[@]}" \
         "${env_vars[@]}" \
