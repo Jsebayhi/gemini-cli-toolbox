@@ -39,7 +39,11 @@ class MonitorService:
     @staticmethod
     def check_and_shutdown(last_active: float, timeout: int) -> float:
         """Performs a single activity check and kills process if stale."""
-        sessions = DiscoveryService.get_sessions()
+        try:
+            sessions = DiscoveryService.get_sessions()
+        except Exception as e:
+            logger.error(f"Discovery failed in monitor: {e}")
+            return last_active
         
         # A session is active if it's either local (running) or remote (reachable)
         active_sessions = [

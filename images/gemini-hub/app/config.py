@@ -1,40 +1,48 @@
 import os
+from typing import List
 
 class Config:
-    """Central configuration for Gemini Hub."""
+    """Centralized configuration for the Gemini Hub."""
     
-    # Required for production runs (fail fast if missing)
-    TAILSCALE_AUTH_KEY = os.environ.get("TAILSCALE_AUTH_KEY", "")
+    # Discovery
+    TAILSCALE_AUTH_KEY = os.environ.get("TAILSCALE_AUTH_KEY")
     
-    # Workspace Roots (Colon separated)
-    HUB_ROOTS = [r for r in os.environ.get("HUB_ROOTS", "").split(":") if r]
+    # Roots (Normalized)
+    _raw_roots = os.environ.get("HUB_ROOTS", "").split(":")
+    _worktree_root = os.environ.get("GEMINI_WORKTREE_ROOT", "/cache/worktrees")
     
-    # Host Environment
-    HOST_CONFIG_ROOT = os.environ.get("HOST_CONFIG_ROOT", "")
-    HOST_HOME = os.environ.get("HOST_HOME", "")
+    HUB_ROOTS: List[str] = []
     
-    # Features
-    HUB_AUTO_SHUTDOWN = os.environ.get("HUB_AUTO_SHUTDOWN", "").lower() in ("1", "true")
-    HUB_WORKTREE_PRUNE_ENABLED = os.environ.get("HUB_WORKTREE_PRUNE_ENABLED", "true").lower() in ("1", "true")
-    HUB_NO_VPN = os.environ.get("GEMINI_HUB_NO_VPN", "").lower() in ("1", "true")
+    # Process and normalize roots using os.path.normpath
+    _seen = set()
+    for r in _raw_roots + [_worktree_root]:
+        r = r.strip()
+        if r:
+            r = os.path.normpath(r)
+            if r not in _seen:
+                HUB_ROOTS.append(r)
+                _seen.add(r)
+
+    # Lifecycle
+    HUB_AUTO_SHUTDOWN = os.environ.get("HUB_AUTO_SHUTDOWN", "true").lower() == "true"
+    HUB_WORKTREE_PRUNE_ENABLED = os.environ.get("HUB_WORKTREE_PRUNE_ENABLED", "true").lower() == "true"
     
-    # Worktree Lifecycle
+    # Expiry settings (days)
     WORKTREE_EXPIRY_HEADLESS = int(os.environ.get("GEMINI_WORKTREE_HEADLESS_EXPIRY_DAYS", "30"))
     WORKTREE_EXPIRY_BRANCH = int(os.environ.get("GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS", "90"))
     WORKTREE_EXPIRY_ORPHAN = int(os.environ.get("GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS", "90"))
-    
-    # The Hub container sees the host cache if it is mounted. 
-    # We will assume it is mounted at /host-cache for now, or just use the absolute host path if we can.
-    # Actually, the Hub needs to know WHERE the worktrees are on the container's FS.
-    WORKTREE_ROOT = os.environ.get("GEMINI_WORKTREE_ROOT", "/home/gemini/.cache/gemini-toolbox/worktrees")
 
-    # Initialization logic: Ensure worktree root is always in scannable roots
-    if WORKTREE_ROOT and WORKTREE_ROOT not in HUB_ROOTS:
-        HUB_ROOTS.append(WORKTREE_ROOT)
+    # Legacy/Compatibility aliases for tests
+    WORKTREE_ROOT = _worktree_root
     
-    @classmethod
-    def validate(cls):
-        """Validate critical configuration."""
-        if not cls.TAILSCALE_AUTH_KEY and not os.environ.get("FLASK_DEBUG"):
-            # In development (FLASK_DEBUG=1), we might skip auth key check if mocking
-            print("Warning: TAILSCALE_AUTH_KEY is not set.")
+    # Security & Paths
+    HOST_CONFIG_ROOT = os.environ.get("HOST_CONFIG_ROOT", "/home/gemini/.gemini")
+    HOST_HOME = os.environ.get("HOST_HOME", "/home/gemini")
+    
+    # Feature Flags
+    HUB_NO_VPN = os.environ.get("GEMINI_HUB_NO_VPN", "false").lower() == "true"
+
+    @staticmethod
+    def validate():
+        """Optional: Perform runtime validation of critical config."""
+        pass

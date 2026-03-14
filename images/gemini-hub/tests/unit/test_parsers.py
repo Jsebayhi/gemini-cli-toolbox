@@ -1,6 +1,14 @@
-from unittest.mock import patch
+import pytest
+from unittest.mock import patch, MagicMock
 from app.services.discovery import DiscoveryService
 from app.models.session import GeminiSession
+
+@pytest.fixture(autouse=True)
+def reset_discovery_singleton():
+    """Ensure each test has its own DiscoveryService instance."""
+    DiscoveryService._instance = None
+    yield
+    DiscoveryService._instance = None
 
 def test_discovery_sessions_standard():
     """Test standard session identification and parsing via DiscoveryService."""

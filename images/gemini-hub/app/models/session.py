@@ -21,6 +21,11 @@ class GeminiSession:
         self.ip: Optional[str] = None
         self.local_url: Optional[str] = None
 
+    @property
+    def online(self) -> bool:
+        """Unified status: session is active either locally or via VPN."""
+        return self.is_running or self.is_reachable
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "name": self.name,

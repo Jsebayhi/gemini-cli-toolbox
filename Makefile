@@ -112,6 +112,7 @@ test-hub: setup-builder
 		gemini-cli-toolbox/hub-test:$$TAG \
 		python3 -m pytest -n auto -vv \
 		--cov=app \
+		--cov-append \
 		--cov-report=json:/coverage/coverage.json \
 		--cov-fail-under=90 \
 		tests/unit tests/integration

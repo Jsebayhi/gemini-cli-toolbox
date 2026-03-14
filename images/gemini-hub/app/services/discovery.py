@@ -8,16 +8,20 @@ logger = logging.getLogger(__name__)
 
 class DiscoveryService:
     """Orchestrates unified discovery of Gemini sessions."""
+    _instance = None
 
-    def __init__(self, providers=None):
-        self.providers = providers or [
-            DockerService(),
-            TailscaleService()
-        ]
+    def __new__(cls, providers=None):
+        if not cls._instance:
+            cls._instance = super(DiscoveryService, cls).__new__(cls)
+            cls._instance.providers = providers or [
+                DockerService(),
+                TailscaleService()
+            ]
+        return cls._instance
 
     @staticmethod
     def get_sessions() -> List[Dict[str, Any]]:
-        """Static wrapper for convenience."""
+        """Static wrapper for convenience. Uses the singleton instance."""
         return DiscoveryService()._get_sessions_internal()
 
     @staticmethod
@@ -34,6 +38,7 @@ class DiscoveryService:
         
         for provider in self.providers:
             try:
+                # Get the map of sessions from the provider
                 provider_sessions = provider.get_sessions()
                 
                 for name, session in provider_sessions.items():
