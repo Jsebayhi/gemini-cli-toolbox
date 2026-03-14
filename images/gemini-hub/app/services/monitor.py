@@ -13,14 +13,11 @@ class MonitorService:
 
     @staticmethod
     def start():
+        """Starts the monitor thread if enabled."""
         if not Config.HUB_AUTO_SHUTDOWN:
             logger.info("Auto-shutdown disabled.")
             return
             
-        if os.environ.get("GEMINI_HUB_TEST_MODE") == "true":
-            logger.info("Test mode detected. Monitor thread suppressed.")
-            return
-
         thread = threading.Thread(target=MonitorService._monitor_loop, daemon=True)
         thread.start()
 
@@ -32,17 +29,30 @@ class MonitorService:
         logger.info(f"Monitor started. Auto-shutdown after {TIMEOUT_SECONDS}s of inactivity.")
         
         while True:
-            time.sleep(10)
             try:
-                # Check for active sessions using Unified Discovery
-                machines = DiscoveryService.get_sessions()
-                
-                if machines:
-                    last_active = time.time()
-                else:
-                    idle_time = time.time() - last_active
-                    if idle_time > TIMEOUT_SECONDS:
-                        logger.warning(f"Inactivity limit ({TIMEOUT_SECONDS}s) reached. Shutting down.")
-                        os.kill(os.getpid(), signal.SIGTERM)
+                last_active = MonitorService.check_and_shutdown(last_active, TIMEOUT_SECONDS)
             except Exception as e:
                 logger.error(f"Monitor error: {e}")
+            
+            time.sleep(10)
+
+    @staticmethod
+    def check_and_shutdown(last_active: float, timeout: int) -> float:
+        """Performs a single activity check and kills process if stale."""
+        sessions = DiscoveryService.get_sessions()
+        
+        # A session is active if it's either local (running) or remote (reachable)
+        active_sessions = [
+            s for s in sessions 
+            if s.get("is_running") or s.get("is_reachable")
+        ]
+        
+        now = time.time()
+        if active_sessions:
+            return now
+        else:
+            idle_time = now - last_active
+            if idle_time > timeout:
+                logger.warning(f"Inactivity limit ({timeout}s) reached. Shutting down.")
+                os.kill(os.getpid(), signal.SIGTERM)
+            return last_active

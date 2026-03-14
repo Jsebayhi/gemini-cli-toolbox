@@ -18,9 +18,8 @@ def app(monkeypatch: pytest.MonkeyPatch) -> Flask:
     monkeypatch.setattr(Config, "TAILSCALE_AUTH_KEY", "mock-key")
     monkeypatch.setattr(Config, "HUB_AUTO_SHUTDOWN", False)
 
-    app = create_app(Config)
+    app = create_app()
     return app
-
 @pytest.fixture
 def client(app: Flask):
     """A test client for the app."""

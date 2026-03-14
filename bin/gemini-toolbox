@@ -49,9 +49,6 @@ show_help() {
     echo "  --project <path>     Path to project directory to mount as workspace (default: current dir)"
     echo "  --docker-args <str>  Additional arguments passed to 'docker run' (e.g., mounts)"
     echo "  --remote <key>       Enable Tailscale VPN for remote access (Container Mode)"
-    echo "  --no-vpn             Disable VPN and bind to localhost strictly (Pure Localhost Mode)"
-    echo "  --no-localhost       Disable host port mapping (remote-only access)"
-    echo "  --network-host       Use raw host networking (Legacy/Unprotected Mode)"
     echo "  --worktree [arg]     Launch in an isolated Git Worktree. Arg can be name or task."
     echo "  --name <str>         Explicit name for the worktree folder and branch."
     echo "  --bash               Start a bash shell instead of the Gemini CLI"
@@ -283,9 +280,6 @@ main() {
     fi
     local args=()
     local remote_mode=false
-    local localhost_mode=false
-    local localhost_access=true
-    local raw_host=false
     local no_tmux_flag=false
     local tailscale_key="${GEMINI_REMOTE_KEY:-}"
     local enable_docker=true
@@ -310,9 +304,6 @@ main() {
         --project)     project_dir="$2";   shift; shift ;;
         --bash)        use_bash=true;      shift ;;
         --detached)    detached_mode=true; shift ;;
-        --no-vpn)      localhost_mode=true; shift ;;
-        --no-localhost) localhost_access=false; shift ;;
-        --network-host) raw_host=true; shift ;;
         --remote)      
             remote_mode=true
             if [[ -n "${2:-}" && "$2" == tskey-* ]]; then
@@ -349,11 +340,6 @@ main() {
 
     if [ "$remote_mode" = true ] && [ "$no_tmux_flag" = true ]; then
         log_error "--remote and --no-tmux are incompatible." >&2
-        exit 1
-    fi
-
-    if [ "$remote_mode" = true ] && [ "$localhost_mode" = true ]; then
-        log_error "--remote and --no-vpn are incompatible." >&2
         exit 1
     fi
 
@@ -495,13 +481,8 @@ main() {
         fi
     fi
 
-    local network_mode="--network=bridge"
-    if [ "$raw_host" = true ]; then
-        network_mode="--net=host"
-        if [ "$localhost_mode" = true ] || [ "$remote_mode" = true ]; then
-            log_warn "--network-host overrides --no-vpn/--remote isolation."
-        fi
-    elif [ "$remote_mode" = true ]; then
+    local network_mode="--net=host"
+    if [ "$remote_mode" = true ]; then
         if [ -z "$tailscale_key" ]; then
             log_error "TAILSCALE_KEY is required for --remote mode." >&2
             exit 1
@@ -522,19 +503,12 @@ main() {
                  "$hub_script" "${hub_args[@]}" > /tmp/gemini-hub.log 2>&1 || true
             fi
         fi
+        network_mode="--network=bridge"
         enable_vscode_integration=false
         extra_docker_args+=(
             --env TAILSCALE_AUTH_KEY="$tailscale_key"
-            --cap-add=NET_ADMIN --device /dev/net/tun
+            --cap-add=NET_ADMIN --device /dev/net/tun -p 127.0.0.1:0:3000
         )
-        if [ "$localhost_access" = true ]; then
-            extra_docker_args+=(-p 127.0.0.1:0:3000)
-        fi
-    else
-        # DEFAULT: Protected Localhost
-        if [ "$localhost_access" = true ]; then
-            extra_docker_args+=(-p 127.0.0.1:0:3000)
-        fi
     fi
 
     local docker_args=(
@@ -582,14 +556,6 @@ main() {
         )
     fi
 
-    # Resource Limits (Optional)
-    if [ -n "${GEMINI_TOOLBOX_MEMORY:-}" ]; then
-        docker_args+=("--memory" "${GEMINI_TOOLBOX_MEMORY}")
-    fi
-    if [ -n "${GEMINI_TOOLBOX_CPUS:-}" ]; then
-        docker_args+=("--cpus" "${GEMINI_TOOLBOX_CPUS}")
-    fi
-
     local exec_args=()
     if [ "$use_bash" = true ]; then
         log_info "Mode: BASH"
@@ -602,43 +568,8 @@ main() {
         log_info "Starting container in background..."
         docker run --rm -d "${docker_args[@]}" "${exec_args[@]}"
         log_info "Container started: ${gemini_session_id}"
-        
-        if [ "$localhost_access" = true ]; then
-            local max_attempts=5
-            local attempt=0
-            local host_port=""
-            while [ $attempt -lt $max_attempts ]; do
-                host_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "3000/tcp") 0).HostPort}}' "${gemini_session_id}" 2>/dev/null || echo "")
-                if [ -n "$host_port" ]; then
-                    log_info "Session available at http://localhost:${host_port}"
-                    break
-                fi
-                sleep 1
-                attempt=$((attempt + 1))
-            done
-        fi
     else
         if [ "$use_bash" = true ]; then echo "Starting in BASH mode..."; fi
-        
-        if [ "$localhost_access" = true ]; then
-            # We can't easily capture the port before docker run in foreground
-            # but we can try to find it just as it starts using a polling loop.
-            (
-                local max_attempts=10
-                local attempt=0
-                local host_port=""
-                while [ $attempt -lt $max_attempts ]; do
-                    sleep 1
-                    host_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "3000/tcp") 0).HostPort}}' "${gemini_session_id}" 2>/dev/null || echo "")
-                    if [ -n "$host_port" ]; then
-                        log_info "Session available at http://localhost:${host_port}"
-                        break
-                    fi
-                    attempt=$((attempt + 1))
-                done
-            ) &
-        fi
-
         docker run --rm -it "${docker_args[@]}" "${exec_args[@]}"
     fi
 }

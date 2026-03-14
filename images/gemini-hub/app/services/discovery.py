@@ -1,73 +1,62 @@
 import logging
-import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.services.docker import DockerService
 from app.services.tailscale import TailscaleService
+from app.models.session import GeminiSession
 
 logger = logging.getLogger(__name__)
 
 class DiscoveryService:
     """Orchestrates unified discovery of Gemini sessions."""
 
+    def __init__(self, providers=None):
+        self.providers = providers or [
+            DockerService(),
+            TailscaleService()
+        ]
+
     @staticmethod
     def get_sessions() -> List[Dict[str, Any]]:
+        """Static wrapper for convenience."""
+        return DiscoveryService()._get_sessions_internal()
+
+    @staticmethod
+    def get_session_by_name(name: str) -> Optional[Dict[str, Any]]:
+        """Finds a specific session by its name."""
+        sessions = DiscoveryService.get_sessions()
+        return next((s for s in sessions if s["name"] == name), None)
+
+    def _get_sessions_internal(self) -> List[Dict[str, Any]]:
         """
-        Unifies results from Docker and Tailscale into a single list.
+        Unifies results from all registered providers into a single list of dicts.
         """
-        machines_dict = {}
+        master_map: Dict[str, GeminiSession] = {}
         
-        # 1. Fetch Local Sessions from Docker (Standalone)
-        local_ports = DockerService.get_local_ports()
-        
-        # Regex for metadata parsing: gem-{project}-{type}-{uid}
-        metadata_regex = re.compile(r'^gem-(?P<project>.+)-(?P<type>[^-]+)-(?P<uid>[^-]+)$')
-
-        for name, url in local_ports.items():
-            match = metadata_regex.match(name)
-            if match:
-                machines_dict[name] = {
-                    "name": name,
-                    "project": match.group("project"),
-                    "type": match.group("type"),
-                    "uid": match.group("uid"),
-                    "ip": None,
-                    "online": True,
-                    "local_url": url
-                }
-
-        # 2. Merge with Tailscale Peers
-        status = TailscaleService.get_status()
-        peers = status.get("Peer", {})
-        
-        for _, node in peers.items():
-            hostname = node.get("HostName", "")
-            if not hostname.startswith("gem-"):
-                continue
-
-            addrs = node.get("TailscaleIPs", [])
-            ip = next((a for a in addrs if "." in a), None)
-            
-            if not ip:
-                continue
-
-            if hostname in machines_dict:
-                # Enrich existing local session with VPN info
-                machines_dict[hostname]["ip"] = ip
-                machines_dict[hostname]["online"] = machines_dict[hostname]["online"] or node.get("Online", False)
-            else:
-                # Add remote-only or port-hidden local session
-                match = metadata_regex.match(hostname)
-                if match:
-                    machines_dict[hostname] = {
-                        "name": hostname,
-                        "project": match.group("project"),
-                        "type": match.group("type"),
-                        "uid": match.group("uid"),
-                        "ip": ip,
-                        "online": node.get("Online", False),
-                        "local_url": None
-                    }
+        for provider in self.providers:
+            try:
+                provider_sessions = provider.get_sessions()
                 
-        machines = list(machines_dict.values())
-        machines.sort(key=lambda x: x["name"])
-        return machines
+                for name, session in provider_sessions.items():
+                    if name not in master_map:
+                        master_map[name] = session
+                    else:
+                        # Merge logic (Non-exclusive booleans)
+                        existing = master_map[name]
+                        
+                        if session.is_running:
+                            existing.is_running = True
+                        if session.is_reachable:
+                            existing.is_reachable = True
+                            
+                        # Detail Enrichment
+                        if session.ip:
+                            existing.ip = session.ip
+                        if session.local_url:
+                            existing.local_url = session.local_url
+            except Exception as e:
+                logger.error(f"Provider {provider.__class__.__name__} failed: {e}")
+                
+        # Convert to sorted list of dicts for API compatibility
+        result = [s.to_dict() for s in master_map.values()]
+        result.sort(key=lambda x: x["name"])
+        return result

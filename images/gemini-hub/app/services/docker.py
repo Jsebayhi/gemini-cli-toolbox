@@ -1,22 +1,22 @@
 import subprocess
 import logging
 from typing import Dict
+from app.models.session import GeminiSession
+from app.services.base import DiscoveryProvider
 
 logger = logging.getLogger(__name__)
 
-class DockerService:
-    """Manages interactions with the local Docker daemon."""
+class DockerService(DiscoveryProvider):
+    """Session Provider for local Docker containers."""
 
-    @staticmethod
-    def get_local_ports() -> Dict[str, str]:
+    def get_sessions(self) -> Dict[str, GeminiSession]:
         """
-        Returns a mapping of {container_name: local_url} for gemini containers
-        that have port 3000 exposed to the host.
+        Returns GeminiSession objects for all running 
+        Gemini containers on the local daemon.
         """
+        sessions = {}
         try:
-            # We use "docker ps" to find containers that map port 3000.
-            # Format: Name|Ports
-            # Example Ports: "127.0.0.1:32768->3000/tcp"
+            # We use "docker ps" to find containers with the gem- prefix.
             cmd = ["docker", "ps", "--format", "{{.Names}}|{{.Ports}}"]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=2)
             
@@ -24,7 +24,6 @@ class DockerService:
                 logger.error(f"Docker ps error: {result.stderr}")
                 return {}
 
-            mapping = {}
             for line in result.stdout.strip().split('\n'):
                 if not line or "|" not in line:
                     continue
@@ -33,17 +32,26 @@ class DockerService:
                 if not name.startswith("gem-"):
                     continue
                 
-                # Parse ports
+                session = GeminiSession.from_name(name)
+                if not session:
+                    continue
+                    
+                # A container in 'docker ps' is running locally
+                session.is_running = True
+                
+                # Identify port 3000 mapping
                 for part in ports_str.split(','):
                     part = part.strip()
                     if "->3000/tcp" in part:
-                        # Extract "127.0.0.1:32768" from "127.0.0.1:32768->3000/tcp"
                         left = part.split("->")[0]
                         if ":" in left:
                             host_port = left.split(":")[-1]
-                            mapping[name] = f"http://localhost:{host_port}"
+                            session.local_url = f"http://localhost:{host_port}"
                             break
-            return mapping
+                
+                sessions[name] = session
+                    
+            return sessions
         except Exception as e:
-            logger.error(f"Error getting docker ports: {e}")
+            logger.error(f"Error getting docker sessions: {e}")
             return {}

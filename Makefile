@@ -22,18 +22,8 @@ else
     BAKE_FLAGS := --builder default --load
 endif
 
-# Resource limits for tests and test sessions
-# These ensure the host machine remains responsive during CI/Dev.
-export TEST_MEMORY_LIMIT ?= 2g
-export TEST_CPUS_LIMIT ?= 2
-# Disable swap to prevent disk thrashing if memory limit is hit.
-DOCKER_RES_LIMITS := --memory=$(TEST_MEMORY_LIMIT) --memory-swap=$(TEST_MEMORY_LIMIT) --cpus=$(TEST_CPUS_LIMIT)
-
-# Limit parallel build jobs to 2 to prevent CPU exhaustion during Bake.
-export BAKE_MAX_PARALLEL ?= 2
-
 # Common Bake execution with context variables
-BAKE_CMD := docker buildx bake $(BAKE_FLAGS) --set *.args.JOBS=$(BAKE_MAX_PARALLEL)
+BAKE_CMD := docker buildx bake $(BAKE_FLAGS)
 
 .PHONY: help
 help:
@@ -69,21 +59,15 @@ lint-adr:
 .PHONY: lint-shell
 lint-shell:
 	@echo ">> Linting Bash Scripts (ShellCheck)..."
-	docker run --rm \
-		$(DOCKER_RES_LIMITS) \
-		-v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck bin/gemini-toolbox bin/gemini-hub images/gemini-cli/docker-entrypoint.sh images/gemini-hub/docker-entrypoint.sh
+	docker run --rm -v "$(shell pwd):/mnt" -w /mnt koalaman/shellcheck bin/gemini-toolbox bin/gemini-hub images/gemini-cli/docker-entrypoint.sh images/gemini-hub/docker-entrypoint.sh
 
 .PHONY: lint-python
 lint-python:
 	@echo ">> Linting Python Code (Ruff)..."
-	docker run --rm \
-		$(DOCKER_RES_LIMITS) \
-		-v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
+	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
 
 .PHONY: test
-test:
-	@$(MAKE) test-bash
-	@$(MAKE) test-hub
+test: test-bash test-hub
 
 .PHONY: test-bash
 test-bash: setup-builder deps-bash
@@ -93,14 +77,9 @@ test-bash: setup-builder deps-bash
 	# Use docker inspect to get the exact tag built by bake
 	@TAG=$$(docker buildx bake bash-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['bash-test']['tags'][0].split(':')[-1])"); \
 	docker run --rm \
-		$(DOCKER_RES_LIMITS) \
 		--cap-add=SYS_PTRACE \
 		-v "$(shell pwd):/code" \
 		-w /code \
-		--env GEMINI_TOOLBOX_MEMORY=$(TEST_MEMORY_LIMIT) \
-		--env GEMINI_TOOLBOX_CPUS=$(TEST_CPUS_LIMIT) \
-		--env GEMINI_HUB_MEMORY=$(TEST_MEMORY_LIMIT) \
-		--env GEMINI_HUB_CPUS=$(TEST_CPUS_LIMIT) \
 		--entrypoint kcov \
 		gemini-cli-toolbox/bash-test:$$TAG \
 		--include-path=/code/bin,/code/images \
@@ -129,15 +108,9 @@ test-hub: setup-builder
 	mkdir -p coverage/python
 	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
 	docker run --rm \
-		$(DOCKER_RES_LIMITS) \
 		-v "$(shell pwd)/coverage/python:/coverage" \
-		--env GEMINI_HUB_TEST_MODE=true \
-		--env GEMINI_TOOLBOX_MEMORY=$(TEST_MEMORY_LIMIT) \
-		--env GEMINI_TOOLBOX_CPUS=$(TEST_CPUS_LIMIT) \
-		--env GEMINI_HUB_MEMORY=$(TEST_MEMORY_LIMIT) \
-		--env GEMINI_HUB_CPUS=$(TEST_CPUS_LIMIT) \
 		gemini-cli-toolbox/hub-test:$$TAG \
-		python3 -m pytest -n $(TEST_CPUS_LIMIT) -vv \
+		python3 -m pytest -n auto -vv \
 		--cov=app \
 		--cov-report=json:/coverage/coverage.json \
 		--cov-fail-under=90 \
@@ -148,14 +121,7 @@ test-hub-ui: setup-builder
 	@echo ">> Running Gemini Hub UI Tests (Playwright)..."
 	$(BAKE_CMD) hub-test
 	@TAG=$$(docker buildx bake hub-test --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['hub-test']['tags'][0].split(':')[-1])"); \
-	docker run --rm \
-		$(DOCKER_RES_LIMITS) \
-		--env GEMINI_HUB_TEST_MODE=true \
-		--env GEMINI_TOOLBOX_MEMORY=$(TEST_MEMORY_LIMIT) \
-		--env GEMINI_TOOLBOX_CPUS=$(TEST_CPUS_LIMIT) \
-		--env GEMINI_HUB_MEMORY=$(TEST_MEMORY_LIMIT) \
-		--env GEMINI_HUB_CPUS=$(TEST_CPUS_LIMIT) \
-		gemini-cli-toolbox/hub-test:$$TAG python3 -m pytest -n $(TEST_CPUS_LIMIT) --reruns 1 -vv tests/ui
+	docker run --rm gemini-cli-toolbox/hub-test:$$TAG python3 -m pytest -n auto --reruns 1 -vv tests/ui
 
 .PHONY: deps-bash
 deps-bash:
@@ -272,9 +238,7 @@ scan:
 	@TAG=$$(docker buildx bake base --print | python3 -c "import sys, json; print(json.load(sys.stdin)['target']['base']['tags'][0].split(':')[-1])"); \
 	for img in "gemini-cli-toolbox/base:$$TAG" "gemini-cli-toolbox/hub:$$TAG" "gemini-cli-toolbox/cli:$$TAG" "gemini-cli-toolbox/cli-preview:$$TAG"; do \
 		echo ">> Scanning $$img..."; \
-		docker run --rm \
-			$(DOCKER_RES_LIMITS) \
-			-v /var/run/docker.sock:/var/run/docker.sock \
+		docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 			-v "$(shell pwd)/.trivyignore:/.trivyignore" \
 			aquasec/trivy image --exit-code 1 --severity CRITICAL --ignorefile /.trivyignore $$img; \
 	done

@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request
 from app.services.filesystem import FileSystemService
 from app.services.launcher import LauncherService
-from app.services.docker import DockerService
 from app.services.session import SessionService
+from app.services.discovery import DiscoveryService
 
 api = Blueprint('api', __name__)
 
@@ -12,8 +12,8 @@ def resolve_local_url():
     if not hostname:
         return jsonify({"url": None})
     
-    ports = DockerService.get_local_ports()
-    return jsonify({"url": ports.get(hostname)})
+    session = DiscoveryService.get_session_by_name(hostname)
+    return jsonify({"url": session.get("local_url") if session else None})
 
 @api.route('/roots')
 def get_roots():

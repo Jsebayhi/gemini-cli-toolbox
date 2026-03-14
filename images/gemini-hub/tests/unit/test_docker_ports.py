@@ -1,43 +1,52 @@
 from unittest.mock import patch
 from app.services.docker import DockerService
 
-def test_get_local_ports_success():
-    """Test parsing of docker ps output for local ports."""
+def test_get_sessions_success():
+    """Test parsing of docker ps output for Gemini sessions."""
     # Mock output: Name|Ports
-    # gem-app-cli-123 | 0.0.0.0:32768->3000/tcp, :::32768->3000/tcp
     docker_output = """gem-my-app-cli-123|0.0.0.0:32768->3000/tcp
-gem-other-app-bash-456|127.0.0.1:45000->3000/tcp
-random-container|0.0.0.0:80->80/tcp"""
+gem-other-app-bash-456|127.0.0.1:45000->3000/tcp"""
 
     with patch("subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = docker_output
 
-        ports = DockerService.get_local_ports()
-        assert len(ports) == 2
-        assert ports["gem-my-app-cli-123"] == "http://localhost:32768"
-        assert ports["gem-other-app-bash-456"] == "http://localhost:45000"
+        sessions = DockerService().get_sessions()
+        assert len(sessions) == 2
+        
+        s1 = sessions["gem-my-app-cli-123"]
+        assert s1.project == "my-app"
+        assert s1.is_running is True
+        assert s1.local_url == "http://localhost:32768"
 
-def test_get_local_ports_empty():
+def test_get_sessions_malformed():
+    """Test handling of malformed lines in docker ps."""
+    docker_output = "malformed-line-without-pipe\ngem-valid-cli-1|127.0.0.1:3000->3000/tcp"
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = docker_output
+        sessions = DockerService().get_sessions()
+        assert len(sessions) == 1
+
+def test_get_sessions_command_failure():
+    """Test handling of docker command failure."""
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stderr = "Error"
+        sessions = DockerService().get_sessions()
+        assert sessions == {}
+
+def test_get_sessions_exception():
+    """Test handling of subprocess exception."""
+    with patch("subprocess.run", side_effect=Exception("Boom")):
+        sessions = DockerService().get_sessions()
+        assert sessions == {}
+
+def test_get_sessions_empty():
     """Test handling of no active containers."""
     with patch("subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = ""
 
-        ports = DockerService.get_local_ports()
-        assert ports == {}
-
-def test_get_local_ports_failure():
-    """Test handling of docker command failure."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 1
-        mock_run.return_value.stderr = "Docker error"
-
-        ports = DockerService.get_local_ports()
-        assert ports == {}
-
-def test_get_local_ports_exception():
-    """Test handling of subprocess exception."""
-    with patch("subprocess.run", side_effect=Exception("Boom")):
-        ports = DockerService.get_local_ports()
-        assert ports == {}
+        sessions = DockerService().get_sessions()
+        assert sessions == {}
