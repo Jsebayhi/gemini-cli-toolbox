@@ -32,7 +32,7 @@ class Config:
     WORKTREE_EXPIRY_BRANCH = int(os.environ.get("GEMINI_WORKTREE_BRANCH_EXPIRY_DAYS", "90"))
     WORKTREE_EXPIRY_ORPHAN = int(os.environ.get("GEMINI_WORKTREE_ORPHAN_EXPIRY_DAYS", "90"))
 
-    # Legacy/Compatibility aliases for tests
+    # Compatibility aliases
     WORKTREE_ROOT = _worktree_root
     
     # Security & Paths

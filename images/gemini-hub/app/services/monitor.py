@@ -9,30 +9,27 @@ from app.services.discovery import DiscoveryService
 logger = logging.getLogger(__name__)
 
 class MonitorService:
-    """Background service to monitor activity and auto-shutdown."""
+    """Background service that monitors session activity and handles auto-shutdown."""
 
     @staticmethod
     def start():
-        """Starts the monitor thread if enabled."""
-        if not Config.HUB_AUTO_SHUTDOWN:
-            logger.info("Auto-shutdown disabled.")
-            return
-            
-        thread = threading.Thread(target=MonitorService._monitor_loop, daemon=True)
-        thread.start()
+        """Starts the monitor thread if enabled in config."""
+        if Config.HUB_AUTO_SHUTDOWN:
+            thread = threading.Thread(target=MonitorService._monitor_loop, daemon=True)
+            thread.start()
+            logger.info("Auto-shutdown monitor started (60s timeout).")
 
     @staticmethod
     def _monitor_loop():
-        TIMEOUT_SECONDS = 60
+        """Main loop for the monitor thread."""
         last_active = time.time()
-        
-        logger.info(f"Monitor started. Auto-shutdown after {TIMEOUT_SECONDS}s of inactivity.")
-        
+        timeout = 60 # Seconds
+
         while True:
             try:
-                last_active = MonitorService.check_and_shutdown(last_active, TIMEOUT_SECONDS)
+                last_active = MonitorService.check_and_shutdown(last_active, timeout)
             except Exception as e:
-                logger.error(f"Monitor error: {e}")
+                logger.error(f"Monitor loop error: {e}")
             
             time.sleep(10)
 
@@ -50,13 +47,14 @@ class MonitorService:
             s for s in sessions 
             if s.get("is_running") or s.get("is_reachable")
         ]
-        
+
         now = time.time()
         if active_sessions:
             return now
-        else:
-            idle_time = now - last_active
-            if idle_time > timeout:
-                logger.warning(f"Inactivity limit ({timeout}s) reached. Shutting down.")
-                os.kill(os.getpid(), signal.SIGTERM)
-            return last_active
+        
+        idle_time = now - last_active
+        if idle_time > timeout:
+            logger.warning(f"Inactivity limit ({timeout}s) reached. Shutting down.")
+            os.kill(os.getpid(), signal.SIGTERM)
+        
+        return last_active

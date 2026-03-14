@@ -14,10 +14,10 @@ class DiscoveryService:
         if not cls._instance:
             cls._instance = super(DiscoveryService, cls).__new__(cls)
             
+            # Always attempt both Docker and Tailscale for Unified Discovery in Step 2
             if providers is not None:
                 cls._instance.providers = providers
             else:
-                # Always attempt both Docker and Tailscale for Unified Discovery
                 cls._instance.providers = [
                     DockerService(),
                     TailscaleService()
@@ -44,7 +44,7 @@ class DiscoveryService:
         
         for provider in self.providers:
             try:
-                # Skip if provider not available (e.g. docker daemon down)
+                # 1. Skip if provider not available (e.g. docker daemon down)
                 if hasattr(provider, "is_available") and not provider.is_available():
                     continue
 
@@ -54,7 +54,7 @@ class DiscoveryService:
                     if name not in master_map:
                         master_map[name] = session
                     else:
-                        # Strategic Merging (Priority & Aggregation)
+                        # 2. Strategic Merging (Priority & Aggregation)
                         existing = master_map[name]
                         
                         # Booleans are additive (OR)

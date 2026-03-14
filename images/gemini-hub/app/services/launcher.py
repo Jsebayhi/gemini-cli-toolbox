@@ -22,22 +22,22 @@ class LauncherService:
         # Build Args
         config_args = []
         if config_profile:
-            config_args.extend(["--profile", config_profile])
-        
+            profile_path = os.path.join(Config.HOST_CONFIG_ROOT, config_profile)
+            config_args = ["--profile", profile_path]
+
         if session_type == 'bash':
             config_args.append("--bash")
-        
-        if image_variant == 'preview':
-            config_args.append("--preview")
-        
-        if not docker_enabled:
-            config_args.append("--no-docker")
-            
-        if not ide_enabled:
-            config_args.append("--no-ide")
 
         if custom_image:
             config_args.extend(["--image", custom_image])
+        elif image_variant == 'preview':
+            config_args.append("--preview")
+
+        if not docker_enabled:
+            config_args.append("--no-docker")
+
+        if not ide_enabled:
+            config_args.append("--no-ide")
 
         if docker_args:
             config_args.extend(["--docker-args", docker_args])
@@ -52,24 +52,22 @@ class LauncherService:
         if Config.HOST_HOME:
             env["HOME"] = Config.HOST_HOME
         
+        # Pass Key via Env (Security Best Practice)
         env["GEMINI_REMOTE_KEY"] = Config.TAILSCALE_AUTH_KEY
             
         # Command Construction
-        if Config.HUB_NO_VPN:
-            cmd = ["gemini-toolbox", "--no-vpn", "--detached"] + config_args
-        else:
-            cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
+        # We pass --remote without the key value since it's in env
+        cmd = ["gemini-toolbox", "--remote", "--detached"] + config_args
         
         if task:
             # Autonomous mode logic
-            if not interactive:
-                # -p ensures the session exits after task
-                cmd.extend(["--", "-p", task])
+            if interactive:
+                 cmd.extend(["--", "-i", task])
             else:
-                # -i allows attaching to session after task
-                cmd.extend(["--", "-i", task])
+                 cmd.extend(["--", "-p", task])
 
         cmd_str = ' '.join(cmd)
+        
         logger.info(f"Executing: {cmd_str} in {project_path}")
         
         try:
@@ -79,7 +77,7 @@ class LauncherService:
                 env=env, 
                 capture_output=True, 
                 text=True,
-                timeout=30
+                timeout=30 # Safety timeout for startup
             )
             
             return {

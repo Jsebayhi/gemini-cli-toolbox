@@ -155,17 +155,6 @@ def test_discovery_merging_priority_docker_local_url():
     assert s["is_running"] is True
     assert s["is_reachable"] is True
 
-def test_discovery_no_vpn_disables_tailscale():
-    """Verify that Config.HUB_NO_VPN prevents TailscaleService from being used."""
-    with patch.object(Config, "HUB_NO_VPN", True):
-        service = DiscoveryService()
-        # Should only have DockerService
-        from app.services.docker import DockerService
-        from app.services.tailscale import TailscaleService
-        
-        assert any(isinstance(p, DockerService) for p in service.providers)
-        assert not any(isinstance(p, TailscaleService) for p in service.providers)
-
 def test_discovery_provider_skips_if_not_available():
     """Verify that DiscoveryService skips unavailable providers."""
     mock_p = MagicMock()

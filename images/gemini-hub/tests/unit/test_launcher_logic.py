@@ -14,22 +14,8 @@ def test_launcher_success_standard():
         mock_run.return_value.stdout = "Success"
         
         res = LauncherService.launch(project_path="/work")
-        assert res["status"] == "success" if "status" in res else True # Compatibility check
         assert "--remote" in res["command"]
         assert "--no-vpn" not in res["command"]
-
-def test_launcher_success_no_vpn():
-    """Test launch with VPN disabled in Hub."""
-    with patch("app.services.filesystem.FileSystemService.is_safe_path", return_value=True), \
-         patch("subprocess.run") as mock_run, \
-         patch.object(Config, "HUB_NO_VPN", True):
-        
-        mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = "Success"
-        
-        res = LauncherService.launch(project_path="/work")
-        assert "--no-vpn" in res["command"]
-        assert "--remote" not in res["command"]
 
 def test_launcher_permission_denied():
     """Test security check failure."""
