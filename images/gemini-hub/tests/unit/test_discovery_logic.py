@@ -1,7 +1,10 @@
 import pytest
-from unittest.mock import MagicMock
+import os
+from unittest.mock import patch, MagicMock
 from app.services.discovery import DiscoveryService
+from app.services.tailscale import TailscaleService
 from app.models.session import GeminiSession
+from app.config import Config
 
 @pytest.fixture(autouse=True)
 def reset_discovery_singleton():
@@ -9,6 +12,8 @@ def reset_discovery_singleton():
     DiscoveryService._instance = None
     yield
     DiscoveryService._instance = None
+
+# --- Discovery Logic Tests ---
 
 def test_discovery_malformed_provider_data():
     """Trophy: Unit Test (Precision). Hits error branches when providers return junk."""
@@ -118,3 +123,95 @@ def test_discovery_case_sensitivity_merging():
     # Should be 2 sessions if case differs, but we verify they are both preserved
     # (The current implementation is case-sensitive for the map keys)
     assert len(sessions) == 2
+
+# --- Discovery Priority Logic Tests (from test_discovery_priority_logic.py) ---
+
+def test_discovery_merging_priority_docker_local_url():
+    """Verify that Docker local_url takes precedence and IP is merged carefully."""
+    s_docker = GeminiSession("gem-priority", "p", "c", "u1")
+    s_docker.is_running = True
+    s_docker.local_url = "http://localhost:32768"
+    
+    s_ts = GeminiSession("gem-priority", "p", "c", "u1")
+    s_ts.is_reachable = True
+    s_ts.ip = "100.64.0.1"
+    s_ts.local_url = "http://remote-url" # Should be ignored
+    
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s_docker.name: s_docker}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s_ts.name: s_ts}
+    mock_p2.is_available.return_value = True
+    
+    # DiscoveryService order matters: Docker then Tailscale
+    service = DiscoveryService(providers=[mock_p1, mock_p2])
+    sessions = service.get_sessions()
+    
+    assert len(sessions) == 1
+    s = sessions[0]
+    assert s["local_url"] == "http://localhost:32768" # Precedence
+    assert s["ip"] == "100.64.0.1" # Merged
+    assert s["is_running"] is True
+    assert s["is_reachable"] is True
+
+def test_discovery_no_vpn_disables_tailscale():
+    """Verify that Config.HUB_NO_VPN prevents TailscaleService from being used."""
+    with patch.object(Config, "HUB_NO_VPN", True):
+        service = DiscoveryService()
+        # Should only have DockerService
+        from app.services.docker import DockerService
+        from app.services.tailscale import TailscaleService
+        
+        assert any(isinstance(p, DockerService) for p in service.providers)
+        assert not any(isinstance(p, TailscaleService) for p in service.providers)
+
+def test_discovery_provider_skips_if_not_available():
+    """Verify that DiscoveryService skips unavailable providers."""
+    mock_p = MagicMock()
+    mock_p.is_available.return_value = False
+    
+    service = DiscoveryService(providers=[mock_p])
+    service.get_sessions()
+    
+    mock_p.get_sessions.assert_not_called()
+
+# --- Tailscale Logic Tests (from test_tailscale_logic.py) ---
+
+def test_tailscale_is_available_success():
+    """Verify is_available returns True if socket exists."""
+    with patch("os.path.exists", return_value=True):
+        assert TailscaleService().is_available() is True
+
+def test_tailscale_is_available_failure():
+    """Verify is_available returns False if socket missing."""
+    with patch("os.path.exists", return_value=False):
+        assert TailscaleService().is_available() is False
+
+def test_tailscale_get_status_error_handling():
+    """Verify get_status handles command errors gracefully."""
+    with patch("os.path.exists", return_value=True), \
+         patch("subprocess.run") as mock_run:
+        # Error return code
+        mock_run.return_value.returncode = 1
+        assert TailscaleService.get_status() == {}
+        
+        # Exception during run
+        mock_run.side_effect = Exception("OS Error")
+        assert TailscaleService.get_status() == {}
+
+def test_tailscale_get_sessions_missing_ip():
+    """Verify sessions without IPs are skipped."""
+    mock_status = {
+        "Peer": {
+            "n1": {
+                "HostName": "gem-no-ip",
+                "TailscaleIPs": [],
+                "Online": True
+            }
+        }
+    }
+    with patch("app.services.tailscale.TailscaleService.get_status", return_value=mock_status):
+        sessions = TailscaleService().get_sessions()
+        assert "gem-no-ip" not in sessions

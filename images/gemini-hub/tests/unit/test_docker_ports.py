@@ -51,3 +51,30 @@ def test_docker_ps_empty_and_error():
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = "Daemon Down"
         assert DockerService().get_sessions() == {}
+
+def test_docker_service_availability():
+    """Verify is_available logic across success and failures."""
+    service = DockerService()
+    
+    with patch("subprocess.run") as mock_run:
+        # 1. Success
+        mock_run.return_value.returncode = 0
+        assert service.is_available() is True
+        
+        # 2. Command Error
+        mock_run.return_value.returncode = 1
+        assert service.is_available() is False
+        
+        # 3. Exception (Subprocess error)
+        mock_run.side_effect = Exception("OS Error")
+        assert service.is_available() is False
+        
+        # 4. FileNotFoundError (Docker not installed)
+        mock_run.side_effect = FileNotFoundError()
+        assert service.is_available() is False
+
+def test_docker_get_sessions_exception():
+    """Verify exception safety in get_sessions."""
+    with patch("subprocess.run", side_effect=Exception("Timeout")):
+        assert DockerService().get_sessions() == {}
+

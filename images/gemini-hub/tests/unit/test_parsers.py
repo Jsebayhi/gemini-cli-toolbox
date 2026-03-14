@@ -21,7 +21,9 @@ def test_discovery_sessions_standard():
     s1_remote.ip = "100.64.0.1"
     
     with patch("app.services.docker.DockerService.get_sessions", return_value={s1_docker.name: s1_docker}), \
-         patch("app.services.tailscale.TailscaleService.get_sessions", return_value={s1_remote.name: s1_remote}):
+         patch("app.services.docker.DockerService.is_available", return_value=True), \
+         patch("app.services.tailscale.TailscaleService.get_sessions", return_value={s1_remote.name: s1_remote}), \
+         patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
         
         sessions = DiscoveryService.get_sessions()
         assert len(sessions) == 1
@@ -38,7 +40,9 @@ def test_discovery_sessions_complex_project():
     s.is_running = True
     
     with patch("app.services.docker.DockerService.get_sessions", return_value={s.name: s}), \
-         patch("app.services.tailscale.TailscaleService.get_sessions", return_value={}):
+         patch("app.services.docker.DockerService.is_available", return_value=True), \
+         patch("app.services.tailscale.TailscaleService.get_sessions", return_value={}), \
+         patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
         
         sessions = DiscoveryService.get_sessions()
         assert len(sessions) == 1

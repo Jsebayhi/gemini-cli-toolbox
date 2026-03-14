@@ -37,7 +37,9 @@ def test_discovery_service_integration_full_stack():
     # Execute full stack orchestration
     with patch("subprocess.run") as mock_run, \
          patch("os.path.exists", return_value=True), \
-         patch("json.loads", return_value=tailscale_status):
+         patch("json.loads", return_value=tailscale_status), \
+         patch("app.services.docker.DockerService.is_available", return_value=True), \
+         patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
         
         # side_effect returns for Docker then Tailscale
         mock_run.side_effect = [

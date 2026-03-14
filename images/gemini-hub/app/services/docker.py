@@ -9,6 +9,16 @@ logger = logging.getLogger(__name__)
 class DockerService(DiscoveryProvider):
     """Session Provider for local Docker containers."""
 
+    def is_available(self) -> bool:
+        """Checks if the Docker daemon is reachable."""
+        try:
+            # Lightweight check: docker info or version
+            cmd = ["docker", "ps", "-q"]
+            res = subprocess.run(cmd, capture_output=True, timeout=2)
+            return res.returncode == 0
+        except Exception:
+            return False
+
     def get_sessions(self) -> Dict[str, GeminiSession]:
         """
         Returns GeminiSession objects for all running 

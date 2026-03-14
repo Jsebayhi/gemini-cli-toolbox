@@ -11,6 +11,11 @@ logger = logging.getLogger(__name__)
 class TailscaleService(DiscoveryProvider):
     """Session Provider for remote Tailscale nodes."""
 
+    def is_available(self) -> bool:
+        """Checks if Tailscale is running."""
+        socket_path = "/run/tailscale/tailscaled.sock"
+        return os.path.exists(socket_path)
+
     @staticmethod
     def get_status() -> Dict[str, Any]:
         """Executes `tailscale status --json`."""

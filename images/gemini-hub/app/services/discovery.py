@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 from app.services.docker import DockerService
 from app.services.tailscale import TailscaleService
 from app.models.session import GeminiSession
+from app.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +14,17 @@ class DiscoveryService:
     def __new__(cls, providers=None):
         if not cls._instance:
             cls._instance = super(DiscoveryService, cls).__new__(cls)
-            cls._instance.providers = providers or [
-                DockerService(),
-                TailscaleService()
-            ]
+            
+            # Dynamic provider selection based on Pure Localhost mode
+            if providers is not None:
+                cls._instance.providers = providers
+            else:
+                cls._instance.providers = [DockerService()]
+                if not Config.HUB_NO_VPN:
+                    cls._instance.providers.append(TailscaleService())
+                else:
+                    logger.info("Pure Localhost mode active: Tailscale discovery disabled.")
+                    
         return cls._instance
 
     @staticmethod
@@ -38,26 +46,34 @@ class DiscoveryService:
         
         for provider in self.providers:
             try:
-                # Get the map of sessions from the provider
+                # 1. Skip if provider not available (e.g. docker daemon down)
+                # We check for existence of method because of diverse mocks in legacy tests
+                if hasattr(provider, "is_available") and not provider.is_available():
+                    continue
+
                 provider_sessions = provider.get_sessions()
                 
                 for name, session in provider_sessions.items():
                     if name not in master_map:
                         master_map[name] = session
                     else:
-                        # Merge logic (Non-exclusive booleans)
+                        # 2. Strategic Merging (Priority & Aggregation)
                         existing = master_map[name]
                         
+                        # Booleans are additive (OR)
                         if session.is_running:
                             existing.is_running = True
                         if session.is_reachable:
                             existing.is_reachable = True
                             
-                        # Detail Enrichment
-                        if session.ip:
-                            existing.ip = session.ip
-                        if session.local_url:
+                        # Metadata Enrichment (Priority Logic)
+                        # LOCAL info (Docker) always takes precedence over REMOTE info (Tailscale)
+                        # We only overwrite if existing value is empty/None
+                        if session.local_url and not existing.local_url:
                             existing.local_url = session.local_url
+                        
+                        if session.ip and not existing.ip:
+                            existing.ip = session.ip
             except Exception as e:
                 logger.error(f"Provider {provider.__class__.__name__} failed: {e}")
                 

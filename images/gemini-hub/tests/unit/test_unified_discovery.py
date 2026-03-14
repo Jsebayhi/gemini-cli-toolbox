@@ -40,7 +40,9 @@ def test_discovery_unified_merging(mock_tailscale_sessions, mock_docker_sessions
     Verifies that DiscoveryService correctly merges local and remote results.
     """
     with patch("app.services.docker.DockerService.get_sessions", return_value=mock_docker_sessions), \
-         patch("app.services.tailscale.TailscaleService.get_sessions", return_value=mock_tailscale_sessions):
+         patch("app.services.docker.DockerService.is_available", return_value=True), \
+         patch("app.services.tailscale.TailscaleService.get_sessions", return_value=mock_tailscale_sessions), \
+         patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
         
         sessions = DiscoveryService().get_sessions()
         assert len(sessions) == 3
@@ -70,10 +72,12 @@ def test_discovery_provider_failure_resilience():
     # Create mock providers that don't depend on system state
     mock_docker = MagicMock()
     mock_docker.get_sessions.side_effect = Exception("Docker Socket Denied")
+    mock_docker.is_available.return_value = True
     
     s1 = GeminiSession("gem-s1-cli-u1", "p", "c", "u1")
     mock_ts = MagicMock()
     mock_ts.get_sessions.return_value = {s1.name: s1}
+    mock_ts.is_available.return_value = True
     
     # Instantiate with ONLY these mocks
     service = DiscoveryService(providers=[mock_docker, mock_ts])
@@ -96,9 +100,11 @@ def test_discovery_exhaustive_merging_branches():
     
     mock_docker = MagicMock()
     mock_docker.get_sessions.return_value = {s_docker.name: s_docker}
+    mock_docker.is_available.return_value = True
     mock_ts = MagicMock()
     mock_ts.get_sessions.return_value = {s_ts.name: s_ts}
-    
+    mock_ts.is_available.return_value = True
+
     service = DiscoveryService(providers=[mock_docker, mock_ts])
     sessions = service.get_sessions()
     
