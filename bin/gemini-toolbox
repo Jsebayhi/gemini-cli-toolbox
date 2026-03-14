@@ -170,6 +170,10 @@ main() {
     local variant="latest"
     local use_bash=false
     
+    local no_vpn=false
+    local localhost_enabled=true
+    local network_host=false
+
     local enable_vscode_integration=false
     if [[ "${TERM_PROGRAM:-}" == "vscode" ]]; then
         enable_vscode_integration=true
@@ -298,6 +302,9 @@ main() {
         --image)       override_image="$2"; shift; shift ;;
         --no-ide)      enable_vscode_integration=false;   shift ;;
         --no-docker)   enable_docker=false;               shift ;;
+        --no-vpn)      no_vpn=true;                       shift ;;
+        --no-localhost) localhost_enabled=false;          shift ;;
+        --network-host) network_host=true;                shift ;;
         --no-tmux)     extra_docker_args+=("--env" "GEMINI_TOOLBOX_TMUX=false"); no_tmux_flag=true; shift ;;
         --config)      HOST_CONF_DIR="$2"; shift; shift ;;
         --profile)     HOST_CONF_DIR="$2"; enable_profile_mode=true; shift; shift ;;
@@ -481,8 +488,16 @@ main() {
         fi
     fi
 
-    local network_mode="--net=host"
+    local network_mode="--network=bridge"
+    if [ "$network_host" = true ]; then
+        network_mode="--net=host"
+    fi
+
     if [ "$remote_mode" = true ]; then
+        if [ "$no_vpn" = true ]; then
+            log_error "Cannot use both --remote and --no-vpn." >&2
+            exit 1
+        fi
         if [ -z "$tailscale_key" ]; then
             log_error "TAILSCALE_KEY is required for --remote mode." >&2
             exit 1
@@ -503,12 +518,17 @@ main() {
                  "$hub_script" "${hub_args[@]}" > /tmp/gemini-hub.log 2>&1 || true
             fi
         fi
-        network_mode="--network=bridge"
         enable_vscode_integration=false
-        extra_docker_args+=(
-            --env TAILSCALE_AUTH_KEY="$tailscale_key"
-            --cap-add=NET_ADMIN --device /dev/net/tun -p 127.0.0.1:0:3000
-        )
+        extra_docker_args+=("--env" "TAILSCALE_AUTH_KEY=$tailscale_key" "--cap-add=NET_ADMIN" "--device" "/dev/net/tun")
+    fi
+
+    # Port Mapping (Protected by Default)
+    if [ "$localhost_enabled" = true ] && [ "$network_host" = false ]; then
+        extra_docker_args+=("-p" "127.0.0.1:0:3000")
+    fi
+
+    if [ "$no_vpn" = true ]; then
+        extra_docker_args+=("--env" "GEMINI_HUB_NO_VPN=true")
     fi
 
     local docker_args=(

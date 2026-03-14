@@ -1,5 +1,4 @@
-from unittest.mock import patch, MagicMock
-import os
+from unittest.mock import patch
 from app.services.filesystem import FileSystemService
 from app.config import Config
 

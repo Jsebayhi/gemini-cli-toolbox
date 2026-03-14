@@ -1,8 +1,6 @@
 import subprocess
 import sys
 import os
-import pytest
-from unittest.mock import patch
 from app.config import Config
 
 def test_config_boolean_parsing_isolation():

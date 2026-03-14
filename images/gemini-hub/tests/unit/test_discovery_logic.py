@@ -1,5 +1,4 @@
 import pytest
-import os
 from unittest.mock import patch, MagicMock
 from app.services.discovery import DiscoveryService
 from app.services.tailscale import TailscaleService

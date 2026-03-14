@@ -1,8 +1,6 @@
 import pytest
-from unittest.mock import patch, MagicMock
-import os
+from unittest.mock import patch
 import signal
-import time
 from app.services.monitor import MonitorService
 from app.config import Config
 
@@ -94,7 +92,6 @@ def test_monitor_start_logic_disabled():
 def test_monitor_check_and_shutdown_discovery_failure():
     """Verify that monitor handles discovery failure gracefully (no state update)."""
     with patch("app.services.discovery.DiscoveryService.get_sessions") as mock_get:
-        mock_bad = MagicMock()
         mock_get.side_effect = Exception("Discovery Crashed")
         
         # Should catch exception and return the original last_active

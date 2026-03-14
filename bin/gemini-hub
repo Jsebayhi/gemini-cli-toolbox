@@ -120,10 +120,14 @@ main() {
         image_name="$remote_tag"
     fi
 
-    # 3. Parse Args
     local mode="-it"
     local auto_shutdown=false
     local prune_enabled=true
+    
+    local no_vpn=false
+    local localhost_enabled=true
+    local network_host=false
+
     while [[ $# -gt 0 ]]; do
       case $1 in
         -d|--detach) mode="-d"; shift ;;
@@ -131,6 +135,9 @@ main() {
         --key)       auth_key="$2"; shift; shift ;;
         --auto-shutdown) auto_shutdown=true; shift ;;
         --no-worktree-prune) prune_enabled=false; shift ;;
+        --no-vpn)      no_vpn=true; shift ;;
+        --no-localhost) localhost_enabled=false; shift ;;
+        --network-host) network_host=true; shift ;;
         --workspace) workspace_roots+=("$2"); shift; shift ;;
         --config-root) config_root="$2"; shift; shift ;;
         -h|--help)   show_help; exit 0 ;;
@@ -159,12 +166,6 @@ main() {
         *)           log_error "Unknown argument '$1'"; show_help; exit 1 ;;
       esac
     done
-
-    if [ -z "$auth_key" ]; then
-        log_error "TAILSCALE_KEY is required for the Hub."
-        echo "Run 'gemini-hub --help' for usage instructions."
-        exit 1
-    fi
 
     # 4. Prepare Docker Args
     local extra_mounts=()
@@ -276,16 +277,37 @@ main() {
         fi
     fi
 
+    if [ -z "$auth_key" ] && [ "$no_vpn" = false ]; then
+        log_error "TAILSCALE_KEY is required for the Hub. Use --key or --no-vpn." >&2
+        exit 1
+    fi
+
+    local network_mode="--network=bridge"
+    if [ "$network_host" = true ]; then
+        network_mode="--net=host"
+    fi
+
+    local docker_args=(
+        "--rm" "$mode"
+        "--name" "$container_name"
+        "$network_mode"
+    )
+
+    if [ "$localhost_enabled" = true ] && [ "$network_host" = false ]; then
+        docker_args+=("-p" "127.0.0.1:${port}:8888")
+    fi
+
+    if [ "$no_vpn" = false ]; then
+        docker_args+=("--cap-add=NET_ADMIN" "--device" "/dev/net/tun")
+    fi
+
     log_info "Starting Gemini Hub on port $port..."
     log_info "Access at http://localhost:$port (Desktop)"
-    log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
+    if [ "$no_vpn" = false ]; then
+        log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
+    fi
 
-    docker run --rm "$mode" \
-        --name "$container_name" \
-        --network=bridge \
-        -p 127.0.0.1:$port:8888 \
-        --cap-add=NET_ADMIN \
-        --device /dev/net/tun \
+    docker run "${docker_args[@]}" \
         --volume "/var/run/docker.sock:/var/run/docker.sock" \
         "${extra_mounts[@]}" \
         "${env_vars[@]}" \

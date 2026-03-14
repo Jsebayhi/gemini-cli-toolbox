@@ -66,6 +66,11 @@ lint-python:
 	@echo ">> Linting Python Code (Ruff)..."
 	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check images/gemini-hub
 
+.PHONY: lint-fix
+lint-fix:
+	@echo ">> Fixing Python Linting Errors (Ruff)..."
+	docker run --rm -v "$(shell pwd):/mnt" -w /mnt ghcr.io/astral-sh/ruff check --fix images/gemini-hub
+
 .PHONY: test
 test: test-bash test-hub
 

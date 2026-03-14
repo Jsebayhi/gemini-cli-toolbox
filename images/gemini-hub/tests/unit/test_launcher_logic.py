@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import subprocess
 from app.services.launcher import LauncherService
 from app.config import Config

@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.services.discovery import DiscoveryService
 from app.models.session import GeminiSession
 
