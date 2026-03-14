@@ -41,6 +41,8 @@ A modular "Gemini CLI Toolbox" repository containing multiple self-contained Doc
 *   **SLSA Compliance:** All official images generate SBOMs and Provenance metadata.
 *   **Keyless Signing:** Images published to Docker Hub are signed using Cosign (OIDC) to ensure integrity.
 *   **Release Logic:** Official releases (signing/publishing) occur on any `main` branch event that is NOT a PR (e.g., merge, schedule).
+*   **Auto-Update (Toolbox):** The `gemini-toolbox` script automatically attempts to `docker pull` remote images with `latest` tags at most once per hour. This ensures persistence on the host and minimizes startup latency.
+*   **CLI Immutability:** The global Node.js installation in `gemini-cli` is read-only for the `gemini` user. Internal CLI auto-updates are disabled in favor of the host-side image pull (ADR-0058).
 
 
 ## 4. Core Mandates
