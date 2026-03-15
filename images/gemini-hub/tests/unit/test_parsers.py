@@ -1,14 +1,7 @@
-import pytest
 from unittest.mock import patch
 from app.services.discovery import DiscoveryService
 from app.models.session import GeminiSession
 
-@pytest.fixture(autouse=True)
-def reset_discovery_singleton():
-    """Ensure each test has its own DiscoveryService instance."""
-    DiscoveryService._instance = None
-    yield
-    DiscoveryService._instance = None
 
 def test_discovery_sessions_standard():
     """Test standard session identification and parsing via DiscoveryService."""
@@ -25,7 +18,7 @@ def test_discovery_sessions_standard():
          patch("app.services.tailscale.TailscaleService.get_sessions", return_value={s1_remote.name: s1_remote}), \
          patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
         
-        sessions = DiscoveryService.get_sessions()
+        sessions = DiscoveryService().get_sessions()
         assert len(sessions) == 1
         s = sessions[0]
         assert s["project"] == "myproject"
@@ -44,7 +37,7 @@ def test_discovery_sessions_complex_project():
          patch("app.services.tailscale.TailscaleService.get_sessions", return_value={}), \
          patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
         
-        sessions = DiscoveryService.get_sessions()
+        sessions = DiscoveryService().get_sessions()
         assert len(sessions) == 1
         assert sessions[0]["project"] == "my-cool-project"
         assert sessions[0]["type"] == "bash"

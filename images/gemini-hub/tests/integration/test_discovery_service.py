@@ -1,13 +1,6 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from app.services.discovery import DiscoveryService
 
-@pytest.fixture(autouse=True)
-def reset_discovery_singleton():
-    """Ensure each test has its own DiscoveryService instance."""
-    DiscoveryService._instance = None
-    yield
-    DiscoveryService._instance = None
 
 def test_discovery_service_integration_full_stack():
     """
@@ -47,7 +40,7 @@ def test_discovery_service_integration_full_stack():
             MagicMock(returncode=0, stdout="{}")             # Tailscale (json.loads handles it)
         ]
         
-        sessions = DiscoveryService.get_sessions()
+        sessions = DiscoveryService().get_sessions()
         
         # Verify Orchestration Outcome
         assert len(sessions) == 2

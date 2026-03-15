@@ -5,5 +5,5 @@ web = Blueprint('web', __name__)
 
 @web.route('/')
 def home():
-    machines = DiscoveryService.get_sessions()
+    machines = DiscoveryService().get_sessions()
     return render_template('index.html', machines=machines)

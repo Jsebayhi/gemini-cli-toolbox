@@ -7,6 +7,9 @@ class Config:
     # Discovery
     TAILSCALE_AUTH_KEY = os.environ.get("TAILSCALE_AUTH_KEY")
     
+    # Logging
+    LOG_LEVEL = int(os.environ.get("LOG_LEVEL", "1")) # Default to INFO (1)
+    
     # Roots (Normalized)
     _raw_roots = os.environ.get("HUB_ROOTS", "").split(":")
     _worktree_root = os.environ.get("GEMINI_WORKTREE_ROOT", "/cache/worktrees")

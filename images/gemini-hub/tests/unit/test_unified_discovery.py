@@ -3,12 +3,6 @@ from unittest.mock import patch, MagicMock
 from app.services.discovery import DiscoveryService
 from app.models.session import GeminiSession
 
-@pytest.fixture(autouse=True)
-def reset_discovery_singleton():
-    """Ensure each test has its own DiscoveryService instance."""
-    DiscoveryService._instance = None
-    yield
-    DiscoveryService._instance = None
 
 @pytest.fixture
 def mock_tailscale_sessions():
@@ -116,12 +110,3 @@ def test_discovery_exhaustive_merging_branches():
     assert s["local_url"] == "http://localhost:1234"
     assert s["online"] is True
 
-def test_discovery_get_session_by_name():
-    """Verify clean lookup helper."""
-    s1 = GeminiSession("gem-s1-cli-u1", "p", "c", "u1")
-    with patch("app.services.discovery.DiscoveryService.get_sessions", return_value=[s1.to_dict()]):
-        res = DiscoveryService.get_session_by_name("gem-s1-cli-u1")
-        assert res is not None
-        assert res["name"] == "gem-s1-cli-u1"
-        
-        assert DiscoveryService.get_session_by_name("non-existent") is None

@@ -12,9 +12,10 @@ def test_dashboard_loads(hub: HubPage):
 
 @pytest.mark.usefixtures("suppress_logs")
 def test_dashboard_no_sessions_initially(hub: HubPage):
-    """Verify the 'No active sessions' message is shown when mock Tailscale returns nothing."""
-    hub.navigate()
-    expect(hub.page.get_by_text("No active sessions found")).to_be_visible()
+    """Verify the 'No active sessions' message is shown when discovery returns nothing."""
+    with patch("app.services.discovery.DiscoveryService.get_sessions", return_value=[]):
+        hub.navigate()
+        expect(hub.page.get_by_text("No active sessions found")).to_be_visible()
 
 def test_wizard_full_launch_journey(hub: HubPage, tmp_path, monkeypatch):
     """Test the full wizard journey using modular POM components."""
@@ -99,8 +100,7 @@ def test_dashboard_filtering(hub: HubPage):
     mock_machines = [
         {"name": "gem-p1", "project": "proj-alpha", "type": "geminicli", "ip": "100.1.1.1", "online": True},
     ]
-    with patch("app.services.tailscale.TailscaleService.get_status", return_value={}), \
-         patch("app.services.tailscale.TailscaleService.parse_peers", return_value=mock_machines):
+    with patch("app.services.discovery.DiscoveryService.get_sessions", return_value=mock_machines):
         hub.navigate()
         hub.project_filter.press_sequentially("alpha", delay=50)
         expect(hub.page.locator(".card:visible")).to_have_count(1)
@@ -109,8 +109,7 @@ def test_dashboard_filtering(hub: HubPage):
 def test_session_stop_lifecycle(hub: HubPage):
     """Verify stop lifecycle."""
     mock_machines = [{"name": "gem-s", "project": "stop-me", "type": "geminicli", "ip": "1.1.1.1", "online": True}]
-    with patch("app.services.tailscale.TailscaleService.get_status", return_value={}), \
-         patch("app.services.tailscale.TailscaleService.parse_peers", return_value=mock_machines), \
+    with patch("app.services.discovery.DiscoveryService.get_sessions", return_value=mock_machines), \
          patch("app.services.session.SessionService.stop", return_value={"status": "success", "session_id": "gem-s"}):
         hub.navigate()
         hub.stop_session("stop-me")
@@ -138,8 +137,7 @@ def test_connectivity_hybrid_mode(hub: HubPage):
     hub.page.add_init_script("window.probeUrl = async () => true;")
     mock_machines = [{"name": "gem-h", "project": "h", "type": "cli", "ip": "1.1.1.1", "online": True, "local_url": "http://localhost:32768"}]
     
-    with patch("app.services.tailscale.TailscaleService.get_status", return_value={}), \
-         patch("app.services.tailscale.TailscaleService.parse_peers", return_value=mock_machines):
+    with patch("app.services.discovery.DiscoveryService.get_sessions", return_value=mock_machines):
         url = hub.base_url.replace("127.0.0.1", "localhost")
         hub.page.goto(url)
         expect(hub.page.locator(".local-badge")).to_have_text("VPN")

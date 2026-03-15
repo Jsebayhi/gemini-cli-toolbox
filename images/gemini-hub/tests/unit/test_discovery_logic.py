@@ -1,15 +1,7 @@
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from app.services.discovery import DiscoveryService
 from app.models.session import GeminiSession
 from app.services.base import DiscoveryProvider
-
-@pytest.fixture(autouse=True)
-def reset_discovery_singleton():
-    """Ensure each test has its own DiscoveryService instance."""
-    DiscoveryService._instance = None
-    yield
-    DiscoveryService._instance = None
 
 def test_discovery_provider_base_is_available():
     """Verify default is_available returns True in base class."""
@@ -173,9 +165,17 @@ def test_discovery_flag_additive_logic():
     s_reach = GeminiSession("gem-additive", "p", "c", "u1")
     s_reach.is_reachable = True
     
-    mock_p1 = MagicMock(); mock_p1.get_sessions.return_value = {s_base.name: s_base}; mock_p1.is_available.return_value = True
-    mock_p2 = MagicMock(); mock_p2.get_sessions.return_value = {s_run.name: s_run}; mock_p2.is_available.return_value = True
-    mock_p3 = MagicMock(); mock_p3.get_sessions.return_value = {s_reach.name: s_reach}; mock_p3.is_available.return_value = True
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s_base.name: s_base}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s_run.name: s_run}
+    mock_p2.is_available.return_value = True
+    
+    mock_p3 = MagicMock()
+    mock_p3.get_sessions.return_value = {s_reach.name: s_reach}
+    mock_p3.is_available.return_value = True
     
     service = DiscoveryService(providers=[mock_p1, mock_p2, mock_p3])
     sessions = service.get_sessions()
@@ -193,8 +193,13 @@ def test_discovery_cross_boolean_merging():
     s2.is_running = False
     s2.is_reachable = True
     
-    mock_p1 = MagicMock(); mock_p1.get_sessions.return_value = {s1.name: s1}; mock_p1.is_available.return_value = True
-    mock_p2 = MagicMock(); mock_p2.get_sessions.return_value = {s2.name: s2}; mock_p2.is_available.return_value = True
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s1.name: s1}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s2.name: s2}
+    mock_p2.is_available.return_value = True
     
     service = DiscoveryService(providers=[mock_p1, mock_p2])
     sessions = service.get_sessions()
@@ -211,8 +216,13 @@ def test_discovery_local_url_enrichment_merging():
     s2 = GeminiSession("gem-url", "p", "c", "u1")
     s2.local_url = "http://localhost:45000"
     
-    mock_p1 = MagicMock(); mock_p1.get_sessions.return_value = {s1.name: s1}; mock_p1.is_available.return_value = True
-    mock_p2 = MagicMock(); mock_p2.get_sessions.return_value = {s2.name: s2}; mock_p2.is_available.return_value = True
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s1.name: s1}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s2.name: s2}
+    mock_p2.is_available.return_value = True
     
     service = DiscoveryService(providers=[mock_p1, mock_p2])
     sessions = service.get_sessions()
@@ -225,8 +235,13 @@ def test_discovery_disjoint_provider_merging():
     s1 = GeminiSession("gem-only-1", "p", "c", "u1")
     s2 = GeminiSession("gem-only-2", "p", "c", "u1")
     
-    mock_p1 = MagicMock(); mock_p1.get_sessions.return_value = {s1.name: s1}; mock_p1.is_available.return_value = True
-    mock_p2 = MagicMock(); mock_p2.get_sessions.return_value = {s2.name: s2}; mock_p2.is_available.return_value = True
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s1.name: s1}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s2.name: s2}
+    mock_p2.is_available.return_value = True
     
     service = DiscoveryService(providers=[mock_p1, mock_p2])
     sessions = service.get_sessions()
@@ -247,19 +262,8 @@ def test_discovery_skip_unavailable_provider():
     assert sessions == []
     mock_p.get_sessions.assert_not_called()
 
-def test_discovery_get_session_by_name_helper():
-    """Verify clean lookup helper returns correct data or None."""
-    s1 = GeminiSession("gem-find-me", "p", "c", "u1")
-    s1.is_running = True
     
-    with patch("app.services.discovery.DiscoveryService.get_sessions", return_value=[s1.to_dict()]):
-        # Found
-        res = DiscoveryService.get_session_by_name("gem-find-me")
-        assert res is not None
-        assert res["name"] == "gem-find-me"
-        
-        # Not Found
-        assert DiscoveryService.get_session_by_name("non-existent") is None
+    # Not Found
 
 def test_discovery_malformed_provider_data():
     """Verify that malformed data (not a dict) is handled gracefully."""
@@ -284,8 +288,13 @@ def test_discovery_disjoint_provider_merging_full():
     s1 = GeminiSession("gem-only-1", "p", "c", "u1")
     s2 = GeminiSession("gem-only-2", "p", "c", "u1")
     
-    mock_p1 = MagicMock(); mock_p1.get_sessions.return_value = {s1.name: s1}; mock_p1.is_available.return_value = True
-    mock_p2 = MagicMock(); mock_p2.get_sessions.return_value = {s2.name: s2}; mock_p2.is_available.return_value = True
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s1.name: s1}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s2.name: s2}
+    mock_p2.is_available.return_value = True
     
     service = DiscoveryService(providers=[mock_p1, mock_p2])
     sessions = service.get_sessions()
@@ -302,3 +311,48 @@ def test_discovery_provider_resilience():
     
     service = DiscoveryService(providers=[mock_p])
     assert service.get_sessions() == []
+
+def test_discovery_online_recalculation_merging():
+    """Verify that 'online' is recalculated correctly during merging."""
+    s1 = GeminiSession("gem-online", "p", "c", "u1")
+    s1.is_running = False
+    s1.is_reachable = False
+    
+    s2 = GeminiSession("gem-online", "p", "c", "u1")
+    s2.is_running = True
+    
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s1.name: s1}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s2.name: s2}
+    mock_p2.is_available.return_value = True
+    
+    service = DiscoveryService(providers=[mock_p1, mock_p2])
+    sessions = service.get_sessions()
+    
+    assert len(sessions) == 1
+    assert sessions[0]["is_running"] is True
+    assert sessions[0]["online"] is True
+
+def test_discovery_disjoint_provider_merging_v2():
+    """Verify that sessions from different providers are both added (v2)."""
+    s1 = GeminiSession("gem-only-1", "p", "c", "u1")
+    s2 = GeminiSession("gem-only-2", "p", "c", "u1")
+    
+    mock_p1 = MagicMock()
+    mock_p1.get_sessions.return_value = {s1.name: s1}
+    mock_p1.is_available.return_value = True
+    
+    mock_p2 = MagicMock()
+    mock_p2.get_sessions.return_value = {s2.name: s2}
+    mock_p2.is_available.return_value = True
+    
+    service = DiscoveryService(providers=[mock_p1, mock_p2])
+    sessions = service.get_sessions()
+    
+    assert len(sessions) == 2
+    names = [s["name"] for s in sessions]
+    assert "gem-only-1" in names
+    assert "gem-only-2" in names

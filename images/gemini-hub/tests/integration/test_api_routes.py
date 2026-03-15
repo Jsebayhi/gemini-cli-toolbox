@@ -179,3 +179,33 @@ def test_api_not_found(client):
     """Verify that a non-existent API endpoint returns 404."""
     response = client.get('/api/non-existent-endpoint')
     assert response.status_code == 404
+
+# Precision Coverage Boosters
+
+def test_api_browse_generic_exception(client):
+    """Trigger generic Exception handler in /browse for coverage."""
+    with patch("app.api.routes.FileSystemService.browse", side_effect=Exception("Generic Error")):
+        resp = client.get("/api/browse?path=/")
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"
+
+def test_api_create_directory_generic_exception(client):
+    """Trigger generic Exception handler in /create-directory for coverage."""
+    with patch("app.api.routes.FileSystemService.create_directory", side_effect=Exception("Generic Error")):
+        resp = client.post("/api/create-directory", json={"parent_path": "/", "name": "new"})
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"
+
+def test_api_launch_generic_exception(client):
+    """Trigger generic Exception handler in /launch for coverage."""
+    with patch("app.api.routes.LauncherService.launch", side_effect=Exception("Generic Error")):
+        resp = client.post("/api/launch", json={"project_path": "/"})
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"
+
+def test_api_stop_session_generic_exception(client):
+    """Trigger generic Exception handler in /sessions/stop for coverage."""
+    with patch("app.api.routes.SessionService.stop", side_effect=Exception("Generic Error")):
+        resp = client.post("/api/sessions/stop", json={"session_id": "id"})
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"

@@ -37,7 +37,8 @@ class MonitorService:
     def check_and_shutdown(last_active: float, timeout: int) -> float:
         """Performs a single activity check and kills process if stale."""
         try:
-            sessions = DiscoveryService.get_sessions()
+            discovery = DiscoveryService()
+            sessions = discovery.get_sessions()
         except Exception as e:
             logger.error(f"Discovery failed in monitor: {e}")
             return last_active

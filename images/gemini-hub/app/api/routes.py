@@ -6,13 +6,21 @@ from app.services.discovery import DiscoveryService
 
 api = Blueprint('api', __name__)
 
+@api.route('/sessions')
+def get_sessions():
+    """Returns all discovered sessions (Unified)."""
+    discovery = DiscoveryService()
+    return jsonify(discovery.get_sessions())
+
 @api.route('/resolve-local-url')
 def resolve_local_url():
     hostname = request.args.get('hostname', '')
     if not hostname:
         return jsonify({"url": None})
     
-    session = DiscoveryService.get_session_by_name(hostname)
+    discovery = DiscoveryService()
+    sessions = discovery.get_sessions()
+    session = next((s for s in sessions if s["name"] == hostname), None)
     return jsonify({"url": session.get("local_url") if session else None})
 
 @api.route('/roots')
