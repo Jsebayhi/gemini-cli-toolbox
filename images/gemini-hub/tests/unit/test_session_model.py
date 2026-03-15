@@ -38,3 +38,14 @@ def test_session_from_name_standard():
 def test_session_from_name_invalid():
     """Ensure invalid names return None."""
     assert GeminiSession.from_name("not-a-gemini-session") is None
+
+def test_session_to_dict_ip_presence():
+    """Verify that IP is correctly handled in to_dict (None vs value)."""
+    s = GeminiSession("gem-test", "p", "c", "u")
+    
+    # Case 1: No IP
+    assert s.to_dict()["ip"] is None
+    
+    # Case 2: With IP
+    s.ip = "100.64.0.1"
+    assert s.to_dict()["ip"] == "100.64.0.1"
