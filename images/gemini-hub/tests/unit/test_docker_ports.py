@@ -77,3 +77,17 @@ def test_docker_get_sessions_exception():
     with patch("subprocess.run", side_effect=Exception("Timeout")):
         assert DockerService().get_sessions() == {}
 
+
+def test_docker_ps_invalid_json(mocker):
+    """Trigger JSON parsing error in DockerService."""
+    from app.services.docker import DockerService
+    mocker.patch("subprocess.run", return_value=mocker.Mock(stdout="invalid json", returncode=0))
+    service = DockerService()
+    assert service.get_sessions() == {}
+
+def test_docker_ps_generic_exception(mocker):
+    """Trigger generic exception during Docker discovery."""
+    from app.services.docker import DockerService
+    mocker.patch("subprocess.run", side_effect=Exception("Subprocess failed"))
+    service = DockerService()
+    assert service.get_sessions() == {}

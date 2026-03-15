@@ -35,6 +35,10 @@ make rebuild-hub
 We use `pytest` for unit and integration tests, and **Playwright** for UI tests.
 *   **Idempotency Mandate:** Follow the standards in [.gemini/skills/developing-gemini-toolbox/references/general_testing.md](../../.gemini/skills/developing-gemini-toolbox/references/general_testing.md). Never modify `Config` attributes directly; always use `monkeypatch` or `mocker`.
 *   **Filesystem:** Use `tmp_path` fixture for all filesystem operations.
+*   **High-Signal Reporting:** The `test-hub` target automatically provides:
+    *   **Slowest Tests:** The 5 slowest tests are printed at the end (`--durations=5`).
+    *   **Coverage Map:** A built-in terminal table showing missing line numbers (`--cov-report=term-missing`).
+    *   **Source Trace:** Annotated source files with `>` (covered) or `!` (uncovered) markers are generated in `coverage/python/annotated/`. These are git-ignored and useful for surgical debugging.
 *   **Run Commands (from root):**
 ```bash
 # Run unit and integration tests
