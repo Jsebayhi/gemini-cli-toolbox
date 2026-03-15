@@ -84,7 +84,7 @@ test-bash: setup-builder deps-bash
 		gemini-cli-toolbox/bash-test:$$TAG \
 		--include-path=/code/bin,/code/images \
 		/code/coverage/bash \
-		bats tests/bash
+		bats --timing tests/bash
 	@echo ""
 	@echo ">> Checking Bash Coverage (Threshold: 85%)..."
 	@REPORT_JSON=$$(find coverage/bash -name "coverage.json" | head -n 1); \
@@ -111,7 +111,10 @@ test-hub: setup-builder
 		-v "$(shell pwd)/coverage/python:/coverage" \
 		gemini-cli-toolbox/hub-test:$$TAG \
 		python3 -m pytest -n auto -vv \
+		--durations=5 \
 		--cov=app \
+		--cov-report=term-missing \
+		--cov-report=annotate:/coverage/annotated \
 		--cov-report=json:/coverage/coverage.json \
 		--cov-fail-under=90 \
 		tests/unit tests/integration

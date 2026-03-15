@@ -209,3 +209,9 @@ def test_api_stop_session_generic_exception(client):
         resp = client.post("/api/sessions/stop", json={"session_id": "id"})
         assert resp.status_code == 500
         assert resp.json["error"] == "Generic Error"
+
+def test_resolve_local_url_empty_hostname(client):
+    """Trigger early exit in /resolve-local-url with explicit empty hostname."""
+    resp = client.get("/api/resolve-local-url?hostname=")
+    assert resp.status_code == 200
+    assert resp.json["url"] is None

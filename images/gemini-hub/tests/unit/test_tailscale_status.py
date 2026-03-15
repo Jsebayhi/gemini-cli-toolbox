@@ -43,3 +43,17 @@ def test_get_status_exception():
          patch("subprocess.run", side_effect=Exception("Boom")):
         status = TailscaleService.get_status()
         assert status == {}
+
+def test_get_status_invalid_json(mocker):
+    """Trigger JSON parsing error in TailscaleService."""
+    from app.services.tailscale import TailscaleService
+    mocker.patch("subprocess.run", return_value=mocker.Mock(stdout="invalid json", returncode=0))
+    service = TailscaleService()
+    assert service.get_sessions() == {}
+
+def test_get_status_generic_exception(mocker):
+    """Trigger generic exception during Tailscale discovery."""
+    from app.services.tailscale import TailscaleService
+    mocker.patch("subprocess.run", side_effect=Exception("Status failed"))
+    service = TailscaleService()
+    assert service.get_sessions() == {}
