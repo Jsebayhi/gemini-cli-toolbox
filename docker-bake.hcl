@@ -47,11 +47,11 @@ function "get_tag" {
 # --- Groups ---
 
 group "default" {
-  targets = ["base", "hub", "cli", "cli-preview", "hub-test", "bash-test"]
+  targets = ["base", "hub", "cli", "cli-preview", "vpn", "hub-test", "bash-test"]
 }
 
 group "toolbox" {
-  targets = ["hub", "cli", "cli-preview"]
+  targets = ["hub", "cli", "cli-preview", "vpn"]
 }
 
 group "clis" {
@@ -125,6 +125,14 @@ target "cli-preview" {
   tags = [
     RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-preview" : "${REPO_PREFIX}/cli-preview:${get_tag(GITHUB_REF)}",
     RELEASE_TYPE == "suffix" && GEMINI_VERSION != "" ? "${REPO_PREFIX}:${GEMINI_VERSION}-preview" : ""
+  ]
+}
+
+target "vpn" {
+  inherits = ["_release"]
+  dockerfile-inline = "FROM docker.io/tailscale/tailscale:stable"
+  tags = [
+    RELEASE_TYPE == "suffix" ? "${REPO_PREFIX}:${get_tag(GITHUB_REF)}-vpn" : "${REPO_PREFIX}/vpn:${get_tag(GITHUB_REF)}"
   ]
 }
 

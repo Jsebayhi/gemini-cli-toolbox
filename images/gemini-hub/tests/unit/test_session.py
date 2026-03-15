@@ -14,7 +14,7 @@ def test_stop_success(mock_run):
     
     assert result["status"] == "success"
     assert result["session_id"] == "gem-session-id"
-    mock_run.assert_called_with(["docker", "stop", "gem-session-id"], capture_output=True, text=True, timeout=30)
+    mock_run.assert_called_with(["docker", "stop", "gem-session-id", "gem-session-id-vpn"], capture_output=True, text=True, timeout=30)
 
 @patch("subprocess.run")
 def test_stop_error(mock_run):

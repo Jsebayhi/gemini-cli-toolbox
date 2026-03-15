@@ -21,7 +21,23 @@ teardown() {
 @test "Journey 1: Remote Access (--remote)" {
     run gemini-toolbox --remote tskey-auth-123 --bash
     assert_success
-    run grep "TAILSCALE_AUTH_KEY=tskey-auth-123" "$MOCK_DOCKER_LOG"
+    
+    # Poll for sidecar launch in mock log (background process)
+    local max_wait=5
+    local waited=0
+    while ! grep -q "gemini-cli-toolbox/vpn:latest" "$MOCK_DOCKER_LOG"; do
+        sleep 1
+        waited=$((waited + 1))
+        if [ "$waited" -ge "$max_wait" ]; then
+            log_error "Timeout waiting for sidecar in mock log"
+            exit 1
+        fi
+    done
+    
+    # Verify the sidecar was launched with the correct image and auth key
+    run grep "gemini-cli-toolbox/vpn:latest" "$MOCK_DOCKER_LOG"
+    assert_success
+    run grep "TS_AUTHKEY=tskey-auth-123" "$MOCK_DOCKER_LOG"
     assert_success
     run grep "\-\-network=bridge" "$MOCK_DOCKER_LOG"
     assert_success

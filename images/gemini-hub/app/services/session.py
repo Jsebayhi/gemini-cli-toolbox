@@ -15,7 +15,7 @@ class SessionService:
         if not session_id.startswith("gem-"):
             raise PermissionError(f"Invalid session ID: {session_id}. Only sessions starting with 'gem-' can be stopped.")
 
-        cmd = ["docker", "stop", session_id]
+        cmd = ["docker", "stop", session_id, f"{session_id}-vpn"]
         
         logger.info(f"Stopping session: {session_id}")
         

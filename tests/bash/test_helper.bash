@@ -46,7 +46,12 @@ echo "ENV: COLORTERM=\$COLORTERM" >> "$MOCK_DOCKER_LOG"
 echo "ENV: LANG=\$LANG" >> "$MOCK_DOCKER_LOG"
 
 case "\$1" in
-    ps) exit 0 ;;
+    ps) 
+        if [ -f "\$MOCK_DOCKER_LOG" ]; then
+            grep "docker run" "\$MOCK_DOCKER_LOG" | sed -n 's/.*--name \([^ ]*\).*/\1/p'
+        fi
+        exit 0 
+        ;;
     inspect)
         if [[ "\$*" == *"--format"*"{{.State.Running}}"* ]]; then
              echo "true"

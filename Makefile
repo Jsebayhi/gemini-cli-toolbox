@@ -170,13 +170,18 @@ rebuild: setup-builder
 
 .PHONY: build-toolbox
 build-toolbox: setup-builder
-	@echo ">> Building core images (hub, cli, cli-preview)..."
+	@echo ">> Building core images (hub, cli, cli-preview, vpn)..."
 	$(BAKE_CMD) toolbox
 
 .PHONY: rebuild-toolbox
 rebuild-toolbox: setup-builder
-	@echo ">> Rebuilding core images (hub, cli, cli-preview) from scratch..."
+	@echo ">> Rebuilding core images (hub, cli, cli-preview, vpn) from scratch..."
 	$(BAKE_CMD) --no-cache toolbox
+
+.PHONY: build-vpn
+build-vpn: setup-builder
+	@echo ">> Building VPN sidecar image..."
+	$(BAKE_CMD) vpn
 
 .PHONY: build-clis
 build-clis: setup-builder

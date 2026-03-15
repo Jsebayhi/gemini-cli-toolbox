@@ -148,6 +148,73 @@ setup_worktree() {
     echo "$worktree_path"
 }
 
+# VPN Sidecar Launch Function
+start_vpn_sidecar() {
+    local parent_id="$1"
+    local ts_key="$2"
+    local vpn_image="$3"
+    local vpn_fallback="$4"
+    local sidecar_name="${parent_id}-vpn"
+    
+    # Resolve image (Local Branch -> Local Main -> Pull from Registry)
+    local actual_image="$vpn_image"
+    if [ -z "$(docker images -q "$actual_image" 2>/dev/null)" ]; then
+        if [ -n "$vpn_fallback" ] && [ -n "$(docker images -q "$vpn_fallback" 2>/dev/null)" ]; then
+            actual_image="$vpn_fallback"
+        else
+            # Throttled Pull: pull at most once per hour
+            local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/gemini-toolbox"
+            local last_pull_file="${cache_dir}/vpn-last-pull"
+            local now
+            now=$(date +%s)
+            local last_pull=0
+            [ -f "$last_pull_file" ] && last_pull=$(cat "$last_pull_file")
+            
+            if [ $((now - last_pull)) -gt 3600 ]; then
+                log_info "Pulling fresh VPN sidecar image..."
+                if docker pull "$actual_image" >/dev/null 2>&1; then
+                    mkdir -p "$cache_dir"
+                    echo "$now" > "$last_pull_file"
+                else
+                    log_warn "Failed to pull VPN image. Using local version if available."
+                fi
+            fi
+        fi
+    fi
+
+    log_info "Starting VPN Sidecar (${sidecar_name}) using ${actual_image}..."
+    
+    # Initiation: Create the sidecar container immediately. 
+    # We use 'create' instead of 'run' so we can capture failures instantly,
+    # but actual startup happens in the background once the parent is ready.
+    if ! docker create --name "$sidecar_name" \
+        --network "container:${parent_id}" \
+        --cap-add=NET_ADMIN --device /dev/net/tun \
+        --env TS_AUTHKEY="${ts_key}" \
+        --env TS_HOSTNAME="${parent_id}" \
+        "$actual_image" >/dev/null 2>&1; then
+        log_error "Failed to create VPN sidecar container."
+        return 1
+    fi
+
+    # Background Wait & Start Loop
+    (
+        local max_wait=15
+        local waited=0
+        # Wait for parent container to be RUNNING
+        while [ "$(docker inspect -f '{{.State.Running}}' "${parent_id}" 2>/dev/null)" != "true" ]; do
+            sleep 1
+            waited=$((waited + 1))
+            if [ "$waited" -ge "$max_wait" ]; then
+                log_error "Timeout waiting for parent container ${parent_id}. Cleaning up sidecar."
+                docker rm -f "$sidecar_name" >/dev/null 2>&1 || true
+                exit 1
+            fi
+        done
+        docker start "$sidecar_name" >/dev/null 2>&1
+    ) &
+}
+
 # Main Execution Logic
 main() {
     set -euo pipefail
@@ -257,6 +324,8 @@ main() {
     local local_tag=""
     local remote_tag=""
     local local_fallback_tag=""
+    local vpn_tag="gemini-cli-toolbox/vpn:latest${branch_suffix}"
+    local vpn_fallback_tag="gemini-cli-toolbox/vpn:latest"
     local image_name=""
     
     if [ -n "$override_image" ]; then
@@ -447,8 +516,9 @@ main() {
             exit 1
         fi
         log_info "Stopping session: $matches"
-        docker stop "$matches"
-        exit $?
+        # Stop both the parent and its VPN sidecar (if it exists)
+        docker stop "$matches" "${matches}-vpn" 2>/dev/null || true
+        exit 0
     fi
 
     if [ -n "$connect_id" ]; then
@@ -523,10 +593,6 @@ main() {
             fi
         fi
         enable_vscode_integration=false
-        extra_docker_args+=(
-            --env TAILSCALE_AUTH_KEY="$tailscale_key"
-            --cap-add=NET_ADMIN --device /dev/net/tun
-        )
         if [ "$localhost_access" = true ]; then
             extra_docker_args+=(-p 127.0.0.1:0:3000)
         fi
@@ -592,6 +658,11 @@ main() {
 
     if [ "$detached_mode" = true ]; then
         log_info "Starting container in background..."
+        
+        if [ "$remote_mode" = true ]; then
+            start_vpn_sidecar "$gemini_session_id" "$tailscale_key" "$vpn_tag" "$vpn_fallback_tag" &
+        fi
+        
         docker run --rm -d "${docker_args[@]}" "${exec_args[@]}"
         log_info "Container started: ${gemini_session_id}"
         
@@ -611,6 +682,10 @@ main() {
         fi
     else
         if [ "$use_bash" = true ]; then echo "Starting in BASH mode..."; fi
+        
+        if [ "$remote_mode" = true ]; then
+            start_vpn_sidecar "$gemini_session_id" "$tailscale_key" "$vpn_tag" "$vpn_fallback_tag" &
+        fi
         
         if [ "$localhost_access" = true ]; then
             # We can't easily capture the port before docker run in foreground

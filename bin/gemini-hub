@@ -59,6 +59,53 @@ show_help() {
     echo "  gemini-hub --workspace ~/projects --workspace /data/repos"
 }
 
+# VPN Sidecar Launch Function
+start_vpn_sidecar() {
+    local parent_id="$1"
+    local ts_key="$2"
+    local vpn_image="$3"
+    local vpn_fallback="$4"
+    local sidecar_name="${parent_id}-vpn"
+    
+    # Resolve image (Local Branch -> Local Main -> Pull from Registry)
+    local actual_image="$vpn_image"
+    if [ -z "$(docker images -q "$actual_image" 2>/dev/null)" ]; then
+        if [ -n "$vpn_fallback" ] && [ -n "$(docker images -q "$vpn_fallback" 2>/dev/null)" ]; then
+            actual_image="$vpn_fallback"
+        fi
+    fi
+
+    log_info "Starting VPN Sidecar (${sidecar_name}) using ${actual_image}..."
+    
+    # Initiation: Create the sidecar container immediately.
+    if ! docker create --name "$sidecar_name" \
+        --network "container:${parent_id}" \
+        --cap-add=NET_ADMIN --device /dev/net/tun \
+        --env TS_AUTHKEY="${ts_key}" \
+        --env TS_HOSTNAME="${parent_id}" \
+        "$actual_image" >/dev/null 2>&1; then
+        log_error "Failed to create VPN sidecar container."
+        return 1
+    fi
+
+    # Background Wait & Start Loop
+    (
+        local max_wait=15
+        local waited=0
+        # Wait for parent container to be RUNNING
+        while [ "$(docker inspect -f '{{.State.Running}}' "${parent_id}" 2>/dev/null)" != "true" ]; do
+            sleep 1
+            waited=$((waited + 1))
+            if [ "$waited" -ge "$max_wait" ]; then
+                log_error "Timeout waiting for parent container ${parent_id}. Cleaning up sidecar."
+                docker rm -f "$sidecar_name" >/dev/null 2>&1 || true
+                exit 1
+            fi
+        done
+        docker start "$sidecar_name" >/dev/null 2>&1
+    ) &
+}
+
 main() {
     set -euo pipefail
 
@@ -111,6 +158,8 @@ main() {
 
     local local_tag="gemini-cli-toolbox/hub:latest${branch_suffix}"
     local remote_tag="${docker_hub_user}/gemini-cli-toolbox:latest-hub"
+    local vpn_tag="gemini-cli-toolbox/vpn:latest${branch_suffix}"
+    local vpn_fallback_tag="gemini-cli-toolbox/vpn:latest"
     local image_name=""
 
     if [ -n "$override_image" ]; then
@@ -141,13 +190,13 @@ main() {
         -h|--help)   show_help; exit 0 ;;
         stop)
             log_info "Stopping Gemini Hub..."
-            if ! docker stop "$container_name" >/dev/null 2>&1; then
-                if ! docker ps -a --format '{{.Names}}' | grep -q "^${container_name}$"; then
-                    log_info "Hub is not running."
-                else
-                    log_error "Failed to stop Gemini Hub service." >&2
-                    exit 1
-                fi
+            # Stop both the Hub and its VPN sidecar (if it exists)
+            docker stop "$container_name" "${container_name}-vpn" >/dev/null 2>&1 || true
+            if ! docker ps -a --format '{{.Names}}' | grep -q "^${container_name}$"; then
+                log_info "Hub is not running."
+            else
+                log_error "Failed to stop Gemini Hub service." >&2
+                exit 1
             fi
             exit 0
             ;;
@@ -291,23 +340,26 @@ main() {
     fi
 
     log_info "Starting Gemini Hub on port $port..."
-    log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
+    if [ "$no_vpn" = false ]; then
+        log_info "Access at http://gemini-hub:8888 (Mobile VPN)"
+        start_vpn_sidecar "$container_name" "$auth_key" "$vpn_tag" "$vpn_fallback_tag" &
+    else
+        log_info "VPN disabled (--no-vpn). Access limited to Localhost/LAN."
+    fi
 
     docker run --rm "$mode" \
         --name "$container_name" \
         --network=bridge \
         "${port_mapping[@]}" \
-        --cap-add=NET_ADMIN \
-        --device /dev/net/tun \
         --volume "/var/run/docker.sock:/var/run/docker.sock" \
         "${extra_mounts[@]}" \
         "${env_vars[@]}" \
         --env HOST_DOCKER_GID="${host_docker_gid}" \
         --env HOST_UID="$(id -u)" \
         --env HOST_GID="$(id -g)" \
-        --env TAILSCALE_AUTH_KEY="$auth_key" \
         --env HUB_ROOTS="${root_paths_list}" \
         --env HOST_CONFIG_ROOT="${abs_config_root}" \
+        --env GEMINI_HUB_CONTAINER_NAME="${container_name}" \
         --env HOST_HOME="${HOME}" \
         --env GEMINI_INTERNAL_RUN=true \
         --env TERM \

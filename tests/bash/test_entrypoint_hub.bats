@@ -56,13 +56,12 @@ EOF
     chmod +x "$TEST_TEMP_DIR/bin/"*
 }
 
-@test "Hub Entrypoint: authentication and startup" {
+@test "Hub Entrypoint: startup and user creation" {
     mock_hub_commands
     
     cat <<EOF > "$TEST_TEMP_DIR/run_hub.sh"
 #!/bin/bash
 export PROJECT_ROOT=$PROJECT_ROOT
-export TAILSCALE_AUTH_KEY="tskey-hub-123"
 export HOST_UID=1000
 export HOST_GID=1000
 export HOST_DOCKER_GID=999
@@ -75,31 +74,10 @@ EOF
     chmod +x "$TEST_TEMP_DIR/run_hub.sh"
     
     run "$TEST_TEMP_DIR/run_hub.sh"
-    # Note: Test 10 often fails in containerized bats due to process management (tailscaled &)
-    # but we verify the logical calls in the mock log.
-    run grep "tailscale --socket=/run/tailscale/tailscaled.sock up" "$MOCK_GIT_LOG"
     assert_success
     run grep "groupadd -g 1000 gemini" "$MOCK_GIT_LOG"
-    assert_success
-    run grep "chown gemini /run/tailscale /run/tailscale/tailscaled.sock" "$MOCK_GIT_LOG"
     assert_success
     run grep "python run.py" "$MOCK_GIT_LOG"
     assert_success
 }
 
-@test "Hub Entrypoint: error on missing key" {
-    mock_hub_commands
-    
-    cat <<EOF > "$TEST_TEMP_DIR/run_hub.sh"
-#!/bin/bash
-export PROJECT_ROOT=$PROJECT_ROOT
-unset TAILSCALE_AUTH_KEY
-source "\$PROJECT_ROOT/images/gemini-hub/docker-entrypoint.sh"
-main
-EOF
-    chmod +x "$TEST_TEMP_DIR/run_hub.sh"
-    
-    run "$TEST_TEMP_DIR/run_hub.sh"
-    assert_failure
-    assert_output --partial "Error: TAILSCALE_AUTH_KEY is missing"
-}

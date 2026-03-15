@@ -9,27 +9,32 @@ from app.services.base import DiscoveryProvider
 logger = logging.getLogger(__name__)
 
 class TailscaleService(DiscoveryProvider):
-    """Session Provider for remote Tailscale nodes."""
+    """Provider that discovers peers via Tailscale status in a sidecar."""
+
+    def __init__(self):
+        self.container_name = os.environ.get("GEMINI_HUB_CONTAINER_NAME", "gemini-hub-service")
+        self.sidecar_name = f"{self.container_name}-vpn"
 
     def is_available(self) -> bool:
-        """Checks if Tailscale is running."""
-        socket_path = "/run/tailscale/tailscaled.sock"
-        return os.path.exists(socket_path)
-
-    @staticmethod
-    def get_status() -> Dict[str, Any]:
-        """Executes `tailscale status --json`."""
-        socket_path = "/run/tailscale/tailscaled.sock"
-        if not os.path.exists(socket_path):
-            return {}
-
+        """Checks if the VPN sidecar is running."""
         try:
-            cmd = ["tailscale", f"--socket={socket_path}", "status", "--json"]
+            result = subprocess.run(
+                ["docker", "inspect", "-f", "{{.State.Running}}", self.sidecar_name],
+                capture_output=True, text=True, timeout=2
+            )
+            return result.stdout.strip() == "true"
+        except Exception:
+            return False
+
+    def get_status(self) -> Dict[str, Any]:
+        """Executes `tailscale status --json` inside the sidecar."""
+        try:
+            cmd = ["docker", "exec", self.sidecar_name, "tailscale", "status", "--json"]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-            
+
             if result.returncode != 0:
                 return {}
-                
+
             return json.loads(result.stdout)
         except Exception:
             return {}
@@ -37,21 +42,28 @@ class TailscaleService(DiscoveryProvider):
     def get_sessions(self) -> Dict[str, GeminiSession]:
         """Returns GeminiSession objects for all nodes in Tailnet."""
         sessions = {}
-        status = TailscaleService.get_status()
+        status = self.get_status()
         peers = status.get("Peer", {})
         
         for _, node in peers.items():
             hostname = node.get("HostName", "")
             if not hostname.startswith("gem-"):
                 continue
-
-            addrs = node.get("TailscaleIPs", [])
-            ip = next((a for a in addrs if "." in a), None)
             
-            if not ip:
+            # Extract basic info
+            # Format: gem-{PROJECT}-{TYPE}-{ID}
+            try:
+                parts = hostname.split("-")
+                project = "-".join(parts[1:-2])
+                session_type = parts[-2]
+                session_id = parts[-1]
+            except (ValueError, IndexError):
                 continue
 
-            session = GeminiSession.from_name(hostname)
+            # Standard Tailscale logic
+            ip = node.get("TailscaleIPs", [""])[0]
+            
+            session = GeminiSession(hostname, project, session_type, session_id)
             if not session:
                 continue
             
