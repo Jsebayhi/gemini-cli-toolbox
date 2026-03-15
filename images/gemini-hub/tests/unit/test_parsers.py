@@ -1,106 +1,43 @@
 from unittest.mock import patch
-from app.services.tailscale import TailscaleService
+from app.services.discovery import DiscoveryService
+from app.models.session import GeminiSession
 
-@patch("app.services.tailscale.TailscaleService.get_local_ports")
-def test_parse_peers_standard(mock_get_local_ports):
-    """Test parsing of standard gemini-toolbox hostnames."""
-    mock_get_local_ports.return_value = {}
-    mock_status = {
-        "Peer": {
-            "node1": {
-                "HostName": "gem-myproject-geminicli-a1b2",
-                "TailscaleIPs": ["100.1.2.3"],
-                "Online": True
-            }
-        }
-    }
-    
-    peers = TailscaleService.parse_peers(mock_status)
-    assert len(peers) == 1
-    assert peers[0]["project"] == "myproject"
-    assert peers[0]["type"] == "geminicli"
-    assert peers[0]["uid"] == "a1b2"
-    assert peers[0]["online"] is True
-    assert peers[0]["local_url"] is None
 
-@patch("app.services.tailscale.TailscaleService.get_local_ports")
-def test_parse_peers_with_local_url(mock_get_local_ports):
-    """Test parsing of peers when a local port is available."""
-    # Mock local port discovery
-    mock_get_local_ports.return_value = {
-        "gem-local-app-geminicli-1234": "http://localhost:3001"
-    }
+def test_discovery_sessions_standard():
+    """Test standard session identification and parsing via DiscoveryService."""
+    s1_docker = GeminiSession("gem-myproject-geminicli-1", "myproject", "geminicli", "1")
+    s1_docker.is_running = True
+    s1_docker.local_url = "http://localhost:32768"
     
-    mock_status = {
-        "Peer": {
-            "node1": {
-                "HostName": "gem-local-app-geminicli-1234",
-                "TailscaleIPs": ["100.1.2.3"],
-                "Online": True
-            }
-        }
-    }
+    s1_remote = GeminiSession("gem-myproject-geminicli-1", "myproject", "geminicli", "1")
+    s1_remote.is_reachable = True
+    s1_remote.ip = "100.64.0.1"
     
-    peers = TailscaleService.parse_peers(mock_status)
-    assert len(peers) == 1
-    assert peers[0]["name"] == "gem-local-app-geminicli-1234"
-    assert peers[0]["uid"] == "1234"
-    assert peers[0]["local_url"] == "http://localhost:3001"
+    with patch("app.services.docker.DockerService.get_sessions", return_value={s1_docker.name: s1_docker}), \
+         patch("app.services.docker.DockerService.is_available", return_value=True), \
+         patch("app.services.tailscale.TailscaleService.get_sessions", return_value={s1_remote.name: s1_remote}), \
+         patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
+        
+        sessions = DiscoveryService().get_sessions()
+        assert len(sessions) == 1
+        s = sessions[0]
+        assert s["project"] == "myproject"
+        assert s["is_running"] is True
+        assert s["is_reachable"] is True
+        assert s["local_url"] == "http://localhost:32768"
+        assert s["ip"] == "100.64.0.1"
 
-@patch("app.services.tailscale.TailscaleService.get_local_ports")
-def test_parse_peers_bash(mock_get_local_ports):
-    """Test parsing of bash session hostnames."""
-    mock_get_local_ports.return_value = {}
-    mock_status = {
-        "Peer": {
-            "node1": {
-                "HostName": "gem-debug-bash-x9y8",
-                "TailscaleIPs": ["100.1.2.4"],
-                "Online": False
-            }
-        }
-    }
+def test_discovery_sessions_complex_project():
+    """Test project names with multiple hyphens."""
+    s = GeminiSession("gem-my-cool-project-bash-123", "my-cool-project", "bash", "123")
+    s.is_running = True
     
-    peers = TailscaleService.parse_peers(mock_status)
-    assert len(peers) == 1
-    assert peers[0]["type"] == "bash"
-    assert peers[0]["project"] == "debug"
-    assert peers[0]["uid"] == "x9y8"
-
-@patch("app.services.tailscale.TailscaleService.get_local_ports")
-def test_parse_peers_complex_project(mock_get_local_ports):
-    """Test parsing of project names with hyphens."""
-    mock_get_local_ports.return_value = {}
-    mock_status = {
-        "Peer": {
-            "node1": {
-                "HostName": "gem-my-complex-app-geminicli-1234",
-                "TailscaleIPs": ["100.1.2.5"],
-                "Online": True
-            }
-        }
-    }
-    
-    peers = TailscaleService.parse_peers(mock_status)
-    assert len(peers) == 1
-    # Project should join parts: "my-complex-app"
-    assert peers[0]["project"] == "my-complex-app"
-    assert peers[0]["type"] == "geminicli"
-    assert peers[0]["uid"] == "1234"
-
-@patch("app.services.tailscale.TailscaleService.get_local_ports")
-def test_parse_peers_ignore_non_gem(mock_get_local_ports):
-    """Test that non-gemini nodes are ignored."""
-    mock_get_local_ports.return_value = {}
-    mock_status = {
-        "Peer": {
-            "node1": {
-                "HostName": "desktop-pc",
-                "TailscaleIPs": ["100.1.2.6"],
-                "Online": True
-            }
-        }
-    }
-    
-    peers = TailscaleService.parse_peers(mock_status)
-    assert len(peers) == 0
+    with patch("app.services.docker.DockerService.get_sessions", return_value={s.name: s}), \
+         patch("app.services.docker.DockerService.is_available", return_value=True), \
+         patch("app.services.tailscale.TailscaleService.get_sessions", return_value={}), \
+         patch("app.services.tailscale.TailscaleService.is_available", return_value=True):
+        
+        sessions = DiscoveryService().get_sessions()
+        assert len(sessions) == 1
+        assert sessions[0]["project"] == "my-cool-project"
+        assert sessions[0]["type"] == "bash"

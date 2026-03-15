@@ -56,3 +56,78 @@ def test_config_no_duplicates_isolation():
     assert "/projects" in roots
     assert roots.count("/cache/worktrees") == 1
     assert len(roots) == 2
+
+def test_config_empty_values_isolation():
+    """Verify Config initialization with empty/missing values."""
+    env = os.environ.copy()
+    env["HUB_ROOTS"] = ""
+    env["GEMINI_WORKTREE_ROOT"] = ""
+    env["TAILSCALE_AUTH_KEY"] = "dummy"
+    
+    code = "from app.config import Config; print(len(Config.HUB_ROOTS))"
+    
+    current_env = os.environ.copy()
+    current_env.update(env)
+    
+    result = subprocess.run(
+        [sys.executable, "-c", code], 
+        env=current_env, 
+        capture_output=True, 
+        text=True,
+        cwd="/app"
+    )
+    
+    assert result.returncode == 0
+    assert result.stdout.strip() == "0"
+
+def test_config_roots_ordering_isolation():
+    """Verify that entries in HUB_ROOTS are correctly ordered and include worktree root."""
+    env = os.environ.copy()
+    env["HUB_ROOTS"] = "/user/root"
+    env["GEMINI_WORKTREE_ROOT"] = "/tmp/worktree"
+    env["TAILSCALE_AUTH_KEY"] = "dummy"
+    
+    code = "from app.config import Config; print(','.join(Config.HUB_ROOTS))"
+    
+    current_env = os.environ.copy()
+    current_env.update(env)
+    
+    result = subprocess.run(
+        [sys.executable, "-c", code], 
+        env=current_env, 
+        capture_output=True, 
+        text=True,
+        cwd="/app"
+    )
+    
+    assert result.returncode == 0
+    roots = result.stdout.strip().split(',')
+    assert roots[0] == "/user/root"
+    assert roots[1] == "/tmp/worktree"
+
+def test_config_normalization_deduplication_isolation():
+    """Verify that unnormalized paths (e.g. trailing slashes) are deduplicated after normalization."""
+    env = os.environ.copy()
+    env["HUB_ROOTS"] = "/projects/:/projects"
+    env["GEMINI_WORKTREE_ROOT"] = "/cache/worktrees/"
+    env["TAILSCALE_AUTH_KEY"] = "dummy"
+    
+    code = "from app.config import Config; print(','.join(Config.HUB_ROOTS))"
+    
+    current_env = os.environ.copy()
+    current_env.update(env)
+    
+    result = subprocess.run(
+        [sys.executable, "-c", code], 
+        env=current_env, 
+        capture_output=True, 
+        text=True,
+        cwd="/app"
+    )
+    
+    assert result.returncode == 0
+    roots = result.stdout.strip().split(',')
+    # /projects/ and /projects normalize to /projects
+    assert "/projects" in roots
+    assert "/cache/worktrees" in roots
+    assert len(roots) == 2

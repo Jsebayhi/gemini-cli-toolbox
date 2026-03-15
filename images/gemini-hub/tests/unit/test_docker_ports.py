@@ -1,45 +1,79 @@
 from unittest.mock import patch
-from app.services.tailscale import TailscaleService
+from app.services.docker import DockerService
 
-def test_get_local_ports_success():
-    """Test parsing of docker ps output for local ports."""
-    # Mock output: Name|Ports
-    # gem-app-cli-123 | 0.0.0.0:32768->3000/tcp, :::32768->3000/tcp
-    docker_output = """gem-my-app-cli-123|0.0.0.0:32768->3000/tcp
-gem-other-app-bash-456|127.0.0.1:45000->3000/tcp
-random-container|0.0.0.0:80->80/tcp"""
+def test_docker_port_parsing_robustness():
+    """
+    Trophy: Unit Test (Precision).
+    Verify that URL extraction works across various Docker output formats.
+    """
+    scenarios = [
+        {
+            "ports": "0.0.0.0:32768->3000/tcp", 
+            "expected_url": "http://localhost:32768"
+        },
+        {
+            "ports": "127.0.0.1:45000->3000/tcp, 0.0.0.0:80->80/tcp", 
+            "expected_url": "http://localhost:45000"
+        },
+        {
+            "ports": ":::32768->3000/tcp", # IPv6 bind
+            "expected_url": "http://localhost:32768"
+        },
+        {
+            "ports": "3000/tcp", # No mapping (internal only)
+            "expected_url": None
+        },
+        {
+            "ports": "", 
+            "expected_url": None
+        }
+    ]
+    
+    for s in scenarios:
+        docker_output = f"gem-test-cli-u1|{s['ports']}"
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = docker_output
+            
+            sessions = DockerService().get_sessions()
+            session = sessions["gem-test-cli-u1"]
+            assert session.local_url == s["expected_url"], f"Failed scenario: {s}"
 
+def test_docker_ps_empty_and_error():
+    """Verify clean handling of empty or failing docker ps."""
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = docker_output
-        
-        ports = TailscaleService.get_local_ports()
-        
-        assert len(ports) == 2
-        assert ports["gem-my-app-cli-123"] == "http://localhost:32768"
-        assert ports["gem-other-app-bash-456"] == "http://localhost:45000"
-        assert "random-container" not in ports
-
-def test_get_local_ports_empty():
-    """Test handling of no active containers."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 0
+        # 1. Empty
         mock_run.return_value.stdout = ""
+        assert DockerService().get_sessions() == {}
         
-        ports = TailscaleService.get_local_ports()
-        assert ports == {}
-
-def test_get_local_ports_failure():
-    """Test handling of docker command failure."""
-    with patch("subprocess.run") as mock_run:
+        # 2. Error
         mock_run.return_value.returncode = 1
-        mock_run.return_value.stderr = "Docker error"
-        
-        ports = TailscaleService.get_local_ports()
-        assert ports == {}
+        mock_run.return_value.stderr = "Daemon Down"
+        assert DockerService().get_sessions() == {}
 
-def test_get_local_ports_exception():
-    """Test handling of subprocess exception."""
-    with patch("subprocess.run", side_effect=Exception("Boom")):
-        ports = TailscaleService.get_local_ports()
-        assert ports == {}
+def test_docker_service_availability():
+    """Verify is_available logic across success and failures."""
+    service = DockerService()
+    
+    with patch("subprocess.run") as mock_run:
+        # 1. Success
+        mock_run.return_value.returncode = 0
+        assert service.is_available() is True
+        
+        # 2. Command Error
+        mock_run.return_value.returncode = 1
+        assert service.is_available() is False
+        
+        # 3. Exception (Subprocess error)
+        mock_run.side_effect = Exception("OS Error")
+        assert service.is_available() is False
+        
+        # 4. FileNotFoundError (Docker not installed)
+        mock_run.side_effect = FileNotFoundError()
+        assert service.is_available() is False
+
+def test_docker_get_sessions_exception():
+    """Verify exception safety in get_sessions."""
+    with patch("subprocess.run", side_effect=Exception("Timeout")):
+        assert DockerService().get_sessions() == {}
+

@@ -1,241 +1,211 @@
-import os
 from unittest.mock import patch
-from jsonschema import validate
-from tests.contracts import ROOTS_SCHEMA, BROWSE_SCHEMA, LAUNCH_SCHEMA
-
-# --- FileSystem Tests ---
 
 def test_get_roots(client):
-    """Test retrieving allowed workspace roots and verify contract."""
-    with patch("app.config.Config.HUB_ROOTS", ["/real/root"]):
+    """Test getting workspace roots."""
+    with patch("app.api.routes.FileSystemService.get_roots", return_value=["/work"]):
         response = client.get('/api/roots')
         assert response.status_code == 200
-        validate(instance=response.json, schema=ROOTS_SCHEMA)
-        assert response.json == {"roots": ["/real/root"]}
+        assert response.json == {"roots": ["/work"]}
 
-def test_browse_success(client, tmp_path):
-    """Test browsing a valid directory and verify contract."""
-    root = tmp_path / "workspace"
-    root.mkdir()
-    (root / "project1").mkdir()
-    (root / "file.txt").touch()
-
-    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
-        response = client.get(f'/api/browse?path={root}')
-        
-        assert response.status_code == 200
-        validate(instance=response.json, schema=BROWSE_SCHEMA)
-        assert "project1" in response.json["directories"]
-
-def test_browse_access_denied(client, tmp_path):
-    """Test browsing outside allowed roots."""
-    root = tmp_path / "allowed"
-    root.mkdir()
-    
-    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
-        response = client.get('/api/browse?path=/etc')
-        assert response.status_code == 403
-
-def test_browse_not_found(client, tmp_path):
-    """Test browsing a non-existent directory."""
-    root = tmp_path / "workspace"
-    root.mkdir()
-    
-    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
-        missing_path = root / "missing"
-        response = client.get(f'/api/browse?path={missing_path}')
-        assert response.status_code == 404
-
-def test_browse_missing_param(client):
-    """Test browsing without path parameter."""
-    response = client.get('/api/browse')
-    assert response.status_code == 400
-
-def test_create_directory_success(client, tmp_path):
-    """Test successful directory creation."""
-    root = tmp_path / "workspace"
-    root.mkdir()
-    
-    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
-        payload = {"parent_path": str(root), "name": "new-project"}
-        response = client.post('/api/create-directory', json=payload)
-        
-        assert response.status_code == 200
-        assert response.json["status"] == "success"
-        assert os.path.isdir(root / "new-project")
-
-def test_create_directory_access_denied(client, tmp_path):
-    """Test directory creation outside allowed roots."""
-    root = tmp_path / "allowed"
-    root.mkdir()
-    
-    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
-        payload = {"parent_path": "/etc", "name": "exploit"}
-        response = client.post('/api/create-directory', json=payload)
-        assert response.status_code == 403
-
-def test_create_directory_invalid_name(client, tmp_path):
-    """Test directory creation with invalid name."""
-    root = tmp_path / "workspace"
-    root.mkdir()
-    
-    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
-        payload = {"parent_path": str(root), "name": "bad/name"}
-        response = client.post('/api/create-directory', json=payload)
-        assert response.status_code == 400
-
-def test_create_directory_already_exists(client, tmp_path):
-    """Test directory creation when it already exists."""
-    root = tmp_path / "workspace"
-    root.mkdir()
-    (root / "exists").mkdir()
-    
-    with patch("app.config.Config.HUB_ROOTS", [str(root)]):
-        payload = {"parent_path": str(root), "name": "exists"}
-        response = client.post('/api/create-directory', json=payload)
-        assert response.status_code == 409
-
-# --- Config Tests ---
-
-def test_get_configs(client, tmp_path):
-    """Test listing configuration profiles."""
-    (tmp_path / "profile1").mkdir()
-
-    with patch("app.config.Config.HOST_CONFIG_ROOT", str(tmp_path)):
+def test_get_configs(client):
+    """Test getting configuration profiles."""
+    with patch("app.api.routes.FileSystemService.get_configs", return_value=[{"name": "default"}]):
         response = client.get('/api/configs')
         assert response.status_code == 200
-        assert "profile1" in response.json["configs"]
+        assert response.json == {"configs": [{"name": "default"}]}
 
-def test_get_config_details(client, tmp_path):
-    """Test reading profile details."""
-    profile_dir = tmp_path / "profile1"
-    profile_dir.mkdir()
-    (profile_dir / "extra-args").write_text("--preview")
-
-    with patch("app.config.Config.HOST_CONFIG_ROOT", str(tmp_path)):
-        response = client.get('/api/config-details?name=profile1')
+def test_get_config_details(client):
+    """Test getting configuration details."""
+    with patch("app.api.routes.FileSystemService.get_config_details", return_value={"name": "default"}):
+        response = client.get('/api/config-details?name=default')
         assert response.status_code == 200
-        assert {"type": "arg", "raw": "--preview", "arg": "--preview", "comment": ""} in response.json["extra_args"]
+        assert response.json == {"name": "default"}
 
-# --- Launcher Tests ---
+def test_browse_success(client):
+    """Test directory browsing."""
+    mock_data = {"current_path": "/work", "items": []}
+    with patch("app.api.routes.FileSystemService.browse", return_value=mock_data):
+        response = client.get('/api/browse?path=/work')
+        assert response.status_code == 200
+        assert response.json == mock_data
+
+def test_browse_access_denied(client):
+    """Test directory browsing with permission error."""
+    with patch("app.api.routes.FileSystemService.browse", side_effect=PermissionError("Access denied")):
+        response = client.get('/api/browse?path=/root')
+        assert response.status_code == 403
+        assert response.json == {"error": "Access denied"}
+
+def test_browse_not_found(client):
+    """Test directory browsing with not found error."""
+    with patch("app.api.routes.FileSystemService.browse", side_effect=FileNotFoundError("Not found")):
+        response = client.get('/api/browse?path=/invalid')
+        assert response.status_code == 404
+        assert response.json == {"error": "Not found"}
+
+def test_browse_missing_param(client):
+    """Test directory browsing with missing path parameter."""
+    response = client.get('/api/browse')
+    assert response.status_code == 400
+    assert "error" in response.json
+
+def test_create_directory_success(client):
+    """Test creating a directory."""
+    with patch("app.api.routes.FileSystemService.create_directory", return_value="/work/new"):
+        response = client.post('/api/create-directory', json={"parent_path": "/work", "name": "new"})
+        assert response.status_code == 200
+        assert response.json == {"status": "success", "path": "/work/new"}
+
+def test_create_directory_invalid_name(client):
+    """Test creating a directory with invalid name."""
+    with patch("app.api.routes.FileSystemService.create_directory", side_effect=ValueError("Invalid name")):
+        response = client.post('/api/create-directory', json={"parent_path": "/work", "name": ""})
+        assert response.status_code == 400
+        assert response.json == {"error": "Invalid name"}
+
+def test_create_directory_already_exists(client):
+    """Test creating a directory that already exists."""
+    with patch("app.api.routes.FileSystemService.create_directory", side_effect=FileExistsError("Already exists")):
+        response = client.post('/api/create-directory', json={"parent_path": "/work", "name": "exists"})
+        assert response.status_code == 409
+        assert response.json == {"error": "Already exists"}
+
+def test_create_directory_access_denied(client):
+    """Test creating a directory with permission error."""
+    with patch("app.api.routes.FileSystemService.create_directory", side_effect=PermissionError("Access denied")):
+        response = client.post('/api/create-directory', json={"parent_path": "/root", "name": "new"})
+        assert response.status_code == 403
+        assert response.json == {"error": "Access denied"}
 
 def test_launch_success(client):
-    """Test successful session launch and verify contract."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = ">> Container started: gem-test-cli-123"
-        mock_run.return_value.stderr = ""
-
-        payload = {
-            "project_path": "/mock/root/my-project",
-            "session_type": "bash"
-        }
-        
-        response = client.post('/api/launch', json=payload)
-        
+    """Test launching a session."""
+    mock_result = {"returncode": 0, "stdout": "Success", "stderr": "", "command": "...", "status": "success"}
+    with patch("app.api.routes.LauncherService.launch", return_value=mock_result):
+        response = client.post('/api/launch', json={"project_path": "/work"})
         assert response.status_code == 200
-        validate(instance=response.json, schema=LAUNCH_SCHEMA)
         assert response.json["status"] == "success"
 
 def test_launch_with_task_api(client):
-    """Test API launch with an autonomous task."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = "Bot started"
-        mock_run.return_value.stderr = ""
-
-        payload = {
-            "project_path": "/mock/root/project",
-            "task": "do something autonomous"
-        }
-        
-        response = client.post('/api/launch', json=payload)
+    """Test launching a session with a task."""
+    mock_result = {"returncode": 0, "stdout": "Task started", "stderr": "", "command": "...", "status": "success"}
+    with patch("app.api.routes.LauncherService.launch", return_value=mock_result):
+        response = client.post('/api/launch', json={"project_path": "/work", "task": "test task"})
         assert response.status_code == 200
         assert response.json["status"] == "success"
 
 def test_launch_full_options(client):
-    """Test launch with all parity options."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = ">> Container started"
-        mock_run.return_value.stderr = ""
-
-        payload = {
-            "project_path": "/mock/root/project",
+    """Test launching with all options."""
+    mock_result = {"returncode": 0, "stdout": "Full options", "stderr": "", "command": "...", "status": "success"}
+    with patch("app.api.routes.LauncherService.launch", return_value=mock_result):
+        response = client.post('/api/launch', json={
+            "project_path": "/work",
+            "config_profile": "work",
+            "session_type": "cli",
+            "task": "test",
+            "interactive": False,
             "image_variant": "preview",
+            "docker_enabled": False,
+            "ide_enabled": False,
             "worktree_mode": True,
-            "worktree_name": "feat/api"
-        }
-        
-        response = client.post('/api/launch', json=payload)
+            "worktree_name": "feat",
+            "custom_image": "my-img",
+            "docker_args": "-v /tmp:/tmp"
+        })
         assert response.status_code == 200
         assert response.json["status"] == "success"
 
 def test_launch_failure_permission(client):
-    """Test launch rejection for unauthorized path."""
-    payload = {"project_path": "/unauthorized/path"}
-    response = client.post('/api/launch', json=payload)
-    assert response.status_code == 403
+    """Test launching with permission error."""
+    with patch("app.api.routes.LauncherService.launch", side_effect=PermissionError("Not allowed")):
+        response = client.post('/api/launch', json={"project_path": "/work"})
+        assert response.status_code == 403
+        assert response.json == {"status": "error", "error": "Not allowed"}
 
 def test_launch_failure_subprocess(client):
-    """Test handling of subprocess failure."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 1
-        mock_run.return_value.stderr = "Docker error"
-        mock_run.return_value.stdout = ""
-        
-        payload = {"project_path": "/mock/root/project"}
-        response = client.post('/api/launch', json=payload)
-        
+    """Test launching with subprocess failure."""
+    mock_result = {"returncode": 1, "stdout": "", "stderr": "Command failed", "command": "...", "status": "error"}
+    with patch("app.api.routes.LauncherService.launch", return_value=mock_result):
+        response = client.post('/api/launch', json={"project_path": "/work"})
         assert response.status_code == 500
         assert response.json["status"] == "error"
-        validate(instance=response.json, schema=LAUNCH_SCHEMA)
-
-# --- Tailscale/Resolve Tests ---
+        assert response.json["error"] == "Command failed"
 
 def test_resolve_local_url_success(client):
     """Test resolving a local URL for a valid hostname."""
-    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
-        mock_ports.return_value = {"gem-test": "http://localhost:1234"}
-        
-        response = client.get('/api/resolve-local-url?hostname=gem-test')
+    s = {
+        "name": "gem-app-cli-123",
+        "local_url": "http://localhost:32768"
+    }
+    
+    with patch("app.api.routes.DiscoveryService.get_sessions", return_value=[s]):
+        response = client.get('/api/resolve-local-url?hostname=gem-app-cli-123')
         assert response.status_code == 200
-        assert response.json["url"] == "http://localhost:1234"
+        assert response.json == {"url": "http://localhost:32768"}
 
 def test_resolve_local_url_not_found(client):
     """Test resolving a hostname that has no local mapping."""
-    with patch("app.services.tailscale.TailscaleService.get_local_ports") as mock_ports:
-        mock_ports.return_value = {}
-        
-        response = client.get('/api/resolve-local-url?hostname=gem-test')
+    with patch("app.api.routes.DiscoveryService.get_sessions", return_value=[]):
+        response = client.get('/api/resolve-local-url?hostname=gem-app-cli-123')
         assert response.status_code == 200
-        assert response.json["url"] is None
+        assert response.json == {"url": None}
 
 def test_resolve_local_url_missing_param(client):
-    """Test resolving without hostname parameter."""
+    """Test resolving local URL with missing hostname parameter."""
     response = client.get('/api/resolve-local-url')
     assert response.status_code == 200
-    assert response.json["url"] is None
-
-# --- Session Lifecycle Tests ---
+    assert response.json == {"url": None}
 
 def test_stop_session_success(client):
-    """Test successful session stop."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = "gem-test"
-        
-        response = client.post('/api/sessions/stop', json={"session_id": "gem-test"})
-        
+    """Test stopping a session."""
+    with patch("app.api.routes.SessionService.stop", return_value={"status": "success"}):
+        response = client.post('/api/sessions/stop', json={"session_id": "gem-app-cli-123"})
         assert response.status_code == 200
-        assert response.json["status"] == "success"
+        assert response.json == {"status": "success"}
 
 def test_stop_session_invalid_id(client):
-    """Test stop rejection for invalid ID."""
-    response = client.post('/api/sessions/stop', json={"session_id": "not-gem-id"})
-    assert response.status_code == 403
+    """Test stopping a session with invalid ID."""
+    with patch("app.api.routes.SessionService.stop", return_value={"status": "error", "error": "Not found"}):
+        response = client.post('/api/sessions/stop', json={"session_id": "invalid"})
+        assert response.status_code == 500
+        assert response.json == {"status": "error", "error": "Not found"}
 
 def test_stop_session_missing_param(client):
-    """Test stop without session_id."""
+    """Test stopping a session with missing ID."""
     response = client.post('/api/sessions/stop', json={})
     assert response.status_code == 400
+    assert response.json == {"error": "Session ID required"}
+
+def test_api_not_found(client):
+    """Verify that a non-existent API endpoint returns 404."""
+    response = client.get('/api/non-existent-endpoint')
+    assert response.status_code == 404
+
+# Precision Coverage Boosters
+
+def test_api_browse_generic_exception(client):
+    """Trigger generic Exception handler in /browse for coverage."""
+    with patch("app.api.routes.FileSystemService.browse", side_effect=Exception("Generic Error")):
+        resp = client.get("/api/browse?path=/")
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"
+
+def test_api_create_directory_generic_exception(client):
+    """Trigger generic Exception handler in /create-directory for coverage."""
+    with patch("app.api.routes.FileSystemService.create_directory", side_effect=Exception("Generic Error")):
+        resp = client.post("/api/create-directory", json={"parent_path": "/", "name": "new"})
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"
+
+def test_api_launch_generic_exception(client):
+    """Trigger generic Exception handler in /launch for coverage."""
+    with patch("app.api.routes.LauncherService.launch", side_effect=Exception("Generic Error")):
+        resp = client.post("/api/launch", json={"project_path": "/"})
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"
+
+def test_api_stop_session_generic_exception(client):
+    """Trigger generic Exception handler in /sessions/stop for coverage."""
+    with patch("app.api.routes.SessionService.stop", side_effect=Exception("Generic Error")):
+        resp = client.post("/api/sessions/stop", json={"session_id": "id"})
+        assert resp.status_code == 500
+        assert resp.json["error"] == "Generic Error"

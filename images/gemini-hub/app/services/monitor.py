@@ -4,42 +4,58 @@ import signal
 import logging
 import threading
 from app.config import Config
-from app.services.tailscale import TailscaleService
+from app.services.discovery import DiscoveryService
 
 logger = logging.getLogger(__name__)
 
 class MonitorService:
-    """Background service to monitor activity and auto-shutdown."""
+    """Background service that monitors session activity and handles auto-shutdown."""
 
     @staticmethod
     def start():
-        if not Config.HUB_AUTO_SHUTDOWN:
-            logger.info("Auto-shutdown disabled.")
-            return
-
-        thread = threading.Thread(target=MonitorService._monitor_loop, daemon=True)
-        thread.start()
+        """Starts the monitor thread if enabled in config."""
+        if Config.HUB_AUTO_SHUTDOWN:
+            thread = threading.Thread(target=MonitorService._monitor_loop, daemon=True)
+            thread.start()
+            logger.info("Auto-shutdown monitor started (60s timeout).")
 
     @staticmethod
     def _monitor_loop():
-        TIMEOUT_SECONDS = 60
+        """Main loop for the monitor thread."""
         last_active = time.time()
-        
-        logger.info(f"Monitor started. Auto-shutdown after {TIMEOUT_SECONDS}s of inactivity.")
-        
+        timeout = 60 # Seconds
+
         while True:
-            time.sleep(10)
             try:
-                # Check for peers
-                status = TailscaleService.get_status()
-                machines = TailscaleService.parse_peers(status)
-                
-                if machines:
-                    last_active = time.time()
-                else:
-                    idle_time = time.time() - last_active
-                    if idle_time > TIMEOUT_SECONDS:
-                        logger.warning(f"Inactivity limit ({TIMEOUT_SECONDS}s) reached. Shutting down.")
-                        os.kill(os.getpid(), signal.SIGTERM)
+                last_active = MonitorService.check_and_shutdown(last_active, timeout)
             except Exception as e:
-                logger.error(f"Monitor error: {e}")
+                logger.error(f"Monitor loop error: {e}")
+            
+            time.sleep(10)
+
+    @staticmethod
+    def check_and_shutdown(last_active: float, timeout: int) -> float:
+        """Performs a single activity check and kills process if stale."""
+        try:
+            discovery = DiscoveryService()
+            sessions = discovery.get_sessions()
+        except Exception as e:
+            logger.error(f"Discovery failed in monitor: {e}")
+            return last_active
+        
+        # A session is active if it's either local (running) or remote (reachable)
+        active_sessions = [
+            s for s in sessions 
+            if s.get("is_running") or s.get("is_reachable")
+        ]
+
+        now = time.time()
+        if active_sessions:
+            return now
+        
+        idle_time = now - last_active
+        if idle_time > timeout:
+            logger.warning(f"Inactivity limit ({timeout}s) reached. Shutting down.")
+            os.kill(os.getpid(), signal.SIGTERM)
+        
+        return last_active
