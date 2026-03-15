@@ -174,3 +174,8 @@ def test_stop_session_missing_param(client):
     response = client.post('/api/sessions/stop', json={})
     assert response.status_code == 400
     assert response.json == {"error": "Session ID required"}
+
+def test_api_not_found(client):
+    """Verify that a non-existent API endpoint returns 404."""
+    response = client.get('/api/non-existent-endpoint')
+    assert response.status_code == 404
